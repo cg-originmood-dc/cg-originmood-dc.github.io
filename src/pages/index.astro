@@ -1,0 +1,25 @@
+---
+import { getEntry, render } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import DataTable from '../components/DataTable.astro';
+import SourceNote from '../components/SourceNote.astro';
+import { HOME_ID } from '../lib/nav';
+
+const entry = await getEntry('pages', HOME_ID);
+if (!entry) {
+  throw new Error(`找不到首頁內容：content/pages/${HOME_ID}.md`);
+}
+const { Content } = await render(entry);
+---
+
+<Base title={entry.data.title}>
+  <h1 class="page-title">{entry.data.title}</h1>
+
+  <div class="prose">
+    <Content />
+  </div>
+
+  {entry.data.datasets.map((name) => <DataTable name={name} />)}
+
+  <SourceNote sourceUrl={entry.data.sourceUrl} />
+</Base>

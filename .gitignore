@@ -1,0 +1,22 @@
+node_modules/
+dist/
+.astro/
+
+# 抓取用的中繼檔：原始 HTML 快取很大且可重新產生
+.cache/
+_root.html
+_sample.html
+_pets.html
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# 憑證絕不進版控
+*.json.key
+oauth2service.json
+cookies.json
+
+.DS_Store
+Thumbs.db

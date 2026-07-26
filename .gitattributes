@@ -1,0 +1,11 @@
+# 換行一律以 LF 存進版控。編輯者散在 Windows / Mac，不統一的話
+# 光是用不同機器開一次 CSV 存檔，就會產生整份檔案的假 diff。
+* text=auto eol=lf
+
+# 圖片是二進位，不要做任何換行轉換或 diff
+*.gif binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary

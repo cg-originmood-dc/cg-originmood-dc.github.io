@@ -1,0 +1,56 @@
+---
+import type { NavNode } from '../lib/nav';
+
+/**
+ * 側邊導覽。刻意寫成遞迴：原站的分類最深有四層
+ * （任務攻略 › 主線任務 › 海底世界系列 › 被抹去的大陸），
+ * 寫死幾層的話最底層會變成點不進去的死連結。
+ */
+interface Props {
+  nodes: NavNode[];
+  base: string;
+  here: string;
+  depth?: number;
+}
+const { nodes, base, here, depth = 0 } = Astro.props;
+
+const isActive = (href: string | null) => href !== null && base + href === here;
+const hasActive = (n: NavNode): boolean => isActive(n.href) || n.children.some(hasActive);
+---
+
+<ul class="navtree" style={`--depth:${depth}`}>
+  {
+    nodes.map((n) =>
+      n.children.length ? (
+        <li>
+          <details open={hasActive(n)}>
+            {/* 既是分類又是頁面時，標題本身要能點進去 */}
+            <summary>
+              {n.href ? (
+                <a
+                  class="navtree__selflink"
+                  href={base + n.href}
+                  aria-current={isActive(n.href) ? 'page' : undefined}
+                >
+                  {n.label}
+                </a>
+              ) : (
+                <span>{n.label}</span>
+              )}
+            </summary>
+            <Astro.self nodes={n.children} base={base} here={here} depth={depth + 1} />
+          </details>
+        </li>
+      ) : (
+        <li>
+          <a
+            href={n.href ? base + n.href : '#'}
+            aria-current={isActive(n.href) ? 'page' : undefined}
+          >
+            {n.label}
+          </a>
+        </li>
+      ),
+    )
+  }
+</ul>

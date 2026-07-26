@@ -1,0 +1,658 @@
+/*
+ * 介面層。內容層（content/）不含任何顏色或版面資訊。
+ *
+ * 色票與尺寸取自原 Google Sites 站台的實際 computed style，刻意做得接近原站：
+ *   頁面底 #f2f2f2 / 內容區白底 / 側邊欄純黑白字 250px / Open Sans 17px / 內文 #212121
+ * 原站沒有深色模式，這裡也不做，避免兩邊長得不一樣。
+ */
+
+:root {
+  --bg: #f2f2f2;
+  --surface: #ffffff;
+  --surface-2: #f5f5f5;
+  --border: #e0e0e0;
+  --text: #212121;
+  --text-2: #5f6368;
+  --text-3: #80868b;
+  --link: #1155cc;
+
+  --nav-bg: #000000;
+  --nav-text: #ffffff;
+  --nav-text-dim: #bdbdbd;
+  --nav-hover: #1f1f1f;
+  --nav-w: 250px;
+
+  /* 原站內文用的語意色，數值就是原站的原值 */
+  --hl-key: #ff0000; /* 重點 / 關鍵條件 */
+  --hl-drop: #9900ff; /* 掉落道具與機率 */
+  --hl-npc: #7f6000; /* NPC */
+  --hl-mob: #783f04; /* 怪物 */
+  --hl-ref: #0000ff; /* 交互參照 */
+  --hl-ok: #38761d;
+
+  --font: 'Open Sans', 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 17px;
+  line-height: 1.75;
+  -webkit-text-size-adjust: 100%;
+}
+
+a {
+  color: var(--link);
+}
+
+.visually-hidden,
+.skip:not(:focus) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.skip:focus {
+  position: fixed;
+  inset-block-start: 0.5rem;
+  inset-inline-start: 0.5rem;
+  z-index: 100;
+  padding: 0.5rem 1rem;
+  background: #000;
+  color: #fff;
+}
+
+/* ---------------------------------------------------------------- 版面 */
+
+.shell {
+  display: grid;
+  grid-template-columns: var(--nav-w) minmax(0, 1fr);
+  align-items: start;
+  min-height: 100vh;
+}
+
+/* 側邊欄：原站是整條到底的純黑，站名放在最上面 */
+.sidenav {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 0 2rem;
+  background: var(--nav-bg);
+  color: var(--nav-text);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.sidenav__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1.15rem 1rem;
+  color: var(--nav-text);
+  text-decoration: none;
+  font-size: 1.05rem;
+  font-weight: 600;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.sidenav__mark {
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.sidenav__external {
+  color: var(--nav-text-dim) !important;
+  font-size: 0.9rem;
+}
+
+.sidenav details {
+  border: 0;
+}
+
+.sidenav summary {
+  padding: 0.5rem 1rem;
+  color: var(--nav-text);
+  font-weight: 400;
+  cursor: pointer;
+  list-style: none;
+}
+
+.sidenav summary::-webkit-details-marker {
+  display: none;
+}
+
+.sidenav summary::after {
+  content: '▾';
+  float: right;
+  color: var(--nav-text-dim);
+  font-size: 0.75em;
+  transition: transform 0.15s ease;
+}
+
+.sidenav details:not([open]) > summary::after {
+  transform: rotate(-90deg);
+}
+
+.sidenav summary:hover,
+.sidenav a:hover {
+  background: var(--nav-hover);
+}
+
+.sidenav ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 巢狀層級用縮排表示，不畫線，跟原站一致。--depth 由 NavTree 遞迴時帶下來 */
+.navtree > li > a,
+.navtree > li > details > summary {
+  padding-left: calc(1rem + var(--depth) * 1rem);
+}
+
+.sidenav a {
+  display: block;
+  padding: 0.5rem 1rem;
+  color: var(--nav-text);
+  text-decoration: none;
+}
+
+/* summary 裡的自連結已經由 summary 提供內距，自己不要再撐一層 */
+.sidenav summary .navtree__selflink {
+  display: inline;
+  padding: 0;
+}
+
+.sidenav a[aria-current='page'],
+.sidenav summary:has(.navtree__selflink[aria-current='page']) {
+  font-weight: 600;
+  background: var(--nav-hover);
+}
+
+/* 內容區：白底、置中、最寬 1280 */
+main {
+  min-width: 0;
+  padding: 2rem clamp(1rem, 3vw, 2.5rem) 4rem;
+}
+
+.page {
+  max-width: 1280px;
+  margin-inline: auto;
+  padding: clamp(1.25rem, 3vw, 2.25rem);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.6rem;
+  color: var(--text-3);
+  font-size: 0.8125rem;
+}
+
+.crumbs > * + *::before {
+  content: '/';
+  margin-right: 0.4rem;
+  color: #cfcfcf;
+}
+
+.crumbs a {
+  color: var(--text-3);
+  text-decoration: none;
+}
+
+.crumbs a:hover {
+  text-decoration: underline;
+}
+
+/* ---------------------------------------------------------------- 內文 */
+
+.page-title {
+  margin: 0 0 1.25rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.prose > :first-child {
+  margin-top: 0;
+}
+
+.prose p {
+  margin: 0 0 0.75rem;
+  white-space: pre-wrap; /* 原站用斷行表達節奏，保留它 */
+}
+
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4 {
+  margin: 1.75rem 0 0.6rem;
+  line-height: 1.4;
+}
+
+.prose img {
+  max-width: 100%;
+  height: auto;
+}
+
+.prose a {
+  word-break: break-word;
+}
+
+/* 分類連結卡（職業總覽）。色票沿用原站嵌入區塊自己的 CSS */
+.linkcards {
+  max-width: 1000px;
+}
+
+.linkcard {
+  margin-bottom: 20px;
+  padding: 10px;
+  border-radius: 5px;
+  background: #f0f8ff;
+}
+
+.linkcard h3 {
+  margin: 0 0 0.5rem;
+  padding-bottom: 5px;
+  border-bottom: 2px solid #4299e1;
+  color: #2c5282;
+}
+
+.linkcard__items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.linkcard__items a {
+  padding: 5px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  background: #fff;
+  color: #4a5568;
+  text-decoration: none;
+}
+
+.linkcard__items a:hover {
+  background: #ebf8ff;
+}
+
+/* 輪播圖。原站一次只顯示一張，這裡做成可橫向滑動的圖庫，不需要 JS */
+.carousel {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  margin: 0 0 1rem;
+  padding-bottom: 0.5rem;
+}
+
+.carousel p {
+  flex: 0 0 100%;
+  margin: 0;
+  scroll-snap-align: center;
+}
+
+.carousel img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* 原站的按鈕元件：實心色塊、白字、圓角 4px */
+.sitebtn {
+  display: inline-block;
+  min-width: 10rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 4px;
+  background: #993300;
+  color: #fff;
+  text-align: center;
+  text-decoration: none;
+}
+
+.sitebtn:hover {
+  background: #7a2900;
+}
+
+/* 每顆按鈕在原站各自是一個區塊，這裡讓它們排成一列而不是疊成一直行 */
+.prose p:has(> .sitebtn:only-child) {
+  display: inline-block;
+  margin: 0 0.6rem 0.6rem 0;
+}
+
+.prose table {
+  width: 100%;
+  margin: 1rem 0;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.prose th,
+.prose td {
+  padding: 0.4rem 0.65rem;
+  border: 1px solid #999;
+  text-align: left;
+}
+
+.prose thead th {
+  background: var(--surface-2);
+}
+
+/* 原站的語意色 */
+.hl-key {
+  color: var(--hl-key);
+}
+.hl-drop {
+  color: var(--hl-drop);
+}
+.hl-npc {
+  color: var(--hl-npc);
+}
+.hl-mob {
+  color: var(--hl-mob);
+}
+.hl-ref {
+  color: var(--hl-ref);
+}
+.hl-ok {
+  color: var(--hl-ok);
+}
+
+/* ---------------------------------------------------------------- 資料表 */
+
+.dataset {
+  margin: 1.5rem 0;
+}
+
+.dataset__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.dataset__count {
+  margin-left: auto;
+}
+
+/* 控制列排版比照原站：搜尋: [輸入框] [清空] 篩選類別: [下拉] */
+.dataset__field {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  color: var(--text-2);
+}
+
+.dataset__field input,
+.dataset__field select,
+.dataset__clear {
+  padding: 0.3rem 0.55rem;
+  border: 1px solid #b0b0b0;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.dataset__field input {
+  width: min(16rem, 50vw);
+}
+
+.dataset__clear {
+  cursor: pointer;
+}
+
+.dataset__clear:hover {
+  background: var(--surface-2);
+}
+
+.dataset__field input:focus-visible,
+.dataset__field select:focus-visible,
+.dataset__clear:focus-visible {
+  outline: 2px solid var(--link);
+  outline-offset: 1px;
+}
+
+.dataset__count {
+  color: var(--text-3);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.dataset__scroll {
+  max-height: 80vh;
+  overflow: auto;
+  border: 1px solid #c0c0c0;
+}
+
+/* 邊框 #c0c0c0、表頭 #f0f0f0、內容置中 —— 沿用原站嵌入表格的 .dataTable 樣式 */
+.dataset table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.dataset thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 5px;
+  background: #f0f0f0;
+  border: 1px solid #c0c0c0;
+  text-align: center;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+
+.dataset thead th:hover {
+  background: #e4e4e4;
+}
+
+.dataset thead th[aria-sort]::after {
+  content: '▲';
+  margin-left: 0.35em;
+  font-size: 0.7em;
+}
+
+.dataset thead th[aria-sort='descending']::after {
+  content: '▼';
+}
+
+.dataset tbody td {
+  padding: 5px;
+  border: 1px solid #c0c0c0;
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+/* 只有長文字欄位才換行（見 datasets.ts 的 wrapColumns），表格寬不下時整體橫向捲動 */
+.dataset tbody td.is-wrap {
+  white-space: normal;
+  min-width: 14rem;
+  text-align: left;
+}
+
+/* 第一欄通常是名稱，靠左比較好讀 */
+.dataset tbody td:first-child {
+  text-align: left;
+}
+
+.dataset tbody tr:hover td {
+  background: #f7f7f7;
+}
+
+.dataset .col-img {
+  width: 3.25rem;
+  text-align: center;
+}
+
+.dataset .col-img img {
+  display: block;
+  max-width: 2.5rem;
+  max-height: 2.5rem;
+  margin-inline: auto;
+  image-rendering: pixelated; /* 遊戲點陣圖放大時保持銳利 */
+}
+
+/* 滑過縮圖看大圖，對應原站的 .hover-container / .hover-image */
+.hoverpic {
+  position: relative;
+  display: inline-block;
+}
+
+/* 選擇器要壓得過上面的 .dataset .col-img img，不然大圖會一直露出來 */
+.dataset .col-img img.hoverpic__big {
+  display: none;
+  position: absolute;
+  z-index: 5;
+  top: -50%;
+  left: 130%;
+  max-width: none;
+  max-height: none;
+  border: 1px solid #ddd;
+  background: #fff;
+  box-shadow: 2px 2px 10px rgb(0 0 0 / 0.2);
+}
+
+.dataset .col-img .hoverpic:hover img.hoverpic__big {
+  display: block;
+}
+
+.dataset-missing {
+  padding: 0.7rem 1rem;
+  border: 1px dashed #bbb;
+  color: var(--text-3);
+}
+
+/* ---------------------------------------------------------------- 來源與頁尾 */
+
+.source-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 0.75rem;
+  margin-top: 2.5rem;
+  padding: 0.7rem 0.9rem;
+  border-left: 3px solid #999;
+  background: var(--surface-2);
+  font-size: 0.875rem;
+}
+
+.source-note__label {
+  font-weight: 700;
+  color: var(--text-2);
+}
+
+.source-note a {
+  word-break: break-all;
+}
+
+.source-note__hint {
+  color: var(--text-3);
+  font-size: 0.8125rem;
+}
+
+.sitefoot {
+  max-width: 1280px;
+  margin: 1.5rem auto 0;
+  padding: 1.5rem 0 0;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+
+.sitefoot__thanks {
+  margin: 0 0 0.3rem;
+  font-size: 1rem;
+}
+
+.sitefoot__meta {
+  margin: 0;
+  color: var(--text-3);
+  font-size: 0.85rem;
+}
+
+/* 維護者連結，比出處那行醒目一點 */
+.sitefoot__dc {
+  color: #5865f2;
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------------- 手機 */
+
+.navtoggle {
+  display: none;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.7rem 1rem;
+  border: 0;
+  background: var(--nav-bg);
+  color: var(--nav-text);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+@media (max-width: 60rem) {
+  .navtoggle {
+    display: flex;
+  }
+
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sidenav {
+    display: none;
+    position: static;
+    height: auto;
+  }
+
+  .sidenav.is-open {
+    display: block;
+  }
+
+  .sidenav__brand {
+    display: none;
+  }
+
+  main {
+    padding: 1rem 0.75rem 3rem;
+  }
+
+  .page {
+    padding: 1rem;
+  }
+}

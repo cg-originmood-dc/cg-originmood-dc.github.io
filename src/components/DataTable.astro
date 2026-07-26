@@ -1,0 +1,147 @@
+---
+import { loadDataset } from '../lib/datasets';
+
+/**
+ * 把 content/data/<name>.csv 渲染成可搜尋、可篩選、可排序的表格。
+ * 這一層完全不知道資料在講什麼 —— 欄位由 CSV 決定，編輯者加欄位不必動程式。
+ *
+ * 操作方式刻意比照原站的嵌入表格：搜尋框 + 清空 + 篩選類別下拉，
+ * 圖片滑過去會放大（原站的 .hover-container / .hover-image）。
+ */
+interface Props {
+  name: string;
+}
+const { name } = Astro.props;
+const dataset = loadDataset(name);
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const src = (v: string) => (v.startsWith('/') ? base + v : v);
+const cols = dataset?.columns.filter((c) => c !== dataset.imageColumn) ?? [];
+---
+
+{
+  !dataset ? (
+    <p class="dataset-missing">找不到資料集 <code>{name}</code>（應在 content/data/{name}.csv）</p>
+  ) : (
+    <figure class="dataset" data-dataset={name}>
+      <figcaption class="dataset__bar">
+        <label class="dataset__field">
+          搜尋:
+          <input type="search" placeholder="輸入關鍵字" autocomplete="off" />
+        </label>
+        <button type="button" class="dataset__clear">清空</button>
+        {dataset.filterColumn && (
+          <label class="dataset__field">
+            篩選{dataset.filterColumn.name}:
+            <select data-filter-col={cols.indexOf(dataset.filterColumn.name)}>
+              <option value="">全部</option>
+              {dataset.filterColumn.values.map((v) => (
+                <option value={v}>{v}</option>
+              ))}
+            </select>
+          </label>
+        )}
+        <output class="dataset__count">{dataset.rows.length} 筆</output>
+      </figcaption>
+
+      <div class="dataset__scroll">
+        <table>
+          <thead>
+            <tr>
+              {dataset.imageColumn && <th scope="col" class="col-img">圖</th>}
+              {cols.map((c, i) => (
+                <th scope="col" data-sort-index={i} tabindex="0" role="button">
+                  {c}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {dataset.rows.map((row) => (
+              <tr>
+                {dataset.imageColumn && (
+                  <td class="col-img">
+                    {row[dataset.imageColumn] ? (
+                      <span class="hoverpic">
+                        <img src={src(row[dataset.imageColumn])} alt="" loading="lazy" decoding="async" />
+                        <img class="hoverpic__big" src={src(row[dataset.imageColumn])} alt="" loading="lazy" decoding="async" />
+                      </span>
+                    ) : null}
+                  </td>
+                )}
+                {cols.map((c) => (
+                  <td class={dataset.wrapColumns.includes(c) ? 'is-wrap' : undefined}>{row[c]}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </figure>
+  )
+}
+
+<script>
+  // 純靜態站，所以搜尋/篩選/排序都在瀏覽器端做，不需要任何後端。
+  document.querySelectorAll<HTMLElement>('.dataset').forEach((root) => {
+    const input = root.querySelector<HTMLInputElement>('input[type=search]');
+    const select = root.querySelector<HTMLSelectElement>('select[data-filter-col]');
+    const clear = root.querySelector<HTMLButtonElement>('.dataset__clear');
+    const count = root.querySelector<HTMLOutputElement>('.dataset__count');
+    const tbody = root.querySelector('tbody');
+    if (!tbody) return;
+    const rows = Array.from(tbody.rows);
+    const total = rows.length;
+    const imgOffset = root.querySelector('.col-img') ? 1 : 0;
+
+    const apply = () => {
+      const q = input?.value.trim().toLowerCase() ?? '';
+      const want = select?.value ?? '';
+      const col = want && select ? Number(select.dataset.filterCol) + imgOffset : -1;
+      let shown = 0;
+      for (const tr of rows) {
+        const hit =
+          (!q || tr.textContent!.toLowerCase().includes(q)) &&
+          (!want || tr.cells[col]?.textContent?.trim() === want);
+        tr.hidden = !hit;
+        if (hit) shown++;
+      }
+      if (count) count.textContent = shown === total ? `${total} 筆` : `${shown} / ${total} 筆`;
+    };
+
+    input?.addEventListener('input', apply);
+    select?.addEventListener('change', apply);
+    clear?.addEventListener('click', () => {
+      if (input) input.value = '';
+      if (select) select.value = '';
+      apply();
+    });
+
+    let sortCol = -1;
+    let asc = true;
+    root.querySelectorAll<HTMLTableCellElement>('th[data-sort-index]').forEach((th) => {
+      const sort = () => {
+        const idx = Number(th.dataset.sortIndex);
+        const cell = idx + imgOffset;
+        asc = sortCol === idx ? !asc : true;
+        sortCol = idx;
+
+        const collator = new Intl.Collator('zh-Hant', { numeric: true, sensitivity: 'base' });
+        rows.sort((a, b) => {
+          const x = a.cells[cell]?.textContent?.trim() ?? '';
+          const y = b.cells[cell]?.textContent?.trim() ?? '';
+          return (asc ? 1 : -1) * collator.compare(x, y);
+        });
+        rows.forEach((r) => tbody.appendChild(r));
+        root.querySelectorAll('th[data-sort-index]').forEach((o) => o.removeAttribute('aria-sort'));
+        th.setAttribute('aria-sort', asc ? 'ascending' : 'descending');
+      };
+      th.addEventListener('click', sort);
+      th.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          sort();
+        }
+      });
+    });
+  });
+</script>
