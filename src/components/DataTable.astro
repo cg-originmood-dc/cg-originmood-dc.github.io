@@ -1,5 +1,6 @@
 ---
 import { loadDataset } from '../lib/datasets';
+import { thumbOf } from '../lib/thumbs';
 
 /**
  * 把 content/data/<name>.csv 渲染成可搜尋、可篩選、可排序的表格。
@@ -7,6 +8,9 @@ import { loadDataset } from '../lib/datasets';
  *
  * 操作方式刻意比照原站的嵌入表格：搜尋框 + 清空 + 篩選類別下拉，
  * 圖片滑過去會放大（原站的 .hover-container / .hover-image）。
+ *
+ * 表格那張用縮圖，放大預覽才用原圖。預覽那張是 display:none + loading="lazy"，
+ * 瀏覽器不會事先下載，真的 hover 才抓——寵物頁 1069 列，差別是 56MB 對 20MB。
  */
 interface Props {
   name: string;
@@ -62,7 +66,7 @@ const cols = dataset?.columns.filter((c) => c !== dataset.imageColumn) ?? [];
                   <td class="col-img">
                     {row[dataset.imageColumn] ? (
                       <span class="hoverpic">
-                        <img src={src(row[dataset.imageColumn])} alt="" loading="lazy" decoding="async" />
+                        <img src={src(thumbOf(row[dataset.imageColumn]))} alt="" loading="lazy" decoding="async" />
                         <img class="hoverpic__big" src={src(row[dataset.imageColumn])} alt="" loading="lazy" decoding="async" />
                       </span>
                     ) : null}
