@@ -604,6 +604,16 @@ main {
   font-weight: 600;
 }
 
+.sitefoot__gh {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+  color: var(--text-2);
+  font-weight: 600;
+  /* 圖示與文字的基線對不齊會看起來歪一格 */
+  vertical-align: text-bottom;
+}
+
 /* ---------------------------------------------------------------- 手機 */
 
 .navtoggle {
