@@ -1,6 +1,7 @@
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse } from 'csv-parse/sync';
+import { hasLink } from './richtext';
 
 const DATA_DIR = join(process.cwd(), 'content', 'data');
 
@@ -14,6 +15,11 @@ export interface Dataset {
   filterColumn: { name: string; values: string[] } | null;
   /** 內容偏長、需要換行的欄位。其餘欄位不換行，免得「人形系」被擠成直書 */
   wrapColumns: string[];
+  /**
+   * 內容帶連結的補充欄位（像「任務用途」）。這種欄位只有少數列有值，
+   * 會渲染成連結，並多給一個「只看有這欄的」勾選框。
+   */
+  noteColumn: string | null;
 }
 
 /**
@@ -84,6 +90,7 @@ export function loadDataset(name: string): Dataset | null {
     columns,
     rows: records,
     imageColumn,
+    noteColumn: columns.find((c) => records.some((r) => hasLink(r[c] ?? ''))) ?? null,
     filterColumn: pickFilterColumn(columns, records, imageColumn),
     wrapColumns: columns.filter((c) => {
       if (c === imageColumn) return false;

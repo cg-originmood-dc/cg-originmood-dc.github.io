@@ -432,9 +432,26 @@ main {
 
 .dataset__field input:focus-visible,
 .dataset__field select:focus-visible,
-.dataset__clear:focus-visible {
+.dataset__clear:focus-visible,
+.dataset__check input:focus-visible {
   outline: 2px solid var(--link);
   outline-offset: 1px;
+}
+
+/* 補充欄位的勾選框（見 datasets.ts 的 noteColumn），例如「只看有任務用途的」 */
+.dataset__check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  color: var(--text-2);
+  cursor: pointer;
+  user-select: none;
+}
+
+.dataset__check input {
+  accent-color: var(--link);
+  cursor: pointer;
 }
 
 .dataset__count {
@@ -497,6 +514,13 @@ main {
   white-space: normal;
   min-width: 14rem;
   text-align: left;
+}
+
+/* 補充欄位大多數列是空的，有值的才是重點；字小一點免得把本來的欄位擠掉 */
+.dataset tbody td.is-note {
+  min-width: 18rem;
+  font-size: 0.85rem;
+  color: var(--text-2);
 }
 
 /* 第一欄通常是名稱，靠左比較好讀 */

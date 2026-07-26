@@ -1,6 +1,7 @@
 ---
 import { loadDataset } from '../lib/datasets';
 import { thumbOf } from '../lib/thumbs';
+import { renderCell } from '../lib/richtext';
 
 /**
  * 把 content/data/<name>.csv 渲染成可搜尋、可篩選、可排序的表格。
@@ -8,6 +9,10 @@ import { thumbOf } from '../lib/thumbs';
  *
  * 操作方式刻意比照原站的嵌入表格：搜尋框 + 清空 + 篩選類別下拉，
  * 圖片滑過去會放大（原站的 .hover-container / .hover-image）。
+ *
+ * 有一種「只有少數列有值、值裡帶連結」的補充欄位（寵物表的「任務用途」就是），
+ * 這種欄位多給一個勾選框只看有值的列。判斷條件是欄位內容有沒有 Markdown 連結，
+ * 不寫死欄位名字 —— 之後別的 CSV 加同樣形態的欄位也會自動有這個勾選框。
  *
  * 表格那張用縮圖，放大預覽才用原圖。預覽那張是 display:none + loading="lazy"，
  * 瀏覽器不會事先下載，真的 hover 才抓——寵物頁 1069 列，差別是 56MB 對 20MB。
@@ -44,6 +49,12 @@ const cols = dataset?.columns.filter((c) => c !== dataset.imageColumn) ?? [];
             </select>
           </label>
         )}
+        {dataset.noteColumn && (
+          <label class="dataset__check">
+            <input type="checkbox" data-note-col={cols.indexOf(dataset.noteColumn)} />
+            只看有{dataset.noteColumn}的
+          </label>
+        )}
         <output class="dataset__count">{dataset.rows.length} 筆</output>
       </figcaption>
 
@@ -72,9 +83,13 @@ const cols = dataset?.columns.filter((c) => c !== dataset.imageColumn) ?? [];
                     ) : null}
                   </td>
                 )}
-                {cols.map((c) => (
-                  <td class={dataset.wrapColumns.includes(c) ? 'is-wrap' : undefined}>{row[c]}</td>
-                ))}
+                {cols.map((c) =>
+                  c === dataset.noteColumn ? (
+                    <td class="is-wrap is-note" set:html={renderCell(row[c] ?? '', base)} />
+                  ) : (
+                    <td class={dataset.wrapColumns.includes(c) ? 'is-wrap' : undefined}>{row[c]}</td>
+                  ),
+                )}
               </tr>
             ))}
           </tbody>
@@ -89,6 +104,7 @@ const cols = dataset?.columns.filter((c) => c !== dataset.imageColumn) ?? [];
   document.querySelectorAll<HTMLElement>('.dataset').forEach((root) => {
     const input = root.querySelector<HTMLInputElement>('input[type=search]');
     const select = root.querySelector<HTMLSelectElement>('select[data-filter-col]');
+    const note = root.querySelector<HTMLInputElement>('input[data-note-col]');
     const clear = root.querySelector<HTMLButtonElement>('.dataset__clear');
     const count = root.querySelector<HTMLOutputElement>('.dataset__count');
     const tbody = root.querySelector('tbody');
@@ -96,16 +112,19 @@ const cols = dataset?.columns.filter((c) => c !== dataset.imageColumn) ?? [];
     const rows = Array.from(tbody.rows);
     const total = rows.length;
     const imgOffset = root.querySelector('.col-img') ? 1 : 0;
+    const noteCol = note ? Number(note.dataset.noteCol) + imgOffset : -1;
 
     const apply = () => {
       const q = input?.value.trim().toLowerCase() ?? '';
       const want = select?.value ?? '';
       const col = want && select ? Number(select.dataset.filterCol) + imgOffset : -1;
+      const onlyNote = note?.checked ?? false;
       let shown = 0;
       for (const tr of rows) {
         const hit =
           (!q || tr.textContent!.toLowerCase().includes(q)) &&
-          (!want || tr.cells[col]?.textContent?.trim() === want);
+          (!want || tr.cells[col]?.textContent?.trim() === want) &&
+          (!onlyNote || !!tr.cells[noteCol]?.textContent?.trim());
         tr.hidden = !hit;
         if (hit) shown++;
       }
@@ -114,9 +133,11 @@ const cols = dataset?.columns.filter((c) => c !== dataset.imageColumn) ?? [];
 
     input?.addEventListener('input', apply);
     select?.addEventListener('change', apply);
+    note?.addEventListener('change', apply);
     clear?.addEventListener('click', () => {
       if (input) input.value = '';
       if (select) select.value = '';
+      if (note) note.checked = false;
       apply();
     });
 
