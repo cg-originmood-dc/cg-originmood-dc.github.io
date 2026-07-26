@@ -26,9 +26,7 @@ jobs:
           node-version: 22
           cache: npm
 
-      # devDependencies 只有搬遷腳本用的 gifsicle / jpegtran，
-      # 它們的 postinstall 會去下載執行檔，建站根本用不到，別讓 CI 冒這個風險
-      - run: npm ci --omit=dev
+      - run: npm ci
 
       - name: Build
         env:

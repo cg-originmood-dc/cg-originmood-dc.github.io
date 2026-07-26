@@ -13,9 +13,5 @@
     "astro": "^5.13.0",
     "csv-parse": "^5.6.0",
     "unist-util-visit": "^5.1.0"
-  },
-  "devDependencies": {
-    "gifsicle": "^7.0.1",
-    "jpegtran-bin": "^7.0.0"
   }
 }
