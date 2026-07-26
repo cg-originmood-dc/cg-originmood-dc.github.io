@@ -121,11 +121,15 @@ npm run build    # 輸出到 dist/
 
 | 情境 | `SITE_URL` | `BASE_PATH` |
 | --- | --- | --- |
-| 專案頁 `<user>.github.io/<repo>` | `https://<user>.github.io` | `/<repo>` |
-| 使用者頁或自訂網域 | 網域 | `/` |
+| 組織／使用者頁（repo 叫 `<owner>.github.io`） | `https://<owner>.github.io` | `/` |
+| 專案頁（其他 repo 名稱） | `https://<owner>.github.io` | `/<repo>` |
+| 自訂網域 | 該網域 | `/` |
 
-在 repo 的 Settings → Secrets and variables → Actions → Variables 設定即可，
-不設的話會自動用 repo 名稱當作 `BASE_PATH`。
+前兩種 workflow 會自己判斷，不用設定任何東西——repo 名稱等於 `<owner>.github.io`
+就掛在根路徑，否則掛在 `/<repo>` 底下。判斷錯的話全站連結與圖片都會 404。
+
+要覆寫（例如自訂網域）就到 repo 的
+Settings → Secrets and variables → Actions → Variables 設 `SITE_URL` / `BASE_PATH`。
 
 ---
 

@@ -32,9 +32,10 @@ jobs:
 
       - name: Build
         env:
-          # 專案頁請設成 https://<user>.github.io 與 /<repo>
           SITE_URL: ${{ vars.SITE_URL || format('https://{0}.github.io', github.repository_owner) }}
-          BASE_PATH: ${{ vars.BASE_PATH || format('/{0}', github.event.repository.name) }}
+          # repo 叫 <owner>.github.io 的話網站掛在根路徑，BASE_PATH 要是 /；
+          # 其他名字則是專案頁，掛在 /<repo> 底下。判斷錯的話全站連結與圖片都會 404。
+          BASE_PATH: ${{ vars.BASE_PATH || (github.event.repository.name == format('{0}.github.io', github.repository_owner) && '/' || format('/{0}', github.event.repository.name)) }}
         run: npm run build
 
       - uses: actions/upload-pages-artifact@v3
