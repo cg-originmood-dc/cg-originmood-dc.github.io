@@ -65,7 +65,19 @@ const cols = dataset?.columns.filter((c) => c !== dataset.imageColumn) ?? [];
               {dataset.imageColumn && <th scope="col" class="col-img">圖</th>}
               {dataset.action && <th scope="col" class="col-act">工具</th>}
               {cols.map((c, i) => (
-                <th scope="col" data-sort-index={i} tabindex="0" role="button">
+                <th
+                  scope="col"
+                  data-sort-index={i}
+                  tabindex="0"
+                  role="button"
+                  aria-sort={
+                    dataset.defaultSort?.column === c
+                      ? dataset.defaultSort.dir === 'desc'
+                        ? 'descending'
+                        : 'ascending'
+                      : undefined
+                  }
+                >
                   {c}
                 </th>
               ))}
@@ -179,8 +191,11 @@ const cols = dataset?.columns.filter((c) => c !== dataset.imageColumn) ?? [];
       apply();
     });
 
-    let sortCol = -1;
-    let asc = true;
+    // CSV 進來就排好的話，表頭已經帶著 aria-sort。把那個狀態接手過來，
+    // 否則第一次點下去會照「新欄位一律升冪」的規則，先跳到相反方向再回來。
+    const preset = root.querySelector<HTMLTableCellElement>('th[data-sort-index][aria-sort]');
+    let sortCol = preset ? Number(preset.dataset.sortIndex) : -1;
+    let asc = preset ? preset.getAttribute('aria-sort') === 'ascending' : true;
     root.querySelectorAll<HTMLTableCellElement>('th[data-sort-index]').forEach((th) => {
       const sort = () => {
         const idx = Number(th.dataset.sortIndex);

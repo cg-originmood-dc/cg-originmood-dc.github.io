@@ -22,6 +22,41 @@ export interface Dataset {
   noteColumn: string | null;
   /** 每列一顆連到外部工具的按鈕，沒設定就是 null。見下方 ACTIONS */
   action: { label: string; column: string; url: (value: string) => string } | null;
+  /**
+   * 表格一進來就已經照這一欄排好了。只是把既成事實告訴 UI，不會去動列的順序。
+   * 有值的話表頭會顯示排序箭頭，點下去直接反向，不會先跳到相反的方向再回來。
+   */
+  defaultSort: { column: string; dir: 'asc' | 'desc' } | null;
+}
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * 找出「CSV 本來就照它排好」的日期欄。
+ *
+ * 條件刻意訂得嚴：必須是日期欄，而且整份資料已經單調遞增或遞減。
+ * 只看「有沒有日期欄」是不夠的 —— 寵物表也有「公告日」，但它是照名稱排的，
+ * 認成排序欄的話等於謊報，使用者一點表頭 1069 列就會整個跳掉。
+ *
+ * 只挑 ISO 日期是因為它字串比較跟日期比較同序，前端那個
+ * Intl.Collator（numeric: true）算出來也一樣，三邊不會打架。
+ */
+function pickDefaultSort(
+  columns: string[],
+  rows: Record<string, string>[],
+): Dataset['defaultSort'] {
+  if (rows.length < 3) return null;
+  for (const col of columns) {
+    const values = rows.map((r) => (r[col] ?? '').trim());
+    const filled = values.filter(Boolean);
+    if (filled.length < rows.length * 0.9) continue;
+    if (!filled.every((v) => ISO_DATE.test(v))) continue;
+    const desc = filled.every((v, i) => i === 0 || filled[i - 1] >= v);
+    const asc = filled.every((v, i) => i === 0 || filled[i - 1] <= v);
+    if (desc) return { column: col, dir: 'desc' };
+    if (asc) return { column: col, dir: 'asc' };
+  }
+  return null;
 }
 
 /**
@@ -117,6 +152,7 @@ export function loadDataset(name: string): Dataset | null {
         .filter((c) => c.linked > 0)
         .sort((a, b) => a.linked - b.linked)[0]?.name ?? null,
     action: ACTIONS[name] && columns.includes(ACTIONS[name].column) ? ACTIONS[name] : null,
+    defaultSort: pickDefaultSort(columns, records),
     filterColumn: pickFilterColumn(columns, records, imageColumn),
     wrapColumns: columns.filter((c) => {
       if (c === imageColumn) return false;
