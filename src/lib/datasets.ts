@@ -90,7 +90,16 @@ export function loadDataset(name: string): Dataset | null {
     columns,
     rows: records,
     imageColumn,
-    noteColumn: columns.find((c) => records.some((r) => hasLink(r[c] ?? ''))) ?? null,
+    // 可能同時有「公告連結」與稀疏的「任務用途」；勾選器應選最稀疏、
+    // 最像補充註記的連結欄，而不是第一個碰到的連結欄。
+    noteColumn:
+      columns
+        .map((c) => ({
+          name: c,
+          linked: records.filter((r) => hasLink(r[c] ?? '')).length,
+        }))
+        .filter((c) => c.linked > 0)
+        .sort((a, b) => a.linked - b.linked)[0]?.name ?? null,
     filterColumn: pickFilterColumn(columns, records, imageColumn),
     wrapColumns: columns.filter((c) => {
       if (c === imageColumn) return false;

@@ -83,13 +83,19 @@ const cols = dataset?.columns.filter((c) => c !== dataset.imageColumn) ?? [];
                     ) : null}
                   </td>
                 )}
-                {cols.map((c) =>
-                  c === dataset.noteColumn ? (
-                    <td class="is-wrap is-note" set:html={renderCell(row[c] ?? '', base)} />
+                {cols.map((c) => {
+                  const value = row[c] ?? '';
+                  const linked = /\[[^\]]+\]\([^)]+\)/.test(value);
+                  const classes = [
+                    dataset.wrapColumns.includes(c) ? 'is-wrap' : '',
+                    c === dataset.noteColumn ? 'is-note' : '',
+                  ].filter(Boolean).join(' ');
+                  return linked ? (
+                    <td class={classes || undefined} set:html={renderCell(value, base)} />
                   ) : (
-                    <td class={dataset.wrapColumns.includes(c) ? 'is-wrap' : undefined}>{row[c]}</td>
-                  ),
-                )}
+                    <td class={classes || undefined}>{value}</td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>
