@@ -532,6 +532,30 @@ main {
   background: #f7f7f7;
 }
 
+/* 外部工具按鈕欄（見 datasets.ts 的 ACTIONS） */
+.dataset .col-act {
+  width: 4.5rem;
+  text-align: center;
+}
+
+.dataset__act {
+  display: inline-block;
+  padding: 0.15rem 0.45rem;
+  border: 1px solid #c8c8c8;
+  border-radius: 3px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.dataset__act:hover {
+  border-color: var(--link);
+  color: var(--link);
+}
+
 .dataset .col-img {
   width: 3.25rem;
   text-align: center;

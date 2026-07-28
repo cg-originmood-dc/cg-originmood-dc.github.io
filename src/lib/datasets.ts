@@ -20,7 +20,23 @@ export interface Dataset {
    * 會渲染成連結，並多給一個「只看有這欄的」勾選框。
    */
   noteColumn: string | null;
+  /** 每列一顆連到外部工具的按鈕，沒設定就是 null。見下方 ACTIONS */
+  action: { label: string; column: string; url: (value: string) => string } | null;
 }
+
+/**
+ * 資料表接外部工具的按鈕。
+ *
+ * 這是介面層的設定而不是資料：寫進 CSV 的話 1069 列每一列都要重複同一個網址，
+ * 而且會被 noteColumn 當成「帶連結的補充欄」搶走（「任務用途」就不會被認出來）。
+ */
+const ACTIONS: Record<string, NonNullable<Dataset['action']>> = {
+  專屬寵物: {
+    label: '算檔次',
+    column: '名稱',
+    url: (v) => `https://cg-originmood-dc.github.io/monster-remake/?q=${encodeURIComponent(v)}`,
+  },
+};
 
 /**
  * 猜哪一欄適合當下拉篩選。
@@ -100,6 +116,7 @@ export function loadDataset(name: string): Dataset | null {
         }))
         .filter((c) => c.linked > 0)
         .sort((a, b) => a.linked - b.linked)[0]?.name ?? null,
+    action: ACTIONS[name] && columns.includes(ACTIONS[name].column) ? ACTIONS[name] : null,
     filterColumn: pickFilterColumn(columns, records, imageColumn),
     wrapColumns: columns.filter((c) => {
       if (c === imageColumn) return false;

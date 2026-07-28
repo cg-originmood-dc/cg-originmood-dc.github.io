@@ -63,6 +63,7 @@ const cols = dataset?.columns.filter((c) => c !== dataset.imageColumn) ?? [];
           <thead>
             <tr>
               {dataset.imageColumn && <th scope="col" class="col-img">圖</th>}
+              {dataset.action && <th scope="col" class="col-act">工具</th>}
               {cols.map((c, i) => (
                 <th scope="col" data-sort-index={i} tabindex="0" role="button">
                   {c}
@@ -80,6 +81,20 @@ const cols = dataset?.columns.filter((c) => c !== dataset.imageColumn) ?? [];
                         <img src={src(thumbOf(row[dataset.imageColumn]))} alt="" loading="lazy" decoding="async" />
                         <img class="hoverpic__big" src={src(row[dataset.imageColumn])} alt="" loading="lazy" decoding="async" />
                       </span>
+                    ) : null}
+                  </td>
+                )}
+                {dataset.action && (
+                  <td class="col-act">
+                    {row[dataset.action.column] ? (
+                      <a
+                        class="dataset__act"
+                        href={dataset.action.url(row[dataset.action.column])}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {dataset.action.label}
+                      </a>
                     ) : null}
                   </td>
                 )}
@@ -117,18 +132,35 @@ const cols = dataset?.columns.filter((c) => c !== dataset.imageColumn) ?? [];
     if (!tbody) return;
     const rows = Array.from(tbody.rows);
     const total = rows.length;
-    const imgOffset = root.querySelector('.col-img') ? 1 : 0;
-    const noteCol = note ? Number(note.dataset.noteCol) + imgOffset : -1;
+    // 資料欄前面可能插了圖片欄與工具按鈕欄，兩者都不在 cols 裡，
+    // 所以 data-sort-index / data-filter-col 這些索引都要加上這個偏移
+    const lead =
+      (root.querySelector('.col-img') ? 1 : 0) + (root.querySelector('.col-act') ? 1 : 0);
+    const noteCol = note ? Number(note.dataset.noteCol) + lead : -1;
+
+    // 搜尋字串先算好：一來 1069 列每次按鍵都跑 textContent 很浪費，
+    // 二來要把工具按鈕的字排除掉，否則搜「算」會命中每一列。
+    // 綁在列物件上而不是用陣列索引 —— 排序會重排 rows，索引會對不上。
+    const hay = new Map(
+      rows.map((tr) => [
+        tr,
+        Array.from(tr.cells)
+          .filter((td) => !td.classList.contains('col-act'))
+          .map((td) => td.textContent)
+          .join(' ')
+          .toLowerCase(),
+      ]),
+    );
 
     const apply = () => {
       const q = input?.value.trim().toLowerCase() ?? '';
       const want = select?.value ?? '';
-      const col = want && select ? Number(select.dataset.filterCol) + imgOffset : -1;
+      const col = want && select ? Number(select.dataset.filterCol) + lead : -1;
       const onlyNote = note?.checked ?? false;
       let shown = 0;
       for (const tr of rows) {
         const hit =
-          (!q || tr.textContent!.toLowerCase().includes(q)) &&
+          (!q || hay.get(tr)!.includes(q)) &&
           (!want || tr.cells[col]?.textContent?.trim() === want) &&
           (!onlyNote || !!tr.cells[noteCol]?.textContent?.trim());
         tr.hidden = !hit;
@@ -152,7 +184,7 @@ const cols = dataset?.columns.filter((c) => c !== dataset.imageColumn) ?? [];
     root.querySelectorAll<HTMLTableCellElement>('th[data-sort-index]').forEach((th) => {
       const sort = () => {
         const idx = Number(th.dataset.sortIndex);
-        const cell = idx + imgOffset;
+        const cell = idx + lead;
         asc = sortCol === idx ? !asc : true;
         sortCol = idx;
 
