@@ -9,12 +9,7 @@ const { src } = Astro.props;
 const { style, body, scripts } = loadDbHtml(src);
 ---
 
-{
-  /*
-   * 注意：set:html 插入的 <script> 不會被瀏覽器執行。
-   * 因此 loadDbHtml 會抽出 scripts，這裡再以 createElement 掛上。
-   */
-}
+{/* set:html 插入的 script 標籤不會執行；scripts 由下方 is:inline 重掛 */}
 <div class="db-embed-shell" set:html={`<style>${style}</style><div class="db-embed">${body}</div>`} />
 
 {
