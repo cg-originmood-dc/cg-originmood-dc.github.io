@@ -62,9 +62,13 @@ const s140 = statsAt(140);
 const formulaJson = JSON.stringify(clientFormulaPayload());
 const growJson = grow ? JSON.stringify(grow) : 'null';
 
-const { tree: fusionRoot, hasFullData: hasFusionData } = pet
+const {
+  tree: fusionRoot,
+  hasFullData: hasFusionData,
+  outcomes: fusionOutcomes,
+} = pet
   ? resolveFusionTree(pet.名稱, img)
-  : { tree: null as any, hasFullData: false };
+  : { tree: null as any, hasFullData: false, outcomes: [] as any[] };
 
 /** 相關合成活動（連到 /寵物合成活動#act-…） */
 const synthesisActivities = pet ? listActivitiesForPet(pet.名稱) : [];
@@ -440,6 +444,43 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
           <tr>
             <td style="padding: 10px 0;">
               <div class="tree-container">
+                {
+                  fusionOutcomes.length > 1 && (
+                    <div class="fusion-outcomes" aria-label="產物機率">
+                      <span class="fusion-outcomes__label">產物機率</span>
+                      <ul class="fusion-outcomes__list">
+                        {
+                          fusionOutcomes.map((o) => {
+                            const isCur = o.type === 'pet' && o.name === pet.名稱;
+                            const href =
+                              o.type === 'pet'
+                                ? `${base}/寵物資料/${encodeURIComponent(o.name)}`
+                                : null;
+                            return (
+                              <li
+                                class:list={[
+                                  'fusion-outcomes__item',
+                                  { 'is-current': isCur },
+                                ]}
+                              >
+                                {
+                                  href && !isCur ? (
+                                    <a href={href}>{o.name}</a>
+                                  ) : (
+                                    <span>{o.name}</span>
+                                  )
+                                }
+                                {o.prob && (
+                                  <span class="fusion-outcomes__prob">{o.prob}</span>
+                                )}
+                              </li>
+                            );
+                          })
+                        }
+                      </ul>
+                    </div>
+                  )
+                }
                 <ul class="tree-diagram">
                   <FusionTree node={fusionRoot} base={base} currentName={pet.名稱} />
                 </ul>
@@ -876,6 +917,61 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
     margin-left: 0.75em;
     font-size: 12px;
     font-weight: 600 !important;
+  }
+
+  /* ---- 多產物機率（樹外橫列，不破壞經典樹狀） ---- */
+  .fusion-outcomes {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.6rem;
+    margin: 0 0 0.75rem;
+    padding: 0.5rem 0.65rem;
+    background: #fafafa;
+    border: 1px solid #e8e8e8;
+    border-radius: 6px;
+    font-size: 0.85rem;
+  }
+  .fusion-outcomes__label {
+    font-weight: 700;
+    color: #5f6368;
+    margin-right: 0.15rem;
+  }
+  .fusion-outcomes__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .fusion-outcomes__item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.5rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 999px;
+    background: #fff;
+    color: #333;
+  }
+  .fusion-outcomes__item a {
+    color: #1565c0;
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .fusion-outcomes__item a:hover {
+    text-decoration: underline;
+  }
+  .fusion-outcomes__item.is-current {
+    border-color: #1565c0;
+    background: #e3f2fd;
+    font-weight: 700;
+  }
+  .fusion-outcomes__prob {
+    font-size: 0.8em;
+    color: #e65100;
+    font-weight: 700;
   }
 
   /* ---- 合成樹 ---- */
