@@ -6,10 +6,31 @@ interface Props {
   src: string;
 }
 const { src } = Astro.props;
-const { style, body } = loadDbHtml(src);
+const { style, body, scripts } = loadDbHtml(src);
 ---
 
+{
+  /*
+   * 注意：set:html 插入的 <script> 不會被瀏覽器執行。
+   * 因此 loadDbHtml 會抽出 scripts，這裡再以 createElement 掛上。
+   */
+}
 <div class="db-embed-shell" set:html={`<style>${style}</style><div class="db-embed">${body}</div>`} />
+
+{
+  scripts.length > 0 && (
+    <script is:inline define:vars={{ dbEmbedScripts: scripts }}>
+      (function () {
+        var list = dbEmbedScripts || [];
+        for (var i = 0; i < list.length; i++) {
+          var s = document.createElement('script');
+          s.text = list[i];
+          document.body.appendChild(s);
+        }
+      })();
+    </script>
+  )
+}
 
 <style is:global>
   /* 內嵌資料庫：白底、撐滿右側內容區（符合原站版面） */

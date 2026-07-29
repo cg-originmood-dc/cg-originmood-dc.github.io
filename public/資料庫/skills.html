@@ -311,24 +311,13 @@
 <div id="wrapper">
 
   <h2 style="color: #212121; border-left: 6px solid #008be3; padding-left: 12px; margin-top: 0;">
-    ⚡ 技能總覽
+    技能總覽
   </h2>
 
-
-  <!-- 主分類：全部 / 人物 / 寵物（單選） -->
-  <div class="filter-section" id="mode-filter">
-    <div class="filter-group-title">📚 技能範圍（單選）</div>
-    <div class="filter-buttons">
-      <button class="filter-btn filter-btn-primary active" data-mode="all" onclick="setSkillMode('all', this)">全部技能</button>
-      <button class="filter-btn filter-btn-primary" data-mode="char" onclick="setSkillMode('char', this)">人物技能</button>
-      <button class="filter-btn filter-btn-primary" data-mode="pet" onclick="setSkillMode('pet', this)">寵物技能</button>
-    </div>
-  </div>
-
   <div class="filter-section" id="char-subfilter" data-filter-scope="char">
-    <div class="filter-group-title">👤 人物技能分類</div>
+    <div class="filter-group-title">人物技能分類</div>
     <div class="filter-buttons">
-      <button class="filter-btn active" data-scope="char" data-cat="all" onclick="setSubFilter('char', 'all', this)">全部人物技能</button>
+      <button class="filter-btn" data-scope="char" data-cat="all" onclick="setSubFilter('char', 'all', this)">全部人物技能</button>
       <button class="filter-btn" data-scope="char" data-cat="atk_phys" onclick="setSubFilter('char', 'atk_phys', this)">戰鬥攻擊技能</button>
       <button class="filter-btn" data-scope="char" data-cat="def_phys" onclick="setSubFilter('char', 'def_phys', this)">戰鬥防禦技能</button>
       <button class="filter-btn" data-scope="char" data-cat="sup_phys" onclick="setSubFilter('char', 'sup_phys', this)">戰鬥輔助技能</button>
@@ -341,9 +330,9 @@
   </div>
 
   <div class="filter-section" id="pet-subfilter" data-filter-scope="pet">
-    <div class="filter-group-title">🐾 寵物技能分類</div>
+    <div class="filter-group-title">寵物技能分類</div>
     <div class="filter-buttons">
-      <button class="filter-btn active" data-scope="pet" data-cat="all" onclick="setSubFilter('pet', 'all', this)">全部寵物技能</button>
+      <button class="filter-btn" data-scope="pet" data-cat="all" onclick="setSubFilter('pet', 'all', this)">全部寵物技能</button>
       <button class="filter-btn" data-scope="pet" data-cat="pet_general" onclick="setSubFilter('pet', 'pet_general', this)">寵物一般技能</button>
       <button class="filter-btn" data-scope="pet" data-cat="pet_combat" onclick="setSubFilter('pet', 'pet_combat', this)">寵物戰鬥技能</button>
       <button class="filter-btn" data-scope="pet" data-cat="pet_magic" onclick="setSubFilter('pet', 'pet_magic', this)">寵物魔法技能</button>
@@ -352,18 +341,25 @@
 </div>
   </div>
 
+  <div class="filter-section hidden-section" id="skill-name-filter">
+    <div class="filter-group-title">選擇技能</div>
+    <div class="filter-buttons" id="skill-name-buttons">
+      <!-- 依分類動態產生技能名稱 -->
+    </div>
+  </div>
+
+
 
   <div id="char-skills-section">
-    <div class="section-label" id="char-section-label">👤 人物技能列表</div>
+<div class="section-label" id="char-section-label">人物技能列表</div>
     <div id="skills-container">
 <div class="skill-card-block" data-scope="char" data-category="atk_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">⚔️</span>
               <span class="skill-main-name">連擊</span>
               <span class="skill-cat-badge">戰鬥攻擊技能</span>
             </div>
-            <a href="/技能總覽/連擊" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/連擊" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -474,11 +470,10 @@
 <div class="skill-card-block" data-scope="char" data-category="atk_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">⚔️</span>
               <span class="skill-main-name">諸刃</span>
               <span class="skill-cat-badge">戰鬥攻擊技能</span>
             </div>
-            <a href="/技能總覽/諸刃" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/諸刃" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -571,11 +566,10 @@
 <div class="skill-card-block" data-scope="char" data-category="atk_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">⚔️</span>
               <span class="skill-main-name">反擊</span>
               <span class="skill-cat-badge">戰鬥攻擊技能</span>
             </div>
-            <a href="/技能總覽/反擊" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/反擊" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -668,11 +662,10 @@
 <div class="skill-card-block" data-scope="char" data-category="atk_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">⚔️</span>
               <span class="skill-main-name">崩擊</span>
               <span class="skill-cat-badge">戰鬥攻擊技能</span>
             </div>
-            <a href="/技能總覽/崩擊" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/崩擊" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -765,11 +758,10 @@
 <div class="skill-card-block" data-scope="char" data-category="atk_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">⚔️</span>
               <span class="skill-main-name">亂射</span>
               <span class="skill-cat-badge">戰鬥攻擊技能</span>
             </div>
-            <a href="/技能總覽/亂射" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/亂射" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -862,11 +854,10 @@
 <div class="skill-card-block" data-scope="char" data-category="atk_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">⚔️</span>
               <span class="skill-main-name">毒擊</span>
               <span class="skill-cat-badge">戰鬥攻擊技能</span>
             </div>
-            <a href="/技能總覽/毒擊" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/毒擊" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -959,11 +950,10 @@
 <div class="skill-card-block" data-scope="char" data-category="atk_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">⚔️</span>
               <span class="skill-main-name">投擲</span>
               <span class="skill-cat-badge">戰鬥攻擊技能</span>
             </div>
-            <a href="/技能總覽/投擲" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/投擲" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -1056,11 +1046,10 @@
 <div class="skill-card-block" data-scope="char" data-category="atk_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">⚔️</span>
               <span class="skill-main-name">氣功彈</span>
               <span class="skill-cat-badge">戰鬥攻擊技能</span>
             </div>
-            <a href="/技能總覽/氣功彈" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/氣功彈" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -1153,11 +1142,10 @@
 <div class="skill-card-block" data-scope="char" data-category="atk_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">⚔️</span>
               <span class="skill-main-name">乾坤一擲</span>
               <span class="skill-cat-badge">戰鬥攻擊技能</span>
             </div>
-            <a href="/技能總覽/乾坤一擲" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/乾坤一擲" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -1250,11 +1238,10 @@
 <div class="skill-card-block" data-scope="char" data-category="atk_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">⚔️</span>
               <span class="skill-main-name">混亂攻擊</span>
               <span class="skill-cat-badge">戰鬥攻擊技能</span>
             </div>
-            <a href="/技能總覽/混亂攻擊" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/混亂攻擊" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -1335,11 +1322,10 @@
 <div class="skill-card-block" data-scope="char" data-category="atk_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">⚔️</span>
               <span class="skill-main-name">因果報應</span>
               <span class="skill-cat-badge">戰鬥攻擊技能</span>
             </div>
-            <a href="/技能總覽/因果報應" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/因果報應" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -1432,11 +1418,10 @@
 <div class="skill-card-block" data-scope="char" data-category="def_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛡️</span>
               <span class="skill-main-name">陽炎</span>
               <span class="skill-cat-badge">戰鬥防禦技能</span>
             </div>
-            <a href="/技能總覽/陽炎" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/陽炎" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -1529,11 +1514,10 @@
 <div class="skill-card-block" data-scope="char" data-category="def_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛡️</span>
               <span class="skill-main-name">護衛</span>
               <span class="skill-cat-badge">戰鬥防禦技能</span>
             </div>
-            <a href="/技能總覽/護衛" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/護衛" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -1626,11 +1610,10 @@
 <div class="skill-card-block" data-scope="char" data-category="def_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛡️</span>
               <span class="skill-main-name">聖盾</span>
               <span class="skill-cat-badge">戰鬥防禦技能</span>
             </div>
-            <a href="/技能總覽/聖盾" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/聖盾" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -1723,11 +1706,10 @@
 <div class="skill-card-block" data-scope="char" data-category="def_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛡️</span>
               <span class="skill-main-name">攻擊魔法防禦</span>
               <span class="skill-cat-badge">戰鬥防禦技能</span>
             </div>
-            <a href="/技能總覽/攻擊魔法防禦" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/攻擊魔法防禦" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -1820,11 +1802,10 @@
 <div class="skill-card-block" data-scope="char" data-category="sup_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">✨</span>
               <span class="skill-main-name">暗殺</span>
               <span class="skill-cat-badge">戰鬥輔助技能</span>
             </div>
-            <a href="/技能總覽/暗殺" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/暗殺" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -1917,11 +1898,10 @@
 <div class="skill-card-block" data-scope="char" data-category="sup_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">✨</span>
               <span class="skill-main-name">戰慄襲心</span>
               <span class="skill-cat-badge">戰鬥輔助技能</span>
             </div>
-            <a href="/技能總覽/戰慄襲心" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/戰慄襲心" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -2014,11 +1994,10 @@
 <div class="skill-card-block" data-scope="char" data-category="sup_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">✨</span>
               <span class="skill-main-name">明鏡止水</span>
               <span class="skill-cat-badge">戰鬥輔助技能</span>
             </div>
-            <a href="/技能總覽/明鏡止水" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/明鏡止水" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -2111,11 +2090,10 @@
 <div class="skill-card-block" data-scope="char" data-category="sup_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">✨</span>
               <span class="skill-main-name">石化抵抗</span>
               <span class="skill-cat-badge">戰鬥輔助技能</span>
             </div>
-            <a href="/技能總覽/石化抵抗" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/石化抵抗" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -2208,11 +2186,10 @@
 <div class="skill-card-block" data-scope="char" data-category="sup_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">✨</span>
               <span class="skill-main-name">遺忘抵抗</span>
               <span class="skill-cat-badge">戰鬥輔助技能</span>
             </div>
-            <a href="/技能總覽/遺忘抵抗" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/遺忘抵抗" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -2305,11 +2282,10 @@
 <div class="skill-card-block" data-scope="char" data-category="sup_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">✨</span>
               <span class="skill-main-name">混亂抵抗</span>
               <span class="skill-cat-badge">戰鬥輔助技能</span>
             </div>
-            <a href="/技能總覽/混亂抵抗" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/混亂抵抗" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -2402,11 +2378,10 @@
 <div class="skill-card-block" data-scope="char" data-category="sup_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">✨</span>
               <span class="skill-main-name">酒醉抵抗</span>
               <span class="skill-cat-badge">戰鬥輔助技能</span>
             </div>
-            <a href="/技能總覽/酒醉抵抗" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/酒醉抵抗" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -2499,11 +2474,10 @@
 <div class="skill-card-block" data-scope="char" data-category="sup_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">✨</span>
               <span class="skill-main-name">中毒抵抗</span>
               <span class="skill-cat-badge">戰鬥輔助技能</span>
             </div>
-            <a href="/技能總覽/中毒抵抗" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/中毒抵抗" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -2596,11 +2570,10 @@
 <div class="skill-card-block" data-scope="char" data-category="sup_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">✨</span>
               <span class="skill-main-name">昏睡抵抗</span>
               <span class="skill-cat-badge">戰鬥輔助技能</span>
             </div>
-            <a href="/技能總覽/昏睡抵抗" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/昏睡抵抗" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -2693,11 +2666,10 @@
 <div class="skill-card-block" data-scope="char" data-category="atk_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🔥</span>
               <span class="skill-main-name">隕石魔法</span>
               <span class="skill-cat-badge">屬性攻擊魔法</span>
             </div>
-            <a href="/技能總覽/隕石魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/隕石魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -2790,11 +2762,10 @@
 <div class="skill-card-block" data-scope="char" data-category="atk_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🔥</span>
               <span class="skill-main-name">冰凍魔法</span>
               <span class="skill-cat-badge">屬性攻擊魔法</span>
             </div>
-            <a href="/技能總覽/冰凍魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/冰凍魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -2887,11 +2858,10 @@
 <div class="skill-card-block" data-scope="char" data-category="atk_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🔥</span>
               <span class="skill-main-name">火焰魔法</span>
               <span class="skill-cat-badge">屬性攻擊魔法</span>
             </div>
-            <a href="/技能總覽/火焰魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/火焰魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -2984,11 +2954,10 @@
 <div class="skill-card-block" data-scope="char" data-category="atk_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🔥</span>
               <span class="skill-main-name">風刃魔法</span>
               <span class="skill-cat-badge">屬性攻擊魔法</span>
             </div>
-            <a href="/技能總覽/風刃魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/風刃魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -3081,11 +3050,10 @@
 <div class="skill-card-block" data-scope="char" data-category="atk_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🔥</span>
               <span class="skill-main-name">吸血魔法</span>
               <span class="skill-cat-badge">屬性攻擊魔法</span>
             </div>
-            <a href="/技能總覽/吸血魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/吸血魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -3178,11 +3146,10 @@
 <div class="skill-card-block" data-scope="char" data-category="atk_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🔥</span>
               <span class="skill-main-name">強力隕石魔法</span>
               <span class="skill-cat-badge">屬性攻擊魔法</span>
             </div>
-            <a href="/技能總覽/強力隕石魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/強力隕石魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -3275,11 +3242,10 @@
 <div class="skill-card-block" data-scope="char" data-category="atk_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🔥</span>
               <span class="skill-main-name">強力冰凍魔法</span>
               <span class="skill-cat-badge">屬性攻擊魔法</span>
             </div>
-            <a href="/技能總覽/強力冰凍魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/強力冰凍魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -3372,11 +3338,10 @@
 <div class="skill-card-block" data-scope="char" data-category="atk_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🔥</span>
               <span class="skill-main-name">強力火焰魔法</span>
               <span class="skill-cat-badge">屬性攻擊魔法</span>
             </div>
-            <a href="/技能總覽/強力火焰魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/強力火焰魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -3469,11 +3434,10 @@
 <div class="skill-card-block" data-scope="char" data-category="atk_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🔥</span>
               <span class="skill-main-name">強力風刃魔法</span>
               <span class="skill-cat-badge">屬性攻擊魔法</span>
             </div>
-            <a href="/技能總覽/強力風刃魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/強力風刃魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -3566,11 +3530,10 @@
 <div class="skill-card-block" data-scope="char" data-category="atk_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🔥</span>
               <span class="skill-main-name">超強隕石魔法</span>
               <span class="skill-cat-badge">屬性攻擊魔法</span>
             </div>
-            <a href="/技能總覽/超強隕石魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/超強隕石魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -3663,11 +3626,10 @@
 <div class="skill-card-block" data-scope="char" data-category="atk_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🔥</span>
               <span class="skill-main-name">超強冰凍魔法</span>
               <span class="skill-cat-badge">屬性攻擊魔法</span>
             </div>
-            <a href="/技能總覽/超強冰凍魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/超強冰凍魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -3760,11 +3722,10 @@
 <div class="skill-card-block" data-scope="char" data-category="atk_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🔥</span>
               <span class="skill-main-name">超強火焰魔法</span>
               <span class="skill-cat-badge">屬性攻擊魔法</span>
             </div>
-            <a href="/技能總覽/超強火焰魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/超強火焰魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -3857,11 +3818,10 @@
 <div class="skill-card-block" data-scope="char" data-category="atk_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🔥</span>
               <span class="skill-main-name">超強風刃魔法</span>
               <span class="skill-cat-badge">屬性攻擊魔法</span>
             </div>
-            <a href="/技能總覽/超強風刃魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/超強風刃魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -3954,11 +3914,10 @@
 <div class="skill-card-block" data-scope="char" data-category="atk_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🔮</span>
               <span class="skill-main-name">精神衝擊波</span>
               <span class="skill-cat-badge">屬性攻擊魔法</span>
             </div>
-            <a href="/技能總覽/精神衝擊波" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/精神衝擊波" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -4051,11 +4010,10 @@
 <div class="skill-card-block" data-scope="char" data-category="status_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">💤</span>
               <span class="skill-main-name">石化魔法</span>
               <span class="skill-cat-badge">狀態變化魔法</span>
             </div>
-            <a href="/技能總覽/石化魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/石化魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -4148,11 +4106,10 @@
 <div class="skill-card-block" data-scope="char" data-category="status_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">💤</span>
               <span class="skill-main-name">遺忘魔法</span>
               <span class="skill-cat-badge">狀態變化魔法</span>
             </div>
-            <a href="/技能總覽/遺忘魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/遺忘魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -4245,11 +4202,10 @@
 <div class="skill-card-block" data-scope="char" data-category="status_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">💤</span>
               <span class="skill-main-name">混亂魔法</span>
               <span class="skill-cat-badge">狀態變化魔法</span>
             </div>
-            <a href="/技能總覽/混亂魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/混亂魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -4342,11 +4298,10 @@
 <div class="skill-card-block" data-scope="char" data-category="status_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">💤</span>
               <span class="skill-main-name">酒醉魔法</span>
               <span class="skill-cat-badge">狀態變化魔法</span>
             </div>
-            <a href="/技能總覽/酒醉魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/酒醉魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -4439,11 +4394,10 @@
 <div class="skill-card-block" data-scope="char" data-category="status_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">💤</span>
               <span class="skill-main-name">中毒魔法</span>
               <span class="skill-cat-badge">狀態變化魔法</span>
             </div>
-            <a href="/技能總覽/中毒魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/中毒魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -4536,11 +4490,10 @@
 <div class="skill-card-block" data-scope="char" data-category="status_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">💤</span>
               <span class="skill-main-name">昏睡魔法</span>
               <span class="skill-cat-badge">狀態變化魔法</span>
             </div>
-            <a href="/技能總覽/昏睡魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/昏睡魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -4633,11 +4586,10 @@
 <div class="skill-card-block" data-scope="char" data-category="status_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">💤</span>
               <span class="skill-main-name">強力石化魔法</span>
               <span class="skill-cat-badge">狀態變化魔法</span>
             </div>
-            <a href="/技能總覽/強力石化魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/強力石化魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -4730,11 +4682,10 @@
 <div class="skill-card-block" data-scope="char" data-category="status_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">💤</span>
               <span class="skill-main-name">強力遺忘魔法</span>
               <span class="skill-cat-badge">狀態變化魔法</span>
             </div>
-            <a href="/技能總覽/強力遺忘魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/強力遺忘魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -4827,11 +4778,10 @@
 <div class="skill-card-block" data-scope="char" data-category="status_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">💤</span>
               <span class="skill-main-name">強力混亂魔法</span>
               <span class="skill-cat-badge">狀態變化魔法</span>
             </div>
-            <a href="/技能總覽/強力混亂魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/強力混亂魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -4924,11 +4874,10 @@
 <div class="skill-card-block" data-scope="char" data-category="status_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">💤</span>
               <span class="skill-main-name">強力酒醉魔法</span>
               <span class="skill-cat-badge">狀態變化魔法</span>
             </div>
-            <a href="/技能總覽/強力酒醉魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/強力酒醉魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -5021,11 +4970,10 @@
 <div class="skill-card-block" data-scope="char" data-category="status_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">💤</span>
               <span class="skill-main-name">強力中毒魔法</span>
               <span class="skill-cat-badge">狀態變化魔法</span>
             </div>
-            <a href="/技能總覽/強力中毒魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/強力中毒魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -5118,11 +5066,10 @@
 <div class="skill-card-block" data-scope="char" data-category="status_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">💤</span>
               <span class="skill-main-name">強力昏睡魔法</span>
               <span class="skill-cat-badge">狀態變化魔法</span>
             </div>
-            <a href="/技能總覽/強力昏睡魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/強力昏睡魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -5215,11 +5162,10 @@
 <div class="skill-card-block" data-scope="char" data-category="status_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">💤</span>
               <span class="skill-main-name">超強石化魔法</span>
               <span class="skill-cat-badge">狀態變化魔法</span>
             </div>
-            <a href="/技能總覽/超強石化魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/超強石化魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -5312,11 +5258,10 @@
 <div class="skill-card-block" data-scope="char" data-category="status_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">💤</span>
               <span class="skill-main-name">超強遺忘魔法</span>
               <span class="skill-cat-badge">狀態變化魔法</span>
             </div>
-            <a href="/技能總覽/超強遺忘魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/超強遺忘魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -5409,11 +5354,10 @@
 <div class="skill-card-block" data-scope="char" data-category="status_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">💤</span>
               <span class="skill-main-name">超強混亂魔法</span>
               <span class="skill-cat-badge">狀態變化魔法</span>
             </div>
-            <a href="/技能總覽/超強混亂魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/超強混亂魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -5506,11 +5450,10 @@
 <div class="skill-card-block" data-scope="char" data-category="status_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">💤</span>
               <span class="skill-main-name">超強酒醉魔法</span>
               <span class="skill-cat-badge">狀態變化魔法</span>
             </div>
-            <a href="/技能總覽/超強酒醉魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/超強酒醉魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -5603,11 +5546,10 @@
 <div class="skill-card-block" data-scope="char" data-category="status_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">💤</span>
               <span class="skill-main-name">超強中毒魔法</span>
               <span class="skill-cat-badge">狀態變化魔法</span>
             </div>
-            <a href="/技能總覽/超強中毒魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/超強中毒魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -5700,11 +5642,10 @@
 <div class="skill-card-block" data-scope="char" data-category="status_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">💤</span>
               <span class="skill-main-name">超強昏睡魔法</span>
               <span class="skill-cat-badge">狀態變化魔法</span>
             </div>
-            <a href="/技能總覽/超強昏睡魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/超強昏睡魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -5797,11 +5738,10 @@
 <div class="skill-card-block" data-scope="char" data-category="status_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">💤</span>
               <span class="skill-main-name">大地的祈禱</span>
               <span class="skill-cat-badge">狀態變化魔法</span>
             </div>
-            <a href="/技能總覽/大地的祈禱" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/大地的祈禱" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -5894,11 +5834,10 @@
 <div class="skill-card-block" data-scope="char" data-category="status_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">💤</span>
               <span class="skill-main-name">海洋的祈禱</span>
               <span class="skill-cat-badge">狀態變化魔法</span>
             </div>
-            <a href="/技能總覽/海洋的祈禱" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/海洋的祈禱" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -5991,11 +5930,10 @@
 <div class="skill-card-block" data-scope="char" data-category="status_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">💤</span>
               <span class="skill-main-name">火焰的祈禱</span>
               <span class="skill-cat-badge">狀態變化魔法</span>
             </div>
-            <a href="/技能總覽/火焰的祈禱" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/火焰的祈禱" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -6088,11 +6026,10 @@
 <div class="skill-card-block" data-scope="char" data-category="status_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">💤</span>
               <span class="skill-main-name">雲群的祈禱</span>
               <span class="skill-cat-badge">狀態變化魔法</span>
             </div>
-            <a href="/技能總覽/雲群的祈禱" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/雲群的祈禱" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -6185,11 +6122,10 @@
 <div class="skill-card-block" data-scope="char" data-category="status_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">💤</span>
               <span class="skill-main-name">屬性反轉</span>
               <span class="skill-cat-badge">狀態變化魔法</span>
             </div>
-            <a href="/技能總覽/屬性反轉" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/屬性反轉" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -6282,11 +6218,10 @@
 <div class="skill-card-block" data-scope="char" data-category="sup_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🩹</span>
               <span class="skill-main-name">補血魔法</span>
               <span class="skill-cat-badge">戰鬥輔助魔法</span>
             </div>
-            <a href="/技能總覽/補血魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/補血魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -6379,11 +6314,10 @@
 <div class="skill-card-block" data-scope="char" data-category="sup_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🩹</span>
               <span class="skill-main-name">強力補血魔法</span>
               <span class="skill-cat-badge">戰鬥輔助魔法</span>
             </div>
-            <a href="/技能總覽/強力補血魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/強力補血魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -6476,11 +6410,10 @@
 <div class="skill-card-block" data-scope="char" data-category="sup_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🩹</span>
               <span class="skill-main-name">超強補血魔法</span>
               <span class="skill-cat-badge">戰鬥輔助魔法</span>
             </div>
-            <a href="/技能總覽/超強補血魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/超強補血魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -6573,11 +6506,10 @@
 <div class="skill-card-block" data-scope="char" data-category="sup_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🩹</span>
               <span class="skill-main-name">氣絕回復</span>
               <span class="skill-cat-badge">戰鬥輔助魔法</span>
             </div>
-            <a href="/技能總覽/氣絕回復" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/氣絕回復" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -6670,11 +6602,10 @@
 <div class="skill-card-block" data-scope="char" data-category="sup_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🩹</span>
               <span class="skill-main-name">潔淨魔法</span>
               <span class="skill-cat-badge">戰鬥輔助魔法</span>
             </div>
-            <a href="/技能總覽/潔淨魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/潔淨魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -6767,11 +6698,10 @@
 <div class="skill-card-block" data-scope="char" data-category="sup_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🩹</span>
               <span class="skill-main-name">恢復魔法</span>
               <span class="skill-cat-badge">戰鬥輔助魔法</span>
             </div>
-            <a href="/技能總覽/恢復魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/恢復魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -6864,11 +6794,10 @@
 <div class="skill-card-block" data-scope="char" data-category="sup_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🩹</span>
               <span class="skill-main-name">強力恢復魔法</span>
               <span class="skill-cat-badge">戰鬥輔助魔法</span>
             </div>
-            <a href="/技能總覽/強力恢復魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/強力恢復魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -6961,11 +6890,10 @@
 <div class="skill-card-block" data-scope="char" data-category="sup_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🩹</span>
               <span class="skill-main-name">超強恢復魔法</span>
               <span class="skill-cat-badge">戰鬥輔助魔法</span>
             </div>
-            <a href="/技能總覽/超強恢復魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/超強恢復魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -7058,11 +6986,10 @@
 <div class="skill-card-block" data-scope="char" data-category="sup_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🩹</span>
               <span class="skill-main-name">攻擊吸收</span>
               <span class="skill-cat-badge">戰鬥輔助魔法</span>
             </div>
-            <a href="/技能總覽/攻擊吸收" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/攻擊吸收" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -7155,11 +7082,10 @@
 <div class="skill-card-block" data-scope="char" data-category="sup_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🩹</span>
               <span class="skill-main-name">魔法吸收</span>
               <span class="skill-cat-badge">戰鬥輔助魔法</span>
             </div>
-            <a href="/技能總覽/魔法吸收" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/魔法吸收" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -7252,11 +7178,10 @@
 <div class="skill-card-block" data-scope="char" data-category="sup_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🩹</span>
               <span class="skill-main-name">攻擊反彈</span>
               <span class="skill-cat-badge">戰鬥輔助魔法</span>
             </div>
-            <a href="/技能總覽/攻擊反彈" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/攻擊反彈" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -7349,11 +7274,10 @@
 <div class="skill-card-block" data-scope="char" data-category="sup_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🩹</span>
               <span class="skill-main-name">魔法反彈</span>
               <span class="skill-cat-badge">戰鬥輔助魔法</span>
             </div>
-            <a href="/技能總覽/魔法反彈" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/魔法反彈" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -7446,11 +7370,10 @@
 <div class="skill-card-block" data-scope="char" data-category="sup_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🩹</span>
               <span class="skill-main-name">攻擊無效</span>
               <span class="skill-cat-badge">戰鬥輔助魔法</span>
             </div>
-            <a href="/技能總覽/攻擊無效" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/攻擊無效" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -7543,11 +7466,10 @@
 <div class="skill-card-block" data-scope="char" data-category="sup_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🩹</span>
               <span class="skill-main-name">魔法無效</span>
               <span class="skill-cat-badge">戰鬥輔助魔法</span>
             </div>
-            <a href="/技能總覽/魔法無效" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/魔法無效" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -7640,11 +7562,10 @@
 <div class="skill-card-block" data-scope="char" data-category="other_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🌀</span>
               <span class="skill-main-name">鑑定</span>
               <span class="skill-cat-badge">其他特殊技能</span>
             </div>
-            <a href="/技能總覽/鑑定" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/鑑定" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -7737,11 +7658,10 @@
 <div class="skill-card-block" data-scope="char" data-category="other_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🌀</span>
               <span class="skill-main-name">治療</span>
               <span class="skill-cat-badge">其他特殊技能</span>
             </div>
-            <a href="/技能總覽/治療" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/治療" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -7834,11 +7754,10 @@
 <div class="skill-card-block" data-scope="char" data-category="other_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🌀</span>
               <span class="skill-main-name">急救</span>
               <span class="skill-cat-badge">其他特殊技能</span>
             </div>
-            <a href="/技能總覽/急救" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/急救" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -7931,11 +7850,10 @@
 <div class="skill-card-block" data-scope="char" data-category="other_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🌀</span>
               <span class="skill-main-name">調教</span>
               <span class="skill-cat-badge">其他特殊技能</span>
             </div>
-            <a href="/技能總覽/調教" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/調教" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -8028,11 +7946,10 @@
 <div class="skill-card-block" data-scope="char" data-category="other_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🌀</span>
               <span class="skill-main-name">刻印</span>
               <span class="skill-cat-badge">其他特殊技能</span>
             </div>
-            <a href="/技能總覽/刻印" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/刻印" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -8059,11 +7976,10 @@
 <div class="skill-card-block" data-scope="char" data-category="other_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🌀</span>
               <span class="skill-main-name">武器修理</span>
               <span class="skill-cat-badge">其他特殊技能</span>
             </div>
-            <a href="/技能總覽/武器修理" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/武器修理" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -8156,11 +8072,10 @@
 <div class="skill-card-block" data-scope="char" data-category="other_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🌀</span>
               <span class="skill-main-name">防具修理</span>
               <span class="skill-cat-badge">其他特殊技能</span>
             </div>
-            <a href="/技能總覽/防具修理" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/防具修理" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -8253,11 +8168,10 @@
 <div class="skill-card-block" data-scope="char" data-category="other_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🌀</span>
               <span class="skill-main-name">寵物強化</span>
               <span class="skill-cat-badge">其他特殊技能</span>
             </div>
-            <a href="/技能總覽/寵物強化" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/寵物強化" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -8350,11 +8264,10 @@
 <div class="skill-card-block" data-scope="char" data-category="other_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🌀</span>
               <span class="skill-main-name">精靈的盟約</span>
               <span class="skill-cat-badge">其他特殊技能</span>
             </div>
-            <a href="/技能總覽/精靈的盟約" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/精靈的盟約" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -8435,11 +8348,10 @@
 <div class="skill-card-block" data-scope="char" data-category="craft_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛠️</span>
               <span class="skill-main-name">伐木體驗</span>
               <span class="skill-cat-badge">生產製作技能</span>
             </div>
-            <a href="/技能總覽/伐木體驗" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/伐木體驗" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -8466,11 +8378,10 @@
 <div class="skill-card-block" data-scope="char" data-category="craft_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛠️</span>
               <span class="skill-main-name">狩獵體驗</span>
               <span class="skill-cat-badge">生產製作技能</span>
             </div>
-            <a href="/技能總覽/狩獵體驗" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/狩獵體驗" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -8497,11 +8408,10 @@
 <div class="skill-card-block" data-scope="char" data-category="craft_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛠️</span>
               <span class="skill-main-name">挖掘體驗</span>
               <span class="skill-cat-badge">生產製作技能</span>
             </div>
-            <a href="/技能總覽/挖掘體驗" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/挖掘體驗" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -8528,11 +8438,10 @@
 <div class="skill-card-block" data-scope="char" data-category="craft_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛠️</span>
               <span class="skill-main-name">剪取體驗</span>
               <span class="skill-cat-badge">生產製作技能</span>
             </div>
-            <a href="/技能總覽/剪取體驗" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/剪取體驗" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -8559,11 +8468,10 @@
 <div class="skill-card-block" data-scope="char" data-category="craft_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛠️</span>
               <span class="skill-main-name">鍛造體驗</span>
               <span class="skill-cat-badge">生產製作技能</span>
             </div>
-            <a href="/技能總覽/鍛造體驗" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/鍛造體驗" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -8590,11 +8498,10 @@
 <div class="skill-card-block" data-scope="char" data-category="craft_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛠️</span>
               <span class="skill-main-name">伐木</span>
               <span class="skill-cat-badge">生產製作技能</span>
             </div>
-            <a href="/技能總覽/伐木" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/伐木" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -8687,11 +8594,10 @@
 <div class="skill-card-block" data-scope="char" data-category="craft_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛠️</span>
               <span class="skill-main-name">狩獵</span>
               <span class="skill-cat-badge">生產製作技能</span>
             </div>
-            <a href="/技能總覽/狩獵" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/狩獵" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -8784,11 +8690,10 @@
 <div class="skill-card-block" data-scope="char" data-category="craft_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛠️</span>
               <span class="skill-main-name">挖掘</span>
               <span class="skill-cat-badge">生產製作技能</span>
             </div>
-            <a href="/技能總覽/挖掘" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/挖掘" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -8881,11 +8786,10 @@
 <div class="skill-card-block" data-scope="char" data-category="craft_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛠️</span>
               <span class="skill-main-name">剪取</span>
               <span class="skill-cat-badge">生產製作技能</span>
             </div>
-            <a href="/技能總覽/剪取" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/剪取" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -8978,11 +8882,10 @@
 <div class="skill-card-block" data-scope="char" data-category="craft_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛠️</span>
               <span class="skill-main-name">製藥</span>
               <span class="skill-cat-badge">生產製作技能</span>
             </div>
-            <a href="/技能總覽/製藥" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/製藥" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -9075,11 +8978,10 @@
 <div class="skill-card-block" data-scope="char" data-category="craft_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛠️</span>
               <span class="skill-main-name">料理</span>
               <span class="skill-cat-badge">生產製作技能</span>
             </div>
-            <a href="/技能總覽/料理" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/料理" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -9172,11 +9074,10 @@
 <div class="skill-card-block" data-scope="char" data-category="craft_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛠️</span>
               <span class="skill-main-name">鑄劍</span>
               <span class="skill-cat-badge">生產製作技能</span>
             </div>
-            <a href="/技能總覽/鑄劍" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/鑄劍" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -9269,11 +9170,10 @@
 <div class="skill-card-block" data-scope="char" data-category="craft_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛠️</span>
               <span class="skill-main-name">造槍</span>
               <span class="skill-cat-badge">生產製作技能</span>
             </div>
-            <a href="/技能總覽/造槍" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/造槍" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -9366,11 +9266,10 @@
 <div class="skill-card-block" data-scope="char" data-category="craft_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛠️</span>
               <span class="skill-main-name">造斧</span>
               <span class="skill-cat-badge">生產製作技能</span>
             </div>
-            <a href="/技能總覽/造斧" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/造斧" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -9463,11 +9362,10 @@
 <div class="skill-card-block" data-scope="char" data-category="craft_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛠️</span>
               <span class="skill-main-name">造杖</span>
               <span class="skill-cat-badge">生產製作技能</span>
             </div>
-            <a href="/技能總覽/造杖" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/造杖" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -9560,11 +9458,10 @@
 <div class="skill-card-block" data-scope="char" data-category="craft_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛠️</span>
               <span class="skill-main-name">造弓</span>
               <span class="skill-cat-badge">生產製作技能</span>
             </div>
-            <a href="/技能總覽/造弓" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/造弓" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -9657,11 +9554,10 @@
 <div class="skill-card-block" data-scope="char" data-category="craft_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛠️</span>
               <span class="skill-main-name">造小刀</span>
               <span class="skill-cat-badge">生產製作技能</span>
             </div>
-            <a href="/技能總覽/造小刀" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/造小刀" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -9754,11 +9650,10 @@
 <div class="skill-card-block" data-scope="char" data-category="craft_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛠️</span>
               <span class="skill-main-name">造投擲武器</span>
               <span class="skill-cat-badge">生產製作技能</span>
             </div>
-            <a href="/技能總覽/造投擲武器" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/造投擲武器" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -9851,11 +9746,10 @@
 <div class="skill-card-block" data-scope="char" data-category="craft_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛠️</span>
               <span class="skill-main-name">造頭盔</span>
               <span class="skill-cat-badge">生產製作技能</span>
             </div>
-            <a href="/技能總覽/造頭盔" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/造頭盔" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -9948,11 +9842,10 @@
 <div class="skill-card-block" data-scope="char" data-category="craft_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛠️</span>
               <span class="skill-main-name">造帽子</span>
               <span class="skill-cat-badge">生產製作技能</span>
             </div>
-            <a href="/技能總覽/造帽子" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/造帽子" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -10045,11 +9938,10 @@
 <div class="skill-card-block" data-scope="char" data-category="craft_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛠️</span>
               <span class="skill-main-name">造鎧甲</span>
               <span class="skill-cat-badge">生產製作技能</span>
             </div>
-            <a href="/技能總覽/造鎧甲" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/造鎧甲" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -10142,11 +10034,10 @@
 <div class="skill-card-block" data-scope="char" data-category="craft_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛠️</span>
               <span class="skill-main-name">製衣服</span>
               <span class="skill-cat-badge">生產製作技能</span>
             </div>
-            <a href="/技能總覽/製衣服" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/製衣服" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -10239,11 +10130,10 @@
 <div class="skill-card-block" data-scope="char" data-category="craft_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛠️</span>
               <span class="skill-main-name">造長袍</span>
               <span class="skill-cat-badge">生產製作技能</span>
             </div>
-            <a href="/技能總覽/造長袍" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/造長袍" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -10336,11 +10226,10 @@
 <div class="skill-card-block" data-scope="char" data-category="craft_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛠️</span>
               <span class="skill-main-name">造靴子</span>
               <span class="skill-cat-badge">生產製作技能</span>
             </div>
-            <a href="/技能總覽/造靴子" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/造靴子" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -10433,11 +10322,10 @@
 <div class="skill-card-block" data-scope="char" data-category="craft_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛠️</span>
               <span class="skill-main-name">造鞋子</span>
               <span class="skill-cat-badge">生產製作技能</span>
             </div>
-            <a href="/技能總覽/造鞋子" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/造鞋子" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -10530,11 +10418,10 @@
 <div class="skill-card-block" data-scope="char" data-category="craft_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛠️</span>
               <span class="skill-main-name">造盾</span>
               <span class="skill-cat-badge">生產製作技能</span>
             </div>
-            <a href="/技能總覽/造盾" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/造盾" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -10627,11 +10514,10 @@
 <div class="skill-card-block" data-scope="char" data-category="atk_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">⚔️</span>
               <span class="skill-main-name">裂空斬</span>
               <span class="skill-cat-badge">戰鬥攻擊技能</span>
             </div>
-            <a href="/技能總覽/裂空斬" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/裂空斬" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -10724,11 +10610,10 @@
 <div class="skill-card-block" data-scope="char" data-category="atk_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">⚔️</span>
               <span class="skill-main-name">飛刃亂舞</span>
               <span class="skill-cat-badge">戰鬥攻擊技能</span>
             </div>
-            <a href="/技能總覽/飛刃亂舞" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/飛刃亂舞" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -10821,11 +10706,10 @@
 <div class="skill-card-block" data-scope="char" data-category="def_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛡️</span>
               <span class="skill-main-name">聖騎之譽</span>
               <span class="skill-cat-badge">戰鬥防禦技能</span>
             </div>
-            <a href="/技能總覽/聖騎之譽" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/聖騎之譽" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -10918,11 +10802,10 @@
 <div class="skill-card-block" data-scope="char" data-category="atk_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">⚔️</span>
               <span class="skill-main-name">隔山打牛</span>
               <span class="skill-cat-badge">戰鬥攻擊技能</span>
             </div>
-            <a href="/技能總覽/隔山打牛" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/隔山打牛" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -11015,11 +10898,10 @@
 <div class="skill-card-block" data-scope="char" data-category="sup_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">✨</span>
               <span class="skill-main-name">魔法屏障</span>
               <span class="skill-cat-badge">戰鬥輔助魔法</span>
             </div>
-            <a href="/技能總覽/魔法屏障" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/魔法屏障" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -11112,11 +10994,10 @@
 <div class="skill-card-block" data-scope="char" data-category="status_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">💫</span>
               <span class="skill-main-name">混亂衝擊波</span>
               <span class="skill-cat-badge">狀態變化魔法</span>
             </div>
-            <a href="/技能總覽/混亂衝擊波" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/混亂衝擊波" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -11209,11 +11090,10 @@
 <div class="skill-card-block" data-scope="char" data-category="atk_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">⚔️</span>
               <span class="skill-main-name">潛龍殺</span>
               <span class="skill-cat-badge">戰鬥攻擊技能</span>
             </div>
-            <a href="/技能總覽/潛龍殺" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/潛龍殺" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -11306,11 +11186,10 @@
 <div class="skill-card-block" data-scope="char" data-category="atk_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">⚔️</span>
               <span class="skill-main-name">必殺狙擊</span>
               <span class="skill-cat-badge">戰鬥攻擊技能</span>
             </div>
-            <a href="/技能總覽/必殺狙擊" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/必殺狙擊" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -11403,11 +11282,10 @@
 <div class="skill-card-block" data-scope="char" data-category="atk_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">⚔️</span>
               <span class="skill-main-name">突襲之舞</span>
               <span class="skill-cat-badge">戰鬥攻擊技能</span>
             </div>
-            <a href="/技能總覽/突襲之舞" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/突襲之舞" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -11500,11 +11378,10 @@
 <div class="skill-card-block" data-scope="char" data-category="atk_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">⚔️</span>
               <span class="skill-main-name">劇毒攻</span>
               <span class="skill-cat-badge">戰鬥攻擊技能</span>
             </div>
-            <a href="/技能總覽/劇毒攻" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/劇毒攻" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -11597,11 +11474,10 @@
 <div class="skill-card-block" data-scope="char" data-category="atk_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">⚔️</span>
               <span class="skill-main-name">燕斬</span>
               <span class="skill-cat-badge">戰鬥攻擊技能</span>
             </div>
-            <a href="/技能總覽/燕斬" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/燕斬" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -11694,11 +11570,10 @@
 <div class="skill-card-block" data-scope="char" data-category="atk_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">⚔️</span>
               <span class="skill-main-name">鋒上魂</span>
               <span class="skill-cat-badge">戰鬥攻擊技能</span>
             </div>
-            <a href="/技能總覽/鋒上魂" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/鋒上魂" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -11791,11 +11666,10 @@
 <div class="skill-card-block" data-scope="char" data-category="def_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛡️</span>
               <span class="skill-main-name">嘲諷</span>
               <span class="skill-cat-badge">戰鬥防禦技能</span>
             </div>
-            <a href="/技能總覽/嘲諷" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/嘲諷" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -11888,11 +11762,10 @@
 <div class="skill-card-block" data-scope="char" data-category="sup_magic">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">✨</span>
               <span class="skill-main-name">鬥志昂揚魔法</span>
               <span class="skill-cat-badge">戰鬥輔助魔法</span>
             </div>
-            <a href="/技能總覽/鬥志昂揚魔法" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/鬥志昂揚魔法" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -11973,11 +11846,10 @@
 <div class="skill-card-block" data-scope="char" data-category="sup_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">✨</span>
               <span class="skill-main-name">心眼</span>
               <span class="skill-cat-badge">戰鬥輔助技能</span>
             </div>
-            <a href="/技能總覽/心眼" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/心眼" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -12058,11 +11930,10 @@
 <div class="skill-card-block" data-scope="char" data-category="other_skill">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🌀</span>
               <span class="skill-main-name">月讀</span>
               <span class="skill-cat-badge">其他特殊技能</span>
             </div>
-            <a href="/技能總覽/月讀" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/月讀" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -12155,11 +12026,10 @@
 <div class="skill-card-block" data-scope="char" data-category="def_phys">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛡️</span>
               <span class="skill-main-name">砂之鎧</span>
               <span class="skill-cat-badge">戰鬥防禦技能</span>
             </div>
-            <a href="/技能總覽/砂之鎧" class="skill-detail-link">專屬詳情 ➔</a>
+            <a href="/技能總覽/砂之鎧" class="skill-detail-link">專屬詳情</a>
           </div>
 
           <div class="skill-table-wrapper">
@@ -12253,13 +12123,12 @@
   </div>
 
   <div id="pet-skills-section">
-    <div class="section-label pet" id="pet-section-label">🐾 寵物技能列表</div>
+    <div class="section-label pet" id="pet-section-label">寵物技能列表</div>
     <div id="pet-skills-container">
         
         <div class="skill-card-block" data-category="pet_general" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🐾</span>
               <span class="skill-main-name">攻擊</span>
               <span class="skill-cat-badge pet-badge">寵物一般技能</span>
             </div>
@@ -12291,7 +12160,6 @@
         <div class="skill-card-block" data-category="pet_general" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🐾</span>
               <span class="skill-main-name">防禦</span>
               <span class="skill-cat-badge pet-badge">寵物一般技能</span>
             </div>
@@ -12323,7 +12191,6 @@
         <div class="skill-card-block" data-category="pet_general" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🐾</span>
               <span class="skill-main-name">攻擊魔法防禦</span>
               <span class="skill-cat-badge pet-badge">寵物一般技能</span>
             </div>
@@ -12355,7 +12222,6 @@
         <div class="skill-card-block" data-category="pet_general" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🐾</span>
               <span class="skill-main-name">什麼也不做</span>
               <span class="skill-cat-badge pet-badge">寵物一般技能</span>
             </div>
@@ -12387,7 +12253,6 @@
         <div class="skill-card-block" data-category="pet_general" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🐾</span>
               <span class="skill-main-name">定點移動</span>
               <span class="skill-cat-badge pet-badge">寵物一般技能</span>
             </div>
@@ -12419,7 +12284,6 @@
         <div class="skill-card-block" data-category="pet_general" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🐾</span>
               <span class="skill-main-name">寵物郵件</span>
               <span class="skill-cat-badge pet-badge">寵物一般技能</span>
             </div>
@@ -12451,7 +12315,6 @@
         <div class="skill-card-block" data-category="pet_general" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🐾</span>
               <span class="skill-main-name">寵物散步</span>
               <span class="skill-cat-badge pet-badge">寵物一般技能</span>
             </div>
@@ -12483,7 +12346,6 @@
         <div class="skill-card-block" data-category="pet_combat" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">⚔️</span>
               <span class="skill-main-name">連擊</span>
               <span class="skill-cat-badge pet-badge">寵物戰鬥技能</span>
             </div>
@@ -12571,7 +12433,6 @@
         <div class="skill-card-block" data-category="pet_combat" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">⚔️</span>
               <span class="skill-main-name">諸刃</span>
               <span class="skill-cat-badge pet-badge">寵物戰鬥技能</span>
             </div>
@@ -12652,7 +12513,6 @@
         <div class="skill-card-block" data-category="pet_combat" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">⚔️</span>
               <span class="skill-main-name">乾坤一擲</span>
               <span class="skill-cat-badge pet-badge">寵物戰鬥技能</span>
             </div>
@@ -12740,7 +12600,6 @@
         <div class="skill-card-block" data-category="pet_combat" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">⚔️</span>
               <span class="skill-main-name">崩擊</span>
               <span class="skill-cat-badge pet-badge">寵物戰鬥技能</span>
             </div>
@@ -12814,7 +12673,6 @@
         <div class="skill-card-block" data-category="pet_combat" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">⚔️</span>
               <span class="skill-main-name">陽炎</span>
               <span class="skill-cat-badge pet-badge">寵物戰鬥技能</span>
             </div>
@@ -12874,7 +12732,6 @@
         <div class="skill-card-block" data-category="pet_combat" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">⚔️</span>
               <span class="skill-main-name">反擊</span>
               <span class="skill-cat-badge pet-badge">寵物戰鬥技能</span>
             </div>
@@ -12941,7 +12798,6 @@
         <div class="skill-card-block" data-category="pet_combat" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">⚔️</span>
               <span class="skill-main-name">戰慄襲心</span>
               <span class="skill-cat-badge pet-badge">寵物戰鬥技能</span>
             </div>
@@ -13022,7 +12878,6 @@
         <div class="skill-card-block" data-category="pet_combat" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">⚔️</span>
               <span class="skill-main-name">護衛</span>
               <span class="skill-cat-badge pet-badge">寵物戰鬥技能</span>
             </div>
@@ -13089,7 +12944,6 @@
         <div class="skill-card-block" data-category="pet_combat" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">⚔️</span>
               <span class="skill-main-name">聖盾</span>
               <span class="skill-cat-badge pet-badge">寵物戰鬥技能</span>
             </div>
@@ -13156,7 +13010,6 @@
         <div class="skill-card-block" data-category="pet_combat" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">⚔️</span>
               <span class="skill-main-name">明鏡止水</span>
               <span class="skill-cat-badge pet-badge">寵物戰鬥技能</span>
             </div>
@@ -13223,7 +13076,6 @@
         <div class="skill-card-block" data-category="pet_magic" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">✨</span>
               <span class="skill-main-name">隕石魔法</span>
               <span class="skill-cat-badge pet-badge">寵物魔法技能</span>
             </div>
@@ -13318,7 +13170,6 @@
         <div class="skill-card-block" data-category="pet_magic" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">✨</span>
               <span class="skill-main-name">冰凍魔法</span>
               <span class="skill-cat-badge pet-badge">寵物魔法技能</span>
             </div>
@@ -13413,7 +13264,6 @@
         <div class="skill-card-block" data-category="pet_magic" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">✨</span>
               <span class="skill-main-name">火焰魔法</span>
               <span class="skill-cat-badge pet-badge">寵物魔法技能</span>
             </div>
@@ -13508,7 +13358,6 @@
         <div class="skill-card-block" data-category="pet_magic" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">✨</span>
               <span class="skill-main-name">風刃魔法</span>
               <span class="skill-cat-badge pet-badge">寵物魔法技能</span>
             </div>
@@ -13603,7 +13452,6 @@
         <div class="skill-card-block" data-category="pet_magic" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">✨</span>
               <span class="skill-main-name">強力隕石魔法</span>
               <span class="skill-cat-badge pet-badge">寵物魔法技能</span>
             </div>
@@ -13698,7 +13546,6 @@
         <div class="skill-card-block" data-category="pet_magic" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">✨</span>
               <span class="skill-main-name">強力冰凍魔法</span>
               <span class="skill-cat-badge pet-badge">寵物魔法技能</span>
             </div>
@@ -13793,7 +13640,6 @@
         <div class="skill-card-block" data-category="pet_magic" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">✨</span>
               <span class="skill-main-name">強力火焰魔法</span>
               <span class="skill-cat-badge pet-badge">寵物魔法技能</span>
             </div>
@@ -13888,7 +13734,6 @@
         <div class="skill-card-block" data-category="pet_magic" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">✨</span>
               <span class="skill-main-name">強力風刃魔法</span>
               <span class="skill-cat-badge pet-badge">寵物魔法技能</span>
             </div>
@@ -13983,7 +13828,6 @@
         <div class="skill-card-block" data-category="pet_status_atk" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">☠️</span>
               <span class="skill-main-name">毒性攻擊</span>
               <span class="skill-cat-badge pet-badge">狀態攻擊技能</span>
             </div>
@@ -14050,7 +13894,6 @@
         <div class="skill-card-block" data-category="pet_status_atk" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">☠️</span>
               <span class="skill-main-name">昏睡攻擊</span>
               <span class="skill-cat-badge pet-badge">狀態攻擊技能</span>
             </div>
@@ -14131,7 +13974,6 @@
         <div class="skill-card-block" data-category="pet_status_atk" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">☠️</span>
               <span class="skill-main-name">石化攻擊</span>
               <span class="skill-cat-badge pet-badge">狀態攻擊技能</span>
             </div>
@@ -14205,7 +14047,6 @@
         <div class="skill-card-block" data-category="pet_status_atk" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">☠️</span>
               <span class="skill-main-name">酒醉攻擊</span>
               <span class="skill-cat-badge pet-badge">狀態攻擊技能</span>
             </div>
@@ -14272,7 +14113,6 @@
         <div class="skill-card-block" data-category="pet_status_atk" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">☠️</span>
               <span class="skill-main-name">混亂攻擊</span>
               <span class="skill-cat-badge pet-badge">狀態攻擊技能</span>
             </div>
@@ -14346,7 +14186,6 @@
         <div class="skill-card-block" data-category="pet_status_atk" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">☠️</span>
               <span class="skill-main-name">遺忘攻擊</span>
               <span class="skill-cat-badge pet-badge">狀態攻擊技能</span>
             </div>
@@ -14420,7 +14259,6 @@
         <div class="skill-card-block" data-category="pet_status_atk" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">☠️</span>
               <span class="skill-main-name">吸血攻擊</span>
               <span class="skill-cat-badge pet-badge">狀態攻擊技能</span>
             </div>
@@ -14487,7 +14325,6 @@
         <div class="skill-card-block" data-category="pet_status_def" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛡️</span>
               <span class="skill-main-name">抗毒性</span>
               <span class="skill-cat-badge pet-badge">狀態抵抗技能</span>
             </div>
@@ -14547,7 +14384,6 @@
         <div class="skill-card-block" data-category="pet_status_def" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛡️</span>
               <span class="skill-main-name">抗昏睡</span>
               <span class="skill-cat-badge pet-badge">狀態抵抗技能</span>
             </div>
@@ -14607,7 +14443,6 @@
         <div class="skill-card-block" data-category="pet_status_def" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛡️</span>
               <span class="skill-main-name">抗石化</span>
               <span class="skill-cat-badge pet-badge">狀態抵抗技能</span>
             </div>
@@ -14667,7 +14502,6 @@
         <div class="skill-card-block" data-category="pet_status_def" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛡️</span>
               <span class="skill-main-name">抗酒醉</span>
               <span class="skill-cat-badge pet-badge">狀態抵抗技能</span>
             </div>
@@ -14727,7 +14561,6 @@
         <div class="skill-card-block" data-category="pet_status_def" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛡️</span>
               <span class="skill-main-name">抗混亂</span>
               <span class="skill-cat-badge pet-badge">狀態抵抗技能</span>
             </div>
@@ -14787,7 +14620,6 @@
         <div class="skill-card-block" data-category="pet_status_def" data-scope="pet">
           <div class="skill-header-bar">
             <div class="skill-header-title">
-              <span class="skill-icon-badge">🛡️</span>
               <span class="skill-main-name">抗遺忘</span>
               <span class="skill-cat-badge pet-badge">狀態抵抗技能</span>
             </div>
@@ -14853,76 +14685,147 @@
 
 
 <script>
-  let skillMode = 'all';   // all | char | pet
-  let charCat = 'all';
-  let petCat = 'all';
+  /**
+   * 人物分類 / 寵物分類：全域單選（同一時間只生效一個按鈕）。
+   * 點人物側 → 寵物側取消 active；點寵物側 → 人物側取消。
+   * 初始未選：顯示全部技能。
+   */
+  let activeScope = null; // null | 'char' | 'pet'
+  let activeCat = 'all';
+  let skillName = 'all';
 
-  function setSkillMode(mode, btn) {
-    skillMode = mode;
-    document.querySelectorAll('#mode-filter .filter-btn').forEach(b => b.classList.remove('active'));
+  function setSubFilter(scope, cat, btn) {
+    activeScope = scope;
+    activeCat = cat;
+    skillName = 'all';
+
+    document.querySelectorAll('#char-subfilter .filter-btn, #pet-subfilter .filter-btn')
+      .forEach(function (b) { b.classList.remove('active'); });
     if (btn) btn.classList.add('active');
 
-    const charSub = document.getElementById('char-subfilter');
-    const petSub = document.getElementById('pet-subfilter');
-    if (mode === 'all') {
-      charSub.classList.remove('hidden-section');
-      petSub.classList.remove('hidden-section');
-    } else if (mode === 'char') {
-      charSub.classList.remove('hidden-section');
-      petSub.classList.add('hidden-section');
-    } else {
-      charSub.classList.add('hidden-section');
-      petSub.classList.remove('hidden-section');
-    }
+    rebuildSkillNameFilter();
     applySkillFilters();
   }
 
-  function setSubFilter(scope, cat, btn) {
-    if (scope === 'char') charCat = cat;
-    else petCat = cat;
-    document.querySelectorAll('.filter-btn[data-scope="' + scope + '"]').forEach(b => b.classList.remove('active'));
+  function setSkillName(name, btn) {
+    skillName = name;
+    document.querySelectorAll('#skill-name-buttons .filter-btn')
+      .forEach(function (b) { b.classList.remove('active'); });
     if (btn) btn.classList.add('active');
     applySkillFilters();
+  }
+
+  function cardSkillName(block) {
+    var el = block.querySelector('.skill-main-name');
+    return el ? el.textContent.trim() : '';
+  }
+
+  function rebuildSkillNameFilter() {
+    var section = document.getElementById('skill-name-filter');
+    var container = document.getElementById('skill-name-buttons');
+    if (!section || !container) return;
+
+    if (!activeScope) {
+      section.classList.add('hidden-section');
+      container.innerHTML = '';
+      skillName = 'all';
+      return;
+    }
+
+    section.classList.remove('hidden-section');
+    var cards = Array.from(
+      document.querySelectorAll('.skill-card-block[data-scope="' + activeScope + '"]')
+    );
+    var names = [];
+    var seen = {};
+    cards.forEach(function (block) {
+      var c = block.getAttribute('data-category');
+      if (activeCat !== 'all' && c !== activeCat) return;
+      var n = cardSkillName(block);
+      if (!n || seen[n]) return;
+      seen[n] = true;
+      names.push(n);
+    });
+    names.sort(function (a, b) { return a.localeCompare(b, 'zh-Hant'); });
+
+    if (skillName !== 'all' && !seen[skillName]) skillName = 'all';
+
+    container.innerHTML = '';
+    function addBtn(label, value, isActive) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'filter-btn' + (isActive ? ' active' : '');
+      b.textContent = label;
+      b.setAttribute('data-skill-name', value);
+      b.addEventListener('click', function () { setSkillName(value, b); });
+      container.appendChild(b);
+    }
+    addBtn('全部技能', 'all', skillName === 'all');
+    names.forEach(function (n) { addBtn(n, n, skillName === n); });
   }
 
   function applySkillFilters() {
-    const charSection = document.getElementById('char-skills-section');
-    const petSection = document.getElementById('pet-skills-section');
+    var showChar = !activeScope || activeScope === 'char';
+    var showPet = !activeScope || activeScope === 'pet';
 
-    const showChar = (skillMode === 'all' || skillMode === 'char');
-    const showPet = (skillMode === 'all' || skillMode === 'pet');
+    var charSection = document.getElementById('char-skills-section');
+    var petSection = document.getElementById('pet-skills-section');
+    if (charSection) charSection.classList.toggle('hidden-section', !showChar);
+    if (petSection) petSection.classList.toggle('hidden-section', !showPet);
 
-    if (charSection) {
-      if (showChar) charSection.classList.remove('hidden-section');
-      else charSection.classList.add('hidden-section');
-    }
-    if (petSection) {
-      if (showPet) petSection.classList.remove('hidden-section');
-      else petSection.classList.add('hidden-section');
-    }
+    var charLabel = document.getElementById('char-section-label');
+    var petLabel = document.getElementById('pet-section-label');
+    if (charLabel) charLabel.classList.toggle('hidden-section', !showChar);
+    if (petLabel) petLabel.classList.toggle('hidden-section', !showPet);
 
-    document.querySelectorAll('.skill-card-block[data-scope="char"]').forEach(block => {
-      const cat = block.getAttribute('data-category');
-      const ok = showChar && (charCat === 'all' || cat === charCat);
+    document.querySelectorAll('.skill-card-block[data-scope="char"]').forEach(function (block) {
+      var cat = block.getAttribute('data-category');
+      var name = cardSkillName(block);
+      var ok = false;
+      if (!showChar) ok = false;
+      else if (!activeScope) ok = true;
+      else ok = (activeCat === 'all' || cat === activeCat) && (skillName === 'all' || name === skillName);
       block.classList.toggle('hidden-block', !ok);
     });
-    document.querySelectorAll('.skill-card-block[data-scope="pet"]').forEach(block => {
-      const cat = block.getAttribute('data-category');
-      const ok = showPet && (petCat === 'all' || cat === petCat);
+
+    document.querySelectorAll('.skill-card-block[data-scope="pet"]').forEach(function (block) {
+      var cat = block.getAttribute('data-category');
+      var name = cardSkillName(block);
+      var ok = false;
+      if (!showPet) ok = false;
+      else if (!activeScope) ok = true;
+      else ok = (activeCat === 'all' || cat === activeCat) && (skillName === 'all' || name === skillName);
       block.classList.toggle('hidden-block', !ok);
     });
   }
 
-  // 相容舊呼叫（若有）
   function filterSkills(category, btnElement, scope) {
     setSubFilter(scope || 'char', category, btnElement);
   }
 
-  document.addEventListener('DOMContentLoaded', function () {
-    setSkillMode('all', document.querySelector('#mode-filter .filter-btn[data-mode="all"]'));
-  });
-</script>
+  function initSkillOverviewFilters() {
+    document.querySelectorAll('#char-subfilter .filter-btn, #pet-subfilter .filter-btn')
+      .forEach(function (b) { b.classList.remove('active'); });
+    activeScope = null;
+    activeCat = 'all';
+    skillName = 'all';
+    rebuildSkillNameFilter();
+    applySkillFilters();
+  }
 
+  // 供 onclick 使用（內嵌頁腳本需掛到 window）
+  window.setSubFilter = setSubFilter;
+  window.setSkillName = setSkillName;
+  window.filterSkills = filterSkills;
+  window.applySkillFilters = applySkillFilters;
+
+  // set:html 重掛腳本時 DOM 可能已 ready，不能只等 DOMContentLoaded
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSkillOverviewFilters);
+  } else {
+    initSkillOverviewFilters();
+  }
+</script>
 
 </body>
 </html>
