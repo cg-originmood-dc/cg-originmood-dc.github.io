@@ -1,7 +1,8 @@
 import { readFileSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse } from 'csv-parse/sync';
-import { buildFusionTreeForPet } from './synthesis';
+import { buildFusionTreeForPet, listFusionOutcomesForPet } from './synthesis';
+import type { ProductOutcome } from './synthesis';
 import { itemImagePath } from './items';
 
 export interface PetRecord {
@@ -347,11 +348,21 @@ export function applyPetImagesFromSsot(node: FusionNode): FusionNode {
 export function resolveFusionTree(
   petName: string,
   image: string,
-): { tree: FusionNode; hasFullData: boolean } {
+): {
+  tree: FusionNode;
+  hasFullData: boolean;
+  /** 多產物機率（樹外橫列顯示；經典樹本身只畫目前產物→材料） */
+  outcomes: ProductOutcome[];
+} {
+  const outcomes = listFusionOutcomesForPet(petName);
   const extras = loadExtras();
   const self = extras.get(petName)?.fusionTree;
   if (self?.children?.length) {
-    return { tree: applyPetImagesFromSsot(self), hasFullData: true };
+    return {
+      tree: applyPetImagesFromSsot(self),
+      hasFullData: true,
+      outcomes,
+    };
   }
 
   // 在所有已知完整樹中尋找包含本寵的最大樹
@@ -367,12 +378,22 @@ export function resolveFusionTree(
       bestSize = names.size;
     }
   }
-  if (best) return { tree: applyPetImagesFromSsot(best), hasFullData: true };
+  if (best) {
+    return {
+      tree: applyPetImagesFromSsot(best),
+      hasFullData: true,
+      outcomes,
+    };
+  }
 
   // 活動配方自動建樹（寵物合成配方.csv）
   const auto = buildFusionTreeForPet(petName);
   if (auto?.children?.length) {
-    return { tree: applyPetImagesFromSsot(auto), hasFullData: true };
+    return {
+      tree: applyPetImagesFromSsot(auto),
+      hasFullData: true,
+      outcomes,
+    };
   }
 
   // 無資料：只顯示本寵節點（圖仍走 SSOT）
@@ -385,6 +406,7 @@ export function resolveFusionTree(
       children: [],
     }),
     hasFullData: false,
+    outcomes,
   };
 }
 
