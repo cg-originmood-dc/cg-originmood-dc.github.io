@@ -2,6 +2,7 @@
 import { getCollection, render } from 'astro:content';
 import Base from '../layouts/Base.astro';
 import DataTable from '../components/DataTable.astro';
+import PetSynthesisTables from '../components/PetSynthesisTables.astro';
 import SourceNote from '../components/SourceNote.astro';
 import { HOME_ID } from '../lib/nav';
 
@@ -26,7 +27,11 @@ const hasProse = entry.body != null && entry.body.trim().length > 0;
     </div>
   )}
 
-  {entry.data.datasets.map((name) => <DataTable name={name} />)}
+  {entry.data.title === '寵物合成活動' ? (
+    <PetSynthesisTables />
+  ) : (
+    entry.data.datasets.map((name) => <DataTable name={name} />)
+  )}
 
   <SourceNote sourceUrl={entry.data.sourceUrl} />
 </Base>

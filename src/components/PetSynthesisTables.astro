@@ -1,0 +1,343 @@
+---
+import { LIST_SEP, loadDataset } from '../lib/datasets';
+
+type Row = Record<string, string>;
+
+interface NpcGroup {
+  npc: string;
+  rows: Row[];
+}
+
+interface ActivityGroup {
+  year: string;
+  title: string;
+  period: string;
+  announcementDate: string;
+  url: string;
+  rows: Row[];
+  npcGroups: NpcGroup[];
+  search: string;
+}
+
+const dataset = loadDataset('寵物合成配方');
+const rows = dataset?.rows ?? [];
+const activityMap = new Map<string, ActivityGroup>();
+
+const announcementUrl = (value: string) =>
+  value.match(/\]\((https?:\/\/[^)]+)\)/)?.[1] ?? '';
+
+for (const row of rows) {
+  const title = row['活動／期別'] ?? '';
+  const period = row['活動日期'] ?? '';
+  const announcementDate = row['公告日'] ?? '';
+  const url = announcementUrl(row['公告連結'] ?? '');
+  const key = [announcementDate, period, title, url].join('\u0000');
+  let activity = activityMap.get(key);
+  if (!activity) {
+    activity = {
+      year: announcementDate.slice(0, 4) || '其他',
+      title,
+      period,
+      announcementDate,
+      url,
+      rows: [],
+      npcGroups: [],
+      search: '',
+    };
+    activityMap.set(key, activity);
+  }
+  activity.rows.push(row);
+}
+
+const activities = [...activityMap.values()];
+for (const activity of activities) {
+  const npcMap = new Map<string, NpcGroup>();
+  for (const row of activity.rows) {
+    const npc = row['NPC'] || '公告未載明';
+    let group = npcMap.get(npc);
+    if (!group) {
+      group = { npc, rows: [] };
+      npcMap.set(npc, group);
+    }
+    group.rows.push(row);
+  }
+  activity.npcGroups = [...npcMap.values()];
+  activity.search = activity.rows
+    .flatMap((row) => Object.values(row))
+    .join(' ')
+    .toLowerCase();
+}
+
+const yearMap = new Map<string, ActivityGroup[]>();
+for (const activity of activities) {
+  const list = yearMap.get(activity.year) ?? [];
+  list.push(activity);
+  yearMap.set(activity.year, list);
+}
+const years = [...yearMap.entries()].sort(([a], [b]) => b.localeCompare(a, 'zh-Hant'));
+const splitLines = (value: string) => value.split(LIST_SEP).filter(Boolean);
+---
+
+<div class="synthesis" data-synthesis-root>
+  <div class="synthesis__toolbar">
+    <label>
+      <span>搜尋：</span>
+      <input type="search" placeholder="輸入寵物、道具、NPC 或活動" data-synthesis-search />
+    </label>
+    <button type="button" data-synthesis-clear>清空</button>
+    <span class="synthesis__count" data-synthesis-count>{activities.length} 個活動／{rows.length} 條配方</span>
+  </div>
+
+  {years.map(([year, yearActivities]) => (
+    <section class="synthesis-year" data-year-section>
+      <h2>{year} 年</h2>
+      <div class="synthesis__scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>活動</th>
+              <th>NPC</th>
+              <th>合成公式</th>
+              <th>入手方法</th>
+            </tr>
+          </thead>
+          {yearActivities.map((activity) => (
+            <tbody
+              data-synthesis-group
+              data-search={activity.search}
+              data-rows={activity.rows.length}
+            >
+              {activity.npcGroups.map((npcGroup, npcIndex) =>
+                npcGroup.rows.map((row, rowIndex) => (
+                  <tr>
+                    {npcIndex === 0 && rowIndex === 0 && (
+                      <th
+                        class="synthesis__activity"
+                        scope="rowgroup"
+                        rowspan={activity.rows.length}
+                      >
+                        <strong>{activity.title}</strong>
+                        <span>{activity.period}</span>
+                        <small>公告日：{activity.announcementDate}</small>
+                        {activity.url && (
+                          <a href={activity.url} target="_blank" rel="noopener noreferrer">
+                            官方公告
+                          </a>
+                        )}
+                      </th>
+                    )}
+                    {rowIndex === 0 && (
+                      <td class="synthesis__npc" rowspan={npcGroup.rows.length}>
+                        {npcGroup.npc}
+                      </td>
+                    )}
+                    <td class="synthesis__formula">
+                      {splitLines(row['合成樹'] ?? '').map((line) => (
+                        <span>{line}</span>
+                      ))}
+                    </td>
+                    <td class="synthesis__source">
+                      <details>
+                        <summary>查看入手方法</summary>
+                        {(row['入手方法'] ?? '').split('；').map((line) => (
+                          <span>{line}</span>
+                        ))}
+                      </details>
+                    </td>
+                  </tr>
+                )),
+              )}
+            </tbody>
+          ))}
+        </table>
+      </div>
+    </section>
+  ))}
+</div>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-synthesis-root]').forEach((root) => {
+    const input = root.querySelector<HTMLInputElement>('[data-synthesis-search]');
+    const clear = root.querySelector<HTMLButtonElement>('[data-synthesis-clear]');
+    const count = root.querySelector<HTMLElement>('[data-synthesis-count]');
+    const groups = [...root.querySelectorAll<HTMLElement>('[data-synthesis-group]')];
+    const years = [...root.querySelectorAll<HTMLElement>('[data-year-section]')];
+    const totalActivities = groups.length;
+    const totalRows = groups.reduce((sum, group) => sum + Number(group.dataset.rows ?? 0), 0);
+
+    const apply = () => {
+      const query = input?.value.trim().toLowerCase() ?? '';
+      let shownActivities = 0;
+      let shownRows = 0;
+      for (const group of groups) {
+        const visible = !query || (group.dataset.search ?? '').includes(query);
+        group.hidden = !visible;
+        if (visible) {
+          shownActivities++;
+          shownRows += Number(group.dataset.rows ?? 0);
+        }
+      }
+      for (const year of years) {
+        year.hidden = !year.querySelector('[data-synthesis-group]:not([hidden])');
+      }
+      if (count) {
+        count.textContent =
+          shownActivities === totalActivities
+            ? `${totalActivities} 個活動／${totalRows} 條配方`
+            : `${shownActivities} / ${totalActivities} 個活動；${shownRows} 條配方`;
+      }
+    };
+
+    input?.addEventListener('input', apply);
+    clear?.addEventListener('click', () => {
+      if (input) input.value = '';
+      apply();
+    });
+  });
+</script>
+
+<style>
+  .synthesis {
+    margin: 1.25rem 0 2rem;
+  }
+
+  .synthesis__toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .synthesis__toolbar label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .synthesis__toolbar input {
+    width: min(28rem, 65vw);
+    padding: 0.5rem 0.65rem;
+    border: 1px solid #b9b9b9;
+    font: inherit;
+  }
+
+  .synthesis__toolbar button {
+    padding: 0.5rem 0.8rem;
+    border: 1px solid #b9b9b9;
+    background: var(--surface-1);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .synthesis__count {
+    color: var(--text-3);
+    font-size: 0.85rem;
+  }
+
+  .synthesis-year {
+    margin-top: 1.75rem;
+  }
+
+  .synthesis-year > h2 {
+    margin: 0 0 0.65rem;
+  }
+
+  .synthesis__scroll {
+    max-height: 78vh;
+    overflow: auto;
+    border: 1px solid #c0c0c0;
+  }
+
+  .synthesis table {
+    width: 100%;
+    min-width: 72rem;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+    line-height: 1.5;
+  }
+
+  .synthesis thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding: 0.5rem;
+    border: 1px solid #c0c0c0;
+    background: #f0f0f0;
+    text-align: center;
+  }
+
+  .synthesis tbody th,
+  .synthesis tbody td {
+    padding: 0.55rem 0.65rem;
+    border: 1px solid #c0c0c0;
+    vertical-align: middle;
+  }
+
+  .synthesis tbody tr:hover > td {
+    background: #fafafa;
+  }
+
+  .synthesis__activity {
+    width: 17rem;
+    background: #f8f8f8;
+    text-align: left;
+  }
+
+  .synthesis__activity strong,
+  .synthesis__activity span,
+  .synthesis__activity small,
+  .synthesis__activity a {
+    display: block;
+  }
+
+  .synthesis__activity span {
+    margin-top: 0.45rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .synthesis__activity small {
+    margin-top: 0.2rem;
+    color: var(--text-3);
+  }
+
+  .synthesis__activity a {
+    margin-top: 0.55rem;
+  }
+
+  .synthesis__npc {
+    width: 13rem;
+    text-align: center;
+  }
+
+  .synthesis__formula {
+    min-width: 25rem;
+    text-align: left;
+  }
+
+  .synthesis__formula > span {
+    display: block;
+  }
+
+  .synthesis__formula > span:not(:first-child) {
+    padding-left: 1rem;
+  }
+
+  .synthesis__source {
+    width: 12rem;
+    text-align: left;
+  }
+
+  .synthesis__source summary {
+    color: var(--link);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .synthesis__source details > span {
+    display: block;
+    margin-top: 0.4rem;
+    color: var(--text-2);
+    font-size: 0.85rem;
+  }
+</style>
