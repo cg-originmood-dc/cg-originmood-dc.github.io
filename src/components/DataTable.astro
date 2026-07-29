@@ -1,5 +1,5 @@
 ---
-import { loadDataset } from '../lib/datasets';
+import { loadDataset, LIST_SEP } from '../lib/datasets';
 import { thumbOf } from '../lib/thumbs';
 import { renderCell } from '../lib/richtext';
 
@@ -17,6 +17,15 @@ import { renderCell } from '../lib/richtext';
  * 表格那張用縮圖，放大預覽才用原圖。預覽那張是 display:none + loading="lazy"，
  * 瀏覽器不會事先下載，真的 hover 才抓——寵物頁 1069 列，差別是 56MB 對 20MB。
  */
+/**
+ * 「名稱(數量)、名稱(數量)」的材料欄。這種欄位折行時會折在名字或數量中間
+ * （「黃月」換行「木(20)」），一項一項各自不折、只折在頓號之間就好。
+ *
+ * 認的是內容不是欄位名字：整格每一項都是「某某(數字)」才算，
+ * 能力欄的「攻擊+141~225、必殺+1~5」與說明欄的散文都不會中。
+ */
+const QUANTITY_LIST = /^[^、]+\(\d+\)(?:、[^、]+\(\d+\))+$/;
+
 interface Props {
   name: string;
 }
@@ -68,8 +77,21 @@ const petDetailHref = (petName: string) =>
           <thead>
             <tr>
               {dataset.imageColumn && <th scope="col" class="col-img">圖</th>}
+              {dataset.action && <th scope="col" class="col-act">工具</th>}
               {cols.map((c, i) => (
-                <th scope="col" data-sort-index={i} tabindex="0" role="button">
+                <th
+                  scope="col"
+                  data-sort-index={i}
+                  tabindex="0"
+                  role="button"
+                  aria-sort={
+                    dataset.defaultSort?.column === c
+                      ? dataset.defaultSort.dir === 'desc'
+                        ? 'descending'
+                        : 'ascending'
+                      : undefined
+                  }
+                >
                   {c}
                 </th>
               ))}
@@ -100,17 +122,59 @@ const petDetailHref = (petName: string) =>
                       ) : null}
                     </td>
                   )}
-                  {cols.map((c) =>
-                    c === dataset.noteColumn ? (
-                      <td class="is-wrap is-note" set:html={renderCell(row[c] ?? '', base)} />
-                    ) : c === linkNameCol && detail ? (
-                      <td class={dataset.wrapColumns.includes(c) ? 'is-wrap' : undefined}>
-                        <a class="dataset__name-link" href={detail}>{row[c]}</a>
+                  {dataset.action && (
+                    <td class="col-act">
+                      {row[dataset.action.column] ? (
+                        <a
+                          class="dataset__act"
+                          href={dataset.action.url(row[dataset.action.column])}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {dataset.action.label}
+                        </a>
+                      ) : null}
+                    </td>
+                  )}
+                  {cols.map((c) => {
+                    const value = row[c] ?? '';
+                    if (c === linkNameCol && detail) {
+                      return (
+                        <td class={dataset.wrapColumns.includes(c) ? 'is-wrap' : undefined}>
+                          <a class="dataset__name-link" href={detail}>{value}</a>
+                        </td>
+                      );
+                    }
+                    const linked = /\[[^\]]+\]\([^)]+\)/.test(value);
+                    // 一格好幾條的欄位（採集地點最多九個點）拆成一行一條。
+                    // 串成一行的話括號座標一路接下去，要數到第幾個斜線才知道在看哪一個點。
+                    const items = value.includes(LIST_SEP) ? value.split(LIST_SEP) : null;
+                    const parts = !items && QUANTITY_LIST.test(value) ? value.split('、') : null;
+                    const classes = [
+                      dataset.wrapColumns.includes(c) ? 'is-wrap' : '',
+                      c === dataset.noteColumn ? 'is-note' : '',
+                      items ? 'is-list' : '',
+                      parts ? 'is-items' : '',
+                    ].filter(Boolean).join(' ');
+                    return linked ? (
+                      <td class={classes || undefined} set:html={renderCell(value, base)} />
+                    ) : items ? (
+                      <td class={classes}>
+                        {items.map((item) => (
+                          <span>{item}</span>
+                        ))}
+                      </td>
+                    ) : parts ? (
+                      // 頓號留在前一項的尾巴，折行才會折在頓號後面而不是前面
+                      <td class={classes}>
+                        {parts.map((part, i) => (
+                          <span>{i < parts.length - 1 ? `${part}、` : part}</span>
+                        ))}
                       </td>
                     ) : (
-                      <td class={dataset.wrapColumns.includes(c) ? 'is-wrap' : undefined}>{row[c]}</td>
-                    ),
-                  )}
+                      <td class={classes || undefined}>{value}</td>
+                    );
+                  })}
                 </tr>
               );
             })}
@@ -133,18 +197,40 @@ const petDetailHref = (petName: string) =>
     if (!tbody) return;
     const rows = Array.from(tbody.rows);
     const total = rows.length;
-    const imgOffset = root.querySelector('.col-img') ? 1 : 0;
-    const noteCol = note ? Number(note.dataset.noteCol) + imgOffset : -1;
+    // 資料欄前面可能插了圖片欄與工具按鈕欄，兩者都不在 cols 裡，
+    // 所以 data-sort-index / data-filter-col 這些索引都要加上這個偏移
+    const lead =
+      (root.querySelector('.col-img') ? 1 : 0) + (root.querySelector('.col-act') ? 1 : 0);
+    const noteCol = note ? Number(note.dataset.noteCol) + lead : -1;
+
+    // 搜尋字串先算好：一來 1069 列每次按鍵都跑 textContent 很浪費，
+    // 二來要把工具按鈕的字排除掉，否則搜「算」會命中每一列。
+    // 綁在列物件上而不是用陣列索引 —— 排序會重排 rows，索引會對不上。
+    const hay = new Map(
+      rows.map((tr) => [
+        tr,
+        Array.from(tr.cells)
+          .filter((td) => !td.classList.contains('col-act'))
+          // 一行一條的欄位要自己補回分隔空白，textContent 會把相鄰兩條黏成一個字串
+          .map((td) =>
+            td.classList.contains('is-list')
+              ? Array.from(td.children, (n) => n.textContent).join(' ')
+              : td.textContent,
+          )
+          .join(' ')
+          .toLowerCase(),
+      ]),
+    );
 
     const apply = () => {
       const q = input?.value.trim().toLowerCase() ?? '';
       const want = select?.value ?? '';
-      const col = want && select ? Number(select.dataset.filterCol) + imgOffset : -1;
+      const col = want && select ? Number(select.dataset.filterCol) + lead : -1;
       const onlyNote = note?.checked ?? false;
       let shown = 0;
       for (const tr of rows) {
         const hit =
-          (!q || tr.textContent!.toLowerCase().includes(q)) &&
+          (!q || hay.get(tr)!.includes(q)) &&
           (!want || tr.cells[col]?.textContent?.trim() === want) &&
           (!onlyNote || !!tr.cells[noteCol]?.textContent?.trim());
         tr.hidden = !hit;
@@ -163,12 +249,15 @@ const petDetailHref = (petName: string) =>
       apply();
     });
 
-    let sortCol = -1;
-    let asc = true;
+    // CSV 進來就排好的話，表頭已經帶著 aria-sort。把那個狀態接手過來，
+    // 否則第一次點下去會照「新欄位一律升冪」的規則，先跳到相反方向再回來。
+    const preset = root.querySelector<HTMLTableCellElement>('th[data-sort-index][aria-sort]');
+    let sortCol = preset ? Number(preset.dataset.sortIndex) : -1;
+    let asc = preset ? preset.getAttribute('aria-sort') === 'ascending' : true;
     root.querySelectorAll<HTMLTableCellElement>('th[data-sort-index]').forEach((th) => {
       const sort = () => {
         const idx = Number(th.dataset.sortIndex);
-        const cell = idx + imgOffset;
+        const cell = idx + lead;
         asc = sortCol === idx ? !asc : true;
         sortCol = idx;
 

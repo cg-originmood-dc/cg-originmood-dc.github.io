@@ -24,7 +24,9 @@ const here = decodeURIComponent(Astro.url.pathname).replace(/\/$/, '');
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title} — 永恆初心 Cross Gate 攻略</title>
     <meta name="description" content={`${title}｜魔力寶貝 永恆初心 Cross Gate 攻略資料`} />
-    <link rel="icon" href={`${base}/favicon.svg`} type="image/svg+xml" />
+    {/* 站徽 public/img/logo.gif 裁出來的，重產見 scripts/make_favicon.py */}
+    <link rel="icon" href={`${base}/favicon.ico`} sizes="16x16 32x32 48x48" />
+    <link rel="apple-touch-icon" href={`${base}/apple-touch-icon.png`} />
   </head>
 
   <body>
