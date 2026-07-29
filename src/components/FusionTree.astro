@@ -1,8 +1,9 @@
 ---
 /**
- * 合成樹（由頂點向下解構）— 結構對齊 pet_page_template.html
- * currentName：目前瀏覽的寵物，會加上 node-current 邊框
- * 道具節點：圖與是否可點進詳情都依道具庫（CSV）為準
+ * 合成樹（由頂點向下解構）
+ * - 單產物：一個頭 → 材料
+ * - 多產物：多個頭並列 → 共用材料（多拉線）
+ * currentName：目前瀏覽的寵物，加上 node-current 邊框
  */
 import type { FusionNode } from '../lib/pets';
 import { hasItem } from '../lib/items';
@@ -16,13 +17,14 @@ interface Props {
 }
 const { node, base = '', depth = 0, currentName = '' } = Astro.props;
 
-const isCurrent = node.type === 'pet' && currentName !== '' && node.name === currentName;
+const isMultiHead = Boolean(node.heads && node.heads.length > 1);
+const isCurrent =
+  !isMultiHead && node.type === 'pet' && currentName !== '' && node.name === currentName;
 const isRoot = depth === 0 || !!node.target;
 
 function hrefFor(n: FusionNode): string | null {
   if (n.type === 'pet') return `${base}/寵物資料/${encodeURIComponent(n.name)}`;
   if (n.type === 'item' || n.type === 'material') {
-    // 只連道具庫有登錄的道具，避免死連結
     return hasItem(n.name) ? `${base}/道具總覽/${encodeURIComponent(n.name)}` : null;
   }
   return null;
@@ -33,8 +35,6 @@ function imgSrc(path?: string): string {
   return path.startsWith('/') ? base + path : path;
 }
 
-const nodeHref = hrefFor(node);
-
 /** 無圖時以文字分類標示，不使用 emoji */
 function typeFallback(n: FusionNode): string {
   if (n.type === 'gold') return '金幣';
@@ -43,51 +43,136 @@ function typeFallback(n: FusionNode): string {
   return '道具';
 }
 
+const nodeHref = hrefFor(node);
 const displayName = node.name;
 ---
 
-<li>
-  <div
-    class:list={[
-      'node-card',
-      { 'node-target': isRoot && !isCurrent },
-      { 'node-current': isCurrent },
-    ]}
-    data-pet-name={node.type === 'pet' ? node.name : undefined}
-  >
-    {
-      node.image ? (
-        <img src={imgSrc(node.image)} alt={node.name} loading="lazy" decoding="async" />
-      ) : (
-        <span class="node-card__icon node-card__icon--text">{typeFallback(node)}</span>
-      )
-    }
-    {
-      node.type === 'gold' ? (
-        <span class="node-card__name">{displayName}</span>
-      ) : node.type === 'pet' && isCurrent ? (
-        <span class="node-card__name node-card__name--current">
-          {displayName}
-          <span class="node-current-tag">目前</span>
-        </span>
-      ) : nodeHref ? (
-        <a href={nodeHref}>{displayName}</a>
-      ) : (
-        <span class="node-card__name">{displayName}</span>
-      )
-    }
-    {node.qty != null && <span class="count">× {node.qty}</span>}
-    {node.countLabel && <span class="count">{node.countLabel}</span>}
-    {node.npc && <div class="npc-info">{node.npc}</div>}
-  </div>
+{
+  isMultiHead ? (
+    <li class:list={['tree-multi-head', { 'tree-multi-head--root': isRoot }]}>
+      <div class="tree-multi-head__tops">
+        <ul class="tree-multi-head__heads">
+          {
+            node.heads!.map((h) => {
+              const hCur = h.type === 'pet' && currentName !== '' && h.name === currentName;
+              const hHref = hrefFor(h);
+              return (
+                <li class="tree-multi-head__head">
+                  <div
+                    class:list={[
+                      'node-card',
+                      { 'node-target': isRoot && !hCur },
+                      { 'node-current': hCur },
+                    ]}
+                    data-pet-name={h.type === 'pet' ? h.name : undefined}
+                  >
+                    {
+                      h.image ? (
+                        <img
+                          src={imgSrc(h.image)}
+                          alt={h.name}
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      ) : (
+                        <span class="node-card__icon node-card__icon--text">
+                          {typeFallback(h)}
+                        </span>
+                      )
+                    }
+                    {
+                      hCur ? (
+                        <span class="node-card__name node-card__name--current">
+                          {h.name}
+                          <span class="node-current-tag">目前</span>
+                        </span>
+                      ) : hHref ? (
+                        <a href={hHref}>{h.name}</a>
+                      ) : (
+                        <span class="node-card__name">{h.name}</span>
+                      )
+                    }
+                    {h.qty != null && <span class="count">× {h.qty}</span>}
+                    {h.countLabel && <span class="count">{h.countLabel}</span>}
+                  </div>
+                </li>
+              );
+            })
+          }
+        </ul>
+        {node.npc && <div class="npc-info tree-multi-head__npc">{node.npc}</div>}
+      </div>
 
-  {
-    node.children && node.children.length > 0 && (
-      <ul>
-        {node.children.map((child) => (
-          <Astro.self node={child} base={base} depth={depth + 1} currentName={currentName} />
-        ))}
-      </ul>
-    )
-  }
-</li>
+      {
+        node.children && node.children.length > 0 && (
+          <ul>
+            {node.children.map((child) => (
+              <Astro.self
+                node={child}
+                base={base}
+                depth={depth + 1}
+                currentName={currentName}
+              />
+            ))}
+          </ul>
+        )
+      }
+    </li>
+  ) : (
+    <li>
+      <div
+        class:list={[
+          'node-card',
+          { 'node-target': isRoot && !isCurrent },
+          { 'node-current': isCurrent },
+        ]}
+        data-pet-name={node.type === 'pet' ? node.name : undefined}
+      >
+        {
+          node.image ? (
+            <img
+              src={imgSrc(node.image)}
+              alt={node.name}
+              loading="lazy"
+              decoding="async"
+            />
+          ) : (
+            <span class="node-card__icon node-card__icon--text">{typeFallback(node)}</span>
+          )
+        }
+        {
+          node.type === 'gold' ? (
+            <span class="node-card__name">{displayName}</span>
+          ) : node.type === 'pet' && isCurrent ? (
+            <span class="node-card__name node-card__name--current">
+              {displayName}
+              <span class="node-current-tag">目前</span>
+            </span>
+          ) : nodeHref ? (
+            <a href={nodeHref}>{displayName}</a>
+          ) : (
+            <span class="node-card__name">{displayName}</span>
+          )
+        }
+        {node.qty != null && <span class="count">× {node.qty}</span>}
+        {node.countLabel && <span class="count">{node.countLabel}</span>}
+        {node.npc && <div class="npc-info">{node.npc}</div>}
+      </div>
+
+      {
+        node.children && node.children.length > 0 && (
+          <ul>
+            {node.children.map((child) => (
+              <Astro.self
+                node={child}
+                base={base}
+                depth={depth + 1}
+                currentName={currentName}
+              />
+            ))}
+          </ul>
+        )
+      }
+    </li>
+  )
+}

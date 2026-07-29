@@ -534,29 +534,45 @@ function buildTreeForProduct(petName: string, maxDepth: number): FusionNode | nu
   return expandProduct(petName, pick, new Set([petName]), 0, maxDepth);
 }
 
-/**
- * 主配方若有多個產物／機率分支，回傳排序後列表（樹外顯示用，不塞進樹節點）。
- * 單一產物時回傳空陣列。
- */
-export function listFusionOutcomesForPet(petName: string): ProductOutcome[] {
-  ensureParsed();
-  let pick = pickRecipeForProduct(petName);
-  if (!pick) {
-    // 僅當材料：用可合成產物的主配方
-    for (const prod of listProductsFromIngredient(petName)) {
-      pick = pickRecipeForProduct(prod);
-      if (pick?.outcomes.length && pick.outcomes.length > 1) break;
-      pick = null;
-    }
-  }
-  if (!pick || pick.outcomes.length <= 1) return [];
-  return pick.outcomes
+/** 產物分支 → 樹頂「頭」節點（無 children，只顯示名稱／機率／圖） */
+function outcomeHeadNodes(recipe: ParsedRecipe): FusionNode[] {
+  const list =
+    recipe.outcomes.length > 0
+      ? recipe.outcomes
+      : recipe.productPets.map(
+          (name): ProductOutcome => ({
+            type: 'pet',
+            name,
+            ...(recipe.productProb[name] ? { prob: recipe.productProb[name] } : {}),
+          }),
+        );
+
+  return list
     .slice()
     .sort((a, b) => {
       const pa = a.prob ? Number.parseFloat(a.prob) : -1;
       const pb = b.prob ? Number.parseFloat(b.prob) : -1;
       if (pb !== pa) return pb - pa;
       return a.name.localeCompare(b.name, 'zh-Hant');
+    })
+    .map((o): FusionNode => {
+      const probLabel = o.prob ? `機率 ${o.prob}` : undefined;
+      if (o.type === 'pet') {
+        return {
+          type: 'pet',
+          name: o.name,
+          image: ssotImage(o.name),
+          ...(probLabel ? { countLabel: probLabel } : {}),
+        };
+      }
+      const image = itemImagePath(o.name);
+      return {
+        type: 'item',
+        name: o.name,
+        ...(image ? { image } : {}),
+        ...(o.qty != null ? { qty: o.qty } : {}),
+        ...(probLabel ? { countLabel: probLabel } : {}),
+      };
     });
 }
 
@@ -657,9 +673,10 @@ function expandIngredients(
 }
 
 /**
- * 經典合成樹：root = 產物，children = 材料（向下解構）。
- * 多產物機率不塞進樹裡（避免虛擬「機率合成」節點），改由 listFusionOutcomesForPet 樹外顯示。
- * 各層展開的產物節點保留該配方自己的 NPC。
+ * 合成樹：
+ * - 單產物：root = 產物，children = 材料
+ * - 多產物：root.heads = 多個頭（各產物+機率），children = 共用材料（多拉幾條線）
+ * 各層保留該配方自己的 NPC。
  */
 function expandProduct(
   petName: string,
@@ -670,6 +687,19 @@ function expandProduct(
 ): FusionNode {
   const npcLine = formatNpcLine(recipe);
   const materials = expandIngredients(recipe, stack, depth, maxDepth);
+  const multi = recipe.outcomes.length > 1 || recipe.productPets.length > 1;
+
+  if (multi) {
+    return {
+      type: 'material',
+      name: '',
+      target: depth === 0,
+      heads: outcomeHeadNodes(recipe),
+      ...(npcLine ? { npc: npcLine } : {}),
+      children: materials,
+    };
+  }
+
   const prob = recipe.productProb[petName];
   const probLabel = prob ? `機率 ${prob}` : undefined;
 
