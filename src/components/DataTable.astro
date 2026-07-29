@@ -17,6 +17,15 @@ import { renderCell } from '../lib/richtext';
  * 表格那張用縮圖，放大預覽才用原圖。預覽那張是 display:none + loading="lazy"，
  * 瀏覽器不會事先下載，真的 hover 才抓——寵物頁 1069 列，差別是 56MB 對 20MB。
  */
+/**
+ * 「名稱(數量)、名稱(數量)」的材料欄。這種欄位折行時會折在名字或數量中間
+ * （「黃月」換行「木(20)」），一項一項各自不折、只折在頓號之間就好。
+ *
+ * 認的是內容不是欄位名字：整格每一項都是「某某(數字)」才算，
+ * 能力欄的「攻擊+141~225、必殺+1~5」與說明欄的散文都不會中。
+ */
+const QUANTITY_LIST = /^[^、]+\(\d+\)(?:、[^、]+\(\d+\))+$/;
+
 interface Props {
   name: string;
 }
@@ -116,10 +125,12 @@ const cols = dataset?.columns.filter((c) => c !== dataset.imageColumn) ?? [];
                   // 一格好幾條的欄位（採集地點最多九個點）拆成一行一條。
                   // 串成一行的話括號座標一路接下去，要數到第幾個斜線才知道在看哪一個點。
                   const items = value.includes(LIST_SEP) ? value.split(LIST_SEP) : null;
+                  const parts = !items && QUANTITY_LIST.test(value) ? value.split('、') : null;
                   const classes = [
                     dataset.wrapColumns.includes(c) ? 'is-wrap' : '',
                     c === dataset.noteColumn ? 'is-note' : '',
                     items ? 'is-list' : '',
+                    parts ? 'is-items' : '',
                   ].filter(Boolean).join(' ');
                   return linked ? (
                     <td class={classes || undefined} set:html={renderCell(value, base)} />
@@ -127,6 +138,13 @@ const cols = dataset?.columns.filter((c) => c !== dataset.imageColumn) ?? [];
                     <td class={classes}>
                       {items.map((item) => (
                         <span>{item}</span>
+                      ))}
+                    </td>
+                  ) : parts ? (
+                    // 頓號留在前一項的尾巴，折行才會折在頓號後面而不是前面
+                    <td class={classes}>
+                      {parts.map((part, i) => (
+                        <span>{i < parts.length - 1 ? `${part}、` : part}</span>
                       ))}
                     </td>
                   ) : (
