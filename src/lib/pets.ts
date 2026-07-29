@@ -340,7 +340,7 @@ export function applyPetImagesFromSsot(node: FusionNode): FusionNode {
  * 優先序：
  * 1. 手寫 extras（風之使徒模板、寵物詳情補充.json）
  * 2. 其他 extras 樹中包含本寵的最大樹
- * 3. 寵物合成配方.csv 自動建樹（活動產物）
+ * 3. 寵物合成配方.csv 自動建樹（產物；若僅為材料則掛到可合成的產物樹）
  * 4. 僅樹尖本寵
  * 回傳前會對所有寵物節點套用 petImagePath SSOT。
  */

@@ -45,8 +45,10 @@ export interface ParsedRecipe {
   ingredients: FusionNode[];
   /** 產物寵物名稱（已對到專屬寵物表；召喚書會去尾） */
   productPets: string[];
-  /** 產物文字（含機率清理後） */
+  /** 產物文字（已去掉機率字樣） */
   productLabels: string[];
+  /** 產物寵物 → 機率（如 "2%"、"80%"）；確定產物不寫 */
+  productProb: Record<string, string>;
   npc: string;
 }
 
@@ -61,8 +63,28 @@ let petTableMtime = 0;
 
 const GOLD_RE = /金幣|^\d{1,3}(?:,\d{3})+G$|\d+G$/;
 const QTY_RE = /[×*xX]\s*(\d+)\s*$/;
-const PROB_RE = /[（(]\s*概率\s*[^）)]*[）)]|概率\s*\d+%/g;
+/** 公告常見寫法：（概率80%）、概率98%、（概率 2%） */
+const PROB_RE = /[（(]\s*概率\s*[^）)]*[）)]|概率\s*\d+(?:\.\d+)?\s*%?/g;
 const LV_PREFIX_RE = /^(?:任意等級的|Lv\s*\d+\s*的|LV\s*\d+\s*的|lv\s*\d+\s*的)\s*/i;
+
+/** 從產物標籤抽出機率，回傳正規化後的 "80%" 與清乾淨的文字 */
+function extractProb(s: string): { clean: string; prob?: string } {
+  let clean = s;
+  let prob: string | undefined;
+  const mParen = clean.match(/[（(]\s*概率\s*(\d+(?:\.\d+)?)\s*%?\s*[）)]/);
+  if (mParen) {
+    prob = `${mParen[1]}%`;
+    clean = clean.replace(mParen[0], '');
+  } else {
+    const mBare = clean.match(/概率\s*(\d+(?:\.\d+)?)\s*%?/);
+    if (mBare) {
+      prob = `${mBare[1]}%`;
+      clean = clean.replace(mBare[0], '');
+    }
+  }
+  clean = clean.replace(/\s+/g, ' ').trim();
+  return prob ? { clean, prob } : { clean };
+}
 
 /** 活動錨點 id：穩定、短、URL 安全 */
 export function synthesisActivityId(
@@ -173,7 +195,7 @@ export function findPetNamesInText(text: string): string[] {
 }
 
 function stripProb(s: string): string {
-  return s.replace(PROB_RE, '').replace(/\s+/g, ' ').trim();
+  return extractProb(s).clean;
 }
 
 function parseQty(token: string): { name: string; qty?: number } {
@@ -280,21 +302,27 @@ function parseRecipe(raw: SynthesisRecipe): ParsedRecipe {
     productLabels.length > 0 ? productLabels : [raw['獲得寵物']].filter(Boolean);
 
   const productPets: string[] = [];
+  const productProb: Record<string, string> = {};
   const seen = new Set<string>();
   for (const lab of labels) {
+    const { prob } = extractProb(lab);
     for (const n of findPetNamesInText(lab)) {
       if (!seen.has(n)) {
         seen.add(n);
         productPets.push(n);
       }
+      // 同寵多標籤時保留第一個有寫的機率
+      if (prob && !productProb[n]) productProb[n] = prob;
     }
   }
   if (productPets.length === 0) {
+    const { prob } = extractProb(raw['獲得寵物'] || '');
     for (const n of findPetNamesInText(raw['獲得寵物'])) {
       if (!seen.has(n)) {
         seen.add(n);
         productPets.push(n);
       }
+      if (prob && !productProb[n]) productProb[n] = prob;
     }
   }
 
@@ -304,6 +332,7 @@ function parseRecipe(raw: SynthesisRecipe): ParsedRecipe {
     ingredients,
     productPets,
     productLabels: labels.map(stripProb),
+    productProb,
     npc: (raw.NPC || '').trim(),
   };
 }
@@ -394,8 +423,30 @@ export function listActivitiesForPet(petName: string): SynthesisActivityMeta[] {
 }
 
 /**
- * 為產物寵物建「由頂向下」合成樹：
- * root = 產物，children = 材料；材料若仍是某配方產物則遞迴展開。
+ * 此寵作為「材料」可合成出的產物（不含自己重抽）。
+ * 例：百合騎士 → [百合聖騎士]
+ */
+export function listProductsFromIngredient(petName: string): string[] {
+  ensureParsed();
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const rec of recipeCache ?? []) {
+    const uses = rec.ingredients.some((i) => i.type === 'pet' && i.name === petName);
+    if (!uses) continue;
+    for (const p of rec.productPets) {
+      if (p === petName || seen.has(p)) continue;
+      seen.add(p);
+      out.push(p);
+    }
+  }
+  return out;
+}
+
+/**
+ * 為寵物建「由頂向下」合成樹：
+ * - 若為產物：root = 本寵，children = 材料
+ * - 若僅為材料：root = 可合成的產物（藍框仍框目前瀏覽的材料寵）
+ * 材料若仍是某配方產物則遞迴展開。
  */
 export function buildFusionTreeForPet(
   petName: string,
@@ -403,6 +454,36 @@ export function buildFusionTreeForPet(
 ): FusionNode | null {
   ensureParsed();
   const maxDepth = opts.maxDepth ?? 6;
+
+  const asProduct = buildTreeForProduct(petName, maxDepth);
+  if (asProduct) return asProduct;
+
+  // 僅當材料：掛到產物樹（優先「確定產物／單一產物」的升級線）
+  const products = listProductsFromIngredient(petName);
+  if (!products.length) return null;
+
+  const scored = products.map((prod) => {
+    const recs = listRecipesForProduct(prod);
+    const via = recs.find((r) =>
+      r.ingredients.some((i) => i.type === 'pet' && i.name === petName),
+    );
+    const hasProb = via ? Boolean(via.productProb[prod]) : true;
+    const multi = via ? via.productPets.length > 1 : true;
+    // 確定、單一產物優先（百合騎士→百合聖騎士）
+    const score = (hasProb ? 0 : 20) + (multi ? 0 : 10) + recs.length;
+    return { prod, score };
+  });
+  scored.sort((a, b) => b.score - a.score || a.prod.localeCompare(b.prod, 'zh-Hant'));
+
+  for (const { prod } of scored) {
+    const tree = buildTreeForProduct(prod, maxDepth);
+    if (tree?.children?.length) return tree;
+  }
+  return null;
+}
+
+/** 僅在「本寵是產物」時建樹 */
+function buildTreeForProduct(petName: string, maxDepth: number): FusionNode | null {
   const recipes = listRecipesForProduct(petName);
   if (!recipes.length) return null;
 
@@ -480,29 +561,27 @@ function expandProduct(
     return expandProduct(ing.name, sub, next, depth + 1, maxDepth);
   });
 
-  const alt = recipe.productPets.filter((p) => p !== petName);
-  const altNote =
-    alt.length > 0
-      ? `其他產物：${alt.join('、')}`
-      : recipe.productLabels.length > 1
-        ? `產物分支：${recipe.productLabels.join(' / ')}`
-        : '';
+  // 機率合成：節點上標明此產物機率（活動名／期間見「相關合成活動」，不塞這裡）
+  const prob = recipe.productProb[petName];
+  const probLabel = prob ? `機率 ${prob}` : undefined;
 
   return {
     type: 'pet',
     name: petName,
     image: ssotImage(petName),
     target: depth === 0,
-    npc: [npcLine, altNote].filter(Boolean).join(' · '),
+    ...(probLabel ? { countLabel: probLabel } : {}),
+    // 僅樹尖標 NPC；下層材料展開時不再重複同一行
+    ...(npcLine && depth === 0 ? { npc: npcLine } : {}),
     children,
   };
 }
 
+/** 合成樹節點說明：只保留 NPC（去掉「NPC：」前綴），不重複活動名／期間 */
 function formatNpcLine(recipe: ParsedRecipe): string {
-  const meta = getActivityMeta(recipe);
-  const npc = recipe.npc && recipe.npc !== '公告未載明' ? recipe.npc : '';
-  const bits = [npc, meta.title, meta.period].filter(Boolean);
-  return bits.join(' ｜ ');
+  const raw = (recipe.npc || '').trim();
+  if (!raw || raw === '公告未載明') return '';
+  return raw.replace(/^NPC：\s*/u, '').trim();
 }
 
 /** 寵物詳情「相關合成活動」連結（帶 # 錨點） */
