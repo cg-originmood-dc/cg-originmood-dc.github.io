@@ -1,23 +1,140 @@
 ---
+/**
+ * 道具詳情：資料來自 content/data/道具庫.csv（SSOT）
+ */
 import Base from '../../layouts/Base.astro';
-import DbEmbed from '../../components/DbEmbed.astro';
-import { readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { getItem, listItems, itemFallbackIcon } from '../../lib/items';
+import { renderCell } from '../../lib/richtext';
 
 export function getStaticPaths() {
-  const dir = join(process.cwd(), 'public', '資料庫', 'items');
-  try {
-    return readdirSync(dir)
-      .filter((f) => f.endsWith('.html'))
-      .map((f) => ({ params: { name: f.replace(/\.html$/, '') } }));
-  } catch {
-    return [];
-  }
+  return listItems().map((item) => ({
+    params: { name: item.名稱 },
+    props: { name: item.名稱 },
+  }));
 }
 
-const { name } = Astro.params;
+const { name } = Astro.props as { name: string };
+const item = getItem(name);
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const src = (v: string) => (v.startsWith('/') ? base + v : v);
+const img = (item?.image ?? '').trim();
 ---
 
-<Base title={`${name} - 道具詳情`} dbEmbed>
-  <DbEmbed src={`items/${name}.html`} />
-</Base>
+{
+  !item ? (
+    <Base title="找不到道具">
+      <h1 class="page-title">找不到道具</h1>
+      <p>
+        道具庫中沒有「{name}」。請回<a href={`${base}/道具總覽`}>道具總覽</a>。
+      </p>
+    </Base>
+  ) : (
+    <Base title={`${item.名稱} — 道具`}>
+      <h1 class="page-title">{item.名稱}</h1>
+      <p class="crumbs">
+        <a href={`${base}/`}>首頁</a>
+        <span aria-hidden="true"> / </span>
+        <a href={`${base}/道具總覽`}>道具總覽</a>
+        <span aria-hidden="true"> / </span>
+        <span>{item.名稱}</span>
+      </p>
+
+      <table class="info-table">
+        <tr class="head"><td colspan="2">道具資料</td></tr>
+        <tr>
+          <td class="item-hero" colspan="2">
+            {
+              img ? (
+                <img class="item-hero__img" src={src(img)} alt={item.名稱} />
+              ) : (
+                <span class="item-hero__icon">{itemFallbackIcon(item.名稱)}</span>
+              )
+            }
+            <div>
+              <div class="item-hero__name">{item.名稱}</div>
+              <div class="item-hero__meta">
+                {item.分類}
+                {item.子分類 ? ` · ${item.子分類}` : ''}
+                {item.等級 ? ` · 等級 ${item.等級}` : ''}
+              </div>
+            </div>
+          </td>
+        </tr>
+        {
+          item.說明?.trim() && (
+            <tr>
+              <th scope="row">說明</th>
+              <td>{item.說明}</td>
+            </tr>
+          )
+        }
+        {
+          item.入手方式?.trim() && (
+            <tr>
+              <th scope="row">入手方式</th>
+              <td set:html={renderCell(item.入手方式, base)} />
+            </tr>
+          )
+        }
+      </table>
+    </Base>
+  )
+}
+
+<style>
+  .info-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0 2rem;
+    font-size: 0.95rem;
+  }
+  .info-table th,
+  .info-table td {
+    border: 1px solid #c0c0c0;
+    padding: 0.65rem 0.85rem;
+    vertical-align: top;
+  }
+  .info-table th {
+    width: 7rem;
+    background: #f5f5f5;
+    text-align: left;
+    font-weight: 700;
+  }
+  .info-table .head td {
+    background: #eceff1;
+    font-weight: 700;
+  }
+  .item-hero {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .item-hero__img {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+    image-rendering: pixelated;
+    background: #fafafa;
+    border: 1px solid #e0e0e0;
+  }
+  .item-hero__icon {
+    font-size: 2.5rem;
+    line-height: 1;
+  }
+  .item-hero__name {
+    font-size: 1.25rem;
+    font-weight: 800;
+  }
+  .item-hero__meta {
+    margin-top: 0.25rem;
+    color: #5f6368;
+    font-size: 0.9rem;
+  }
+  .crumbs {
+    font-size: 0.9rem;
+    color: #5f6368;
+  }
+  .crumbs a {
+    color: #1565c0;
+  }
+</style>

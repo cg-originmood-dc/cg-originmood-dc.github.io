@@ -1,6 +1,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { listPetsWithSkill, type PetSkillHolder } from './pets';
+import { CRAFT_SKILL_HREF } from './craftSkills';
 
 export interface DbHtml {
   style: string;
@@ -10,6 +11,65 @@ export interface DbHtml {
    * 注意：Astro set:html 插入的 <script> 不會執行，必須由 DbEmbed 另行注入。
    */
   scripts: string[];
+}
+
+/**
+ * 生產技能「專屬詳情」改連站內配方表；
+ * 技能詳情頁頂部補一條「查看配方」捷徑。
+ */
+function rewriteCraftSkillLinks(body: string, relPath: string): string {
+  let next = body;
+  // 長名優先，避免「伐木」吃掉「伐木體驗」的路徑前綴
+  const skills = Object.entries(CRAFT_SKILL_HREF).sort(
+    (a, b) => b[0].length - a[0].length,
+  );
+  for (const [skill, href] of skills) {
+    // 總覽卡：僅精確匹配 /技能總覽/{技能名}" 
+    next = next.replace(
+      new RegExp(`href="/技能總覽/${escapeRegExp(skill)}"`, 'g'),
+      `href="${href}"`,
+    );
+    // 文案：專屬詳情 → 配方一覽
+    next = next.replace(
+      new RegExp(
+        `(href="${escapeRegExp(href)}"[^>]*class="skill-detail-link"[^>]*>)\\s*專屬詳情\\s*(</a>)`,
+        'g',
+      ),
+      '$1配方一覽$2',
+    );
+    next = next.replace(
+      new RegExp(
+        `(class="skill-detail-link"[^>]*href="${escapeRegExp(href)}"[^>]*>)\\s*專屬詳情\\s*(</a>)`,
+        'g',
+      ),
+      '$1配方一覽$2',
+    );
+  }
+
+  // 詳情頁 skills/造槍.html → 頁首捷徑
+  const skillPage = relPath.match(/^skills\/(.+)\.html$/);
+  if (skillPage) {
+    const skill = skillPage[1];
+    const href = CRAFT_SKILL_HREF[skill];
+    if (href && !next.includes('data-craft-recipe-link')) {
+      const banner =
+        `<div data-craft-recipe-link class="craft-recipe-banner" style="margin:0 0 12px;padding:10px 14px;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;font-size:14px;">` +
+        `此技能的站內配方表：` +
+        `<a href="${href}" style="font-weight:700;color:#2e7d32;">${href.replace(/^\//, '')}</a>` +
+        `</div>`;
+      // 插在第一個內容容器前
+      if (/<div[^>]*id="wrapper"/i.test(next)) {
+        next = next.replace(/(<div[^>]*id="wrapper"[^>]*>)/i, `$1${banner}`);
+      } else {
+        next = banner + next;
+      }
+    }
+  }
+  return next;
+}
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /** 修正技能／道具 HTML 內錯誤的相對圖路徑 */
@@ -457,6 +517,9 @@ export function loadDbHtml(relPath: string): DbHtml {
     /href="\.\.\/pet_page_template\.html"/g,
     'href="/專屬寵物"',
   );
+
+  // 生產製作／採集技能 → 左側配方頁（技能總覽卡與詳情內連結）
+  body = rewriteCraftSkillLinks(body, relPath);
 
   // 圖片路徑：靜態 HTML 曾寫成相對路徑 ../cg-originmood.../public/img → 404
   body = fixAssetPaths(body);

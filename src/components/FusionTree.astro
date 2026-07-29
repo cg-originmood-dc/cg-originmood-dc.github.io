@@ -2,8 +2,10 @@
 /**
  * 合成樹（由頂點向下解構）— 結構對齊 pet_page_template.html
  * currentName：目前瀏覽的寵物，會加上 node-current 邊框
+ * 道具節點：圖與是否可點進詳情都依道具庫（CSV）為準
  */
 import type { FusionNode } from '../lib/pets';
+import { hasItem } from '../lib/items';
 
 interface Props {
   node: FusionNode;
@@ -17,18 +19,21 @@ const { node, base = '', depth = 0, currentName = '' } = Astro.props;
 const isCurrent = node.type === 'pet' && currentName !== '' && node.name === currentName;
 const isRoot = depth === 0 || !!node.target;
 
-function hrefFor(n: FusionNode): string {
+function hrefFor(n: FusionNode): string | null {
   if (n.type === 'pet') return `${base}/寵物資料/${encodeURIComponent(n.name)}`;
   if (n.type === 'item' || n.type === 'material') {
-    return `${base}/道具總覽/${encodeURIComponent(n.name)}`;
+    // 只連道具庫有登錄的道具，避免死連結
+    return hasItem(n.name) ? `${base}/道具總覽/${encodeURIComponent(n.name)}` : null;
   }
-  return '#';
+  return null;
 }
 
 function imgSrc(path?: string): string {
   if (!path) return '';
   return path.startsWith('/') ? base + path : path;
 }
+
+const nodeHref = hrefFor(node);
 ---
 
 <li>
@@ -57,8 +62,10 @@ function imgSrc(path?: string): string {
           {isRoot ? `🌟 ${node.name}` : node.name}
           <span class="node-current-tag">目前</span>
         </span>
+      ) : nodeHref ? (
+        <a href={nodeHref}>{isRoot ? `🌟 ${node.name}` : node.name}</a>
       ) : (
-        <a href={hrefFor(node)}>{isRoot ? `🌟 ${node.name}` : node.name}</a>
+        <span class="node-card__name">{isRoot ? `🌟 ${node.name}` : node.name}</span>
       )
     }
     {node.qty != null && <span class="count">× {node.qty}</span>}
