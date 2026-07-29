@@ -516,6 +516,18 @@ main {
   text-align: left;
 }
 
+/* 一格好幾條的欄位（見 datasets.ts 的 LIST_SEP），一行一條 */
+.dataset tbody td.is-list {
+  text-align: left;
+}
+
+.dataset tbody td.is-list > span {
+  display: block;
+  /* 一條長到要折行時續行往內縮，才看得出哪幾行是同一條 */
+  padding-left: 1em;
+  text-indent: -1em;
+}
+
 /* 補充欄位大多數列是空的，有值的才是重點；字小一點免得把本來的欄位擠掉 */
 .dataset tbody td.is-note {
   min-width: 18rem;

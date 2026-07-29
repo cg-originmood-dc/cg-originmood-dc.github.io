@@ -1,5 +1,5 @@
 ---
-import { loadDataset } from '../lib/datasets';
+import { loadDataset, LIST_SEP } from '../lib/datasets';
 import { thumbOf } from '../lib/thumbs';
 import { renderCell } from '../lib/richtext';
 
@@ -113,12 +113,22 @@ const cols = dataset?.columns.filter((c) => c !== dataset.imageColumn) ?? [];
                 {cols.map((c) => {
                   const value = row[c] ?? '';
                   const linked = /\[[^\]]+\]\([^)]+\)/.test(value);
+                  // 一格好幾條的欄位（採集地點最多九個點）拆成一行一條。
+                  // 串成一行的話括號座標一路接下去，要數到第幾個斜線才知道在看哪一個點。
+                  const items = value.includes(LIST_SEP) ? value.split(LIST_SEP) : null;
                   const classes = [
                     dataset.wrapColumns.includes(c) ? 'is-wrap' : '',
                     c === dataset.noteColumn ? 'is-note' : '',
+                    items ? 'is-list' : '',
                   ].filter(Boolean).join(' ');
                   return linked ? (
                     <td class={classes || undefined} set:html={renderCell(value, base)} />
+                  ) : items ? (
+                    <td class={classes}>
+                      {items.map((item) => (
+                        <span>{item}</span>
+                      ))}
+                    </td>
                   ) : (
                     <td class={classes || undefined}>{value}</td>
                   );
@@ -158,7 +168,12 @@ const cols = dataset?.columns.filter((c) => c !== dataset.imageColumn) ?? [];
         tr,
         Array.from(tr.cells)
           .filter((td) => !td.classList.contains('col-act'))
-          .map((td) => td.textContent)
+          // 一行一條的欄位要自己補回分隔空白，textContent 會把相鄰兩條黏成一個字串
+          .map((td) =>
+            td.classList.contains('is-list')
+              ? Array.from(td.children, (n) => n.textContent).join(' ')
+              : td.textContent,
+          )
           .join(' ')
           .toLowerCase(),
       ]),
