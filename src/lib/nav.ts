@@ -46,7 +46,9 @@ export async function buildNav(): Promise<NavNode[]> {
   };
 
   for (const entry of entries) {
-    if (entry.id === HOME_ID) continue;
+    // 首頁另外 prepend 到最上方，不走 breadcrumb 樹
+    // （content/pages/index.md 標題也是「首頁」，一併略過避免重複）
+    if (entry.id === HOME_ID || entry.data.title === HOME_ID) continue;
     let level = roots;
     for (const crumb of entry.data.breadcrumb) {
       level = find(level, crumb).children;
@@ -72,6 +74,17 @@ export async function buildNav(): Promise<NavNode[]> {
     list.forEach((n) => sortTree(n.children));
   };
   sortTree(roots);
+
+  // 首頁固定放在導覽最上方
+  const homeEntry = entries.find((e) => e.id === HOME_ID);
+  if (homeEntry) {
+    roots.unshift({
+      label: homeEntry.data.title,
+      href: hrefFor(HOME_ID),
+      children: [],
+    });
+  }
+
   return roots;
 }
 

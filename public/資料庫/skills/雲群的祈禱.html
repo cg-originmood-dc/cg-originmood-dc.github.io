@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>雲群的祈禱 - 技能詳情</title>
+  <style>
+    :root {
+      --db-bg: #ffffff;
+      --db-surface: #f8f9fa;
+      --db-border: #e0e0e0;
+      --db-text: #212121;
+      --db-text-2: #5f6368;
+      --db-accent: #1155cc;
+      --db-gold: #e65100;
+      --db-header: #f1f3f4;
+    }
+    body {
+      background-color: var(--db-bg);
+      color: var(--db-text);
+      font-family: "Open Sans", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+      margin: 0;
+      padding: 0;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+    #wrapper {
+      width: 100%;
+      max-width: none;
+      margin: 0;
+      padding: 0 4px 24px;
+      box-sizing: border-box;
+    }
+    .back-btn {
+      display: inline-block;
+      margin-bottom: 14px;
+      color: var(--db-accent);
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .back-btn:hover { text-decoration: underline; }
+    .info-table {
+      width: 100%;
+      background-color: var(--db-border);
+      border-collapse: separate;
+      border-spacing: 1px;
+      margin-bottom: 16px;
+    }
+    .info-table td, .info-table th {
+      background-color: #ffffff;
+      padding: 10px 12px;
+      vertical-align: middle;
+      color: var(--db-text);
+    }
+    .info-table .head {
+      background-color: var(--db-header);
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--db-text);
+      border-left: 5px solid var(--db-accent);
+      text-align: left;
+    }
+    .skill-title-cell, .title-cell { display: flex; align-items: center; }
+    .skill-icon {
+      width: 50px; height: 50px;
+      background-color: var(--db-surface);
+      border: 1px solid var(--db-accent);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; margin-right: 15px;
+    }
+    .skill-title-text h2, .title-text h2 {
+      font-size: 22px; color: var(--db-text); margin: 0 0 4px 0;
+    }
+    .title-text span { font-size: 13px; color: var(--db-text-2); }
+    .title-cell img {
+      margin-right: 15px;
+      border: 1px solid var(--db-border);
+      border-radius: 4px;
+      max-width: 64px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 3px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #212121;
+      background-color: var(--db-accent);
+    }
+    .level-table, .grade-table, .stats-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+    }
+    .level-table th, .grade-table th, .stats-table th {
+      background-color: var(--db-header);
+      color: var(--db-accent);
+      font-size: 12px;
+      padding: 8px;
+      border-bottom: 2px solid var(--db-accent);
+      font-weight: 700;
+    }
+    .level-table td, .grade-table td, .stats-table td {
+      padding: 9px 6px;
+      border-bottom: 1px solid #eee;
+      font-size: 13px;
+      color: var(--db-text);
+    }
+    .pet-large-pic {
+      text-align: center;
+      background-color: var(--db-surface);
+      padding: 16px;
+      border: 1px solid var(--db-border);
+      margin-bottom: 16px;
+      border-radius: 6px;
+    }
+    .pet-large-pic img {
+      max-width: 100%;
+      max-height: 360px;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+      image-rendering: pixelated;
+    }
+    .pet-chip-wrapper, .pet-mini-wrapper {
+      display: flex; flex-wrap: wrap; gap: 8px; padding: 5px 0;
+    }
+    .pet-skill-chip, .pet-mini-chip {
+      display: inline-flex; align-items: center;
+      background-color: #fff8e1;
+      border: 1px solid #ffe082;
+      padding: 4px 10px; border-radius: 4px;
+      text-decoration: none; color: var(--db-gold);
+      font-size: 12px; font-weight: 700;
+    }
+    .pet-skill-chip:hover, .pet-mini-chip:hover {
+      background: var(--db-accent); color: #212121; border-color: var(--db-accent);
+    }
+    .pet-skill-chip img, .pet-mini-chip img {
+      width: 24px; height: 24px; object-fit: contain; margin-right: 6px;
+    }
+    .total-grade-text { font-size: 18px; color: var(--db-gold); font-weight: 700; }
+    .grade-bar {
+      display: inline-block; background-color: #eee;
+      width: 60px; height: 8px; border-radius: 4px;
+      overflow: hidden; margin-left: 8px; vertical-align: middle;
+    }
+    .grade-fill { background-color: var(--db-gold); height: 100%; }
+    .tree-container { width: 100%; overflow-x: auto; padding: 15px 0; }
+    .tree-diagram, .tree-diagram ul {
+      display: flex; justify-content: center; margin: 0; padding: 0;
+      list-style: none; position: relative;
+    }
+    .tree-diagram ul { padding-top: 20px; }
+    .tree-diagram li {
+      display: flex; flex-direction: column; align-items: center;
+      position: relative; padding: 20px 4px 0 4px;
+    }
+    .tree-diagram li::before, .tree-diagram li::after {
+      content: ''; position: absolute; top: 0; right: 50%;
+      border-top: 2px solid var(--db-accent); width: 50%; height: 20px;
+    }
+    .tree-diagram li::after {
+      right: auto; left: 50%; border-left: 2px solid var(--db-accent);
+    }
+    .tree-diagram li:only-child::after, .tree-diagram li:only-child::before { display: none; }
+    .tree-diagram li:only-child { padding-top: 0; }
+    .tree-diagram li:first-child::before, .tree-diagram li:last-child::after { border: 0 none; }
+    .tree-diagram li:last-child::before {
+      border-right: 2px solid var(--db-accent); border-radius: 0 4px 0 0;
+    }
+    .tree-diagram li:first-child::after { border-radius: 4px 0 0 0; }
+    .tree-diagram ul::before {
+      content: ''; position: absolute; top: 0; left: 50%;
+      border-left: 2px solid var(--db-accent); width: 0; height: 20px;
+    }
+    .node-card {
+      background-color: #ffffff; border: 1px solid var(--db-border);
+      border-radius: 5px; padding: 6px 8px; text-align: center;
+      min-width: 70px; position: relative; z-index: 2; box-sizing: border-box;
+    }
+    .node-card img {
+      width: 38px; height: 38px; object-fit: contain;
+      display: block; margin: 0 auto 3px auto;
+    }
+    .node-card a {
+      color: var(--db-accent); font-size: 11px; text-decoration: none;
+      font-weight: 700; display: block; white-space: nowrap;
+    }
+    .node-card .count { font-size: 10px; color: var(--db-text-2); display: block; }
+    .node-card .npc-info {
+      font-size: 9px; color: var(--db-text-2); background-color: var(--db-surface);
+      border-radius: 3px; padding: 2px 4px; margin-top: 3px; white-space: nowrap;
+    }
+    .node-target {
+      border: 2px solid var(--db-accent);
+      background-color: #e8f0fe;
+      box-shadow: 0 0 6px rgba(17, 85, 204, 0.2);
+    }
+</style>
+</head>
+<body>
+<div id="wrapper">
+  <a href="/技能總覽" class="back-btn">⬅️ 返回技能總表</a>
+
+  <table class="info-table">
+    <tr>
+      <td>
+        <div class="skill-title-cell">
+          <div class="skill-icon">💤</div>
+          <div class="skill-title-text">
+            <h2>雲群的祈禱</h2>
+            <span>LV 1 ~ LV 12 技能效果</span>
+          </div>
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  <table class="info-table">
+    <tr class="head"><td colspan="4">技能概覽與類別資訊</td></tr>
+    <tr>
+      <td width="120"><b>技能分類</b></td>
+      <td width="230"><span class="badge">狀態變化魔法</span></td>
+      <td width="120"><b>最高等級</b></td>
+      <td width="230"><span style="color: #e65100; font-weight:bold;">LV 12</span></td>
+    </tr>
+  </table>
+
+  <table class="info-table">
+    <tr class="head"><td>⚡ LV 1 ~ LV 12 技能效果明細</td></tr>
+    <tr>
+      <td style="padding: 0;">
+        <table class="level-table">
+          <thead>
+            <tr>
+              <th width="70">等級</th>
+              <th width="110">魔力消耗</th>
+              <th>等級效果說明</th>
+            </tr>
+          </thead>
+          <tbody>
+          <tr>
+            <td style="font-weight: bold; color: #008be3;">LV 1</td>
+            <td style="color: #e65100; font-weight: bold;">15 MP</td>
+            <td style="text-align: left;">雙方戰鬥2回合間，風屬性傷害值減輕1%</td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; color: #008be3;">LV 2</td>
+            <td style="color: #e65100; font-weight: bold;">17 MP</td>
+            <td style="text-align: left;">雙方戰鬥3回合間，風屬性傷害值減輕1%</td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; color: #008be3;">LV 3</td>
+            <td style="color: #e65100; font-weight: bold;">22 MP</td>
+            <td style="text-align: left;">雙方戰鬥3回合間，風屬性傷害值減輕1.5%</td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; color: #008be3;">LV 4</td>
+            <td style="color: #e65100; font-weight: bold;">25 MP</td>
+            <td style="text-align: left;">雙方戰鬥4回合間，風屬性傷害值減輕1.5%</td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; color: #008be3;">LV 5</td>
+            <td style="color: #e65100; font-weight: bold;">30 MP</td>
+            <td style="text-align: left;">雙方戰鬥4回合間，風屬性傷害值減輕2%</td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; color: #008be3;">LV 6</td>
+            <td style="color: #e65100; font-weight: bold;">32 MP</td>
+            <td style="text-align: left;">雙方戰鬥5回合間，風屬性傷害值減輕2%</td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; color: #008be3;">LV 7</td>
+            <td style="color: #e65100; font-weight: bold;">37 MP</td>
+            <td style="text-align: left;">雙方戰鬥5回合間，風屬性傷害值減輕2.5%</td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; color: #008be3;">LV 8</td>
+            <td style="color: #e65100; font-weight: bold;">40 MP</td>
+            <td style="text-align: left;">雙方戰鬥6回合間，風屬性傷害值減輕2.5%</td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; color: #008be3;">LV 9</td>
+            <td style="color: #e65100; font-weight: bold;">45 MP</td>
+            <td style="text-align: left;">雙方戰鬥6回合間，風屬性傷害值減輕3%</td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; color: #008be3;">LV 10</td>
+            <td style="color: #e65100; font-weight: bold;">52 MP</td>
+            <td style="text-align: left;">雙方戰鬥7回合間，風屬性傷害值減輕3%</td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; color: #008be3;">LV 11</td>
+            <td style="color: #e65100; font-weight: bold;">59 MP</td>
+            <td style="text-align: left;">雙方戰鬥8回合間，風屬性傷害值減輕3%（推估）</td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; color: #008be3;">LV 12</td>
+            <td style="color: #e65100; font-weight: bold;">66 MP</td>
+            <td style="text-align: left;">雙方戰鬥9回合間，風屬性傷害值減輕3%（推估）</td>
+          </tr>
+          </tbody>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  <table class="info-table">
+    <tr class="head"><td>已知持有此技能的寵物</td></tr>
+    <tr>
+      <td>
+        <div class="pet-chip-wrapper">
+                <a href="/寵物資料/風暴天使" class="pet-skill-chip">
+                  <img src="/img/專屬寵物/風暴天使.gif" alt="風暴天使" onerror="this.style.visibility='hidden'" />
+                  <span>風暴天使</span>
+                </a>
+                <a href="/寵物資料/梅利莎" class="pet-skill-chip">
+                  <img src="/img/專屬寵物/梅利莎.gif" alt="梅利莎" onerror="this.style.visibility='hidden'" />
+                  <span>梅利莎</span>
+                </a>
+                <a href="/寵物資料/女皇賽格梅特" class="pet-skill-chip">
+                  <img src="/img/專屬寵物/女皇賽格梅特.gif" alt="女皇賽格梅特" onerror="this.style.visibility='hidden'" />
+                  <span>女皇賽格梅特</span>
+                </a>
+        </div>
+      </td>
+    </tr>
+  </table>
+</div>
+</body>
+</html>

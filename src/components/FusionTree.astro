@@ -1,0 +1,78 @@
+---
+/**
+ * 合成樹（由頂點向下解構）— 結構對齊 pet_page_template.html
+ * currentName：目前瀏覽的寵物，會加上 node-current 邊框
+ */
+import type { FusionNode } from '../lib/pets';
+
+interface Props {
+  node: FusionNode;
+  base?: string;
+  depth?: number;
+  /** 目前頁面的寵物名稱，用於高亮 */
+  currentName?: string;
+}
+const { node, base = '', depth = 0, currentName = '' } = Astro.props;
+
+const isCurrent = node.type === 'pet' && currentName !== '' && node.name === currentName;
+const isRoot = depth === 0 || !!node.target;
+
+function hrefFor(n: FusionNode): string {
+  if (n.type === 'pet') return `${base}/寵物資料/${encodeURIComponent(n.name)}`;
+  if (n.type === 'item' || n.type === 'material') {
+    return `${base}/道具總覽/${encodeURIComponent(n.name)}`;
+  }
+  return '#';
+}
+
+function imgSrc(path?: string): string {
+  if (!path) return '';
+  return path.startsWith('/') ? base + path : path;
+}
+---
+
+<li>
+  <div
+    class:list={[
+      'node-card',
+      { 'node-target': isRoot && !isCurrent },
+      { 'node-current': isCurrent },
+    ]}
+    data-pet-name={node.type === 'pet' ? node.name : undefined}
+  >
+    {
+      node.image ? (
+        <img src={imgSrc(node.image)} alt={node.name} loading="lazy" decoding="async" />
+      ) : node.icon ? (
+        <span class="node-card__icon">{node.icon}</span>
+      ) : (
+        <span class="node-card__icon">📦</span>
+      )
+    }
+    {
+      node.type === 'gold' ? (
+        <span class="node-card__name">{node.name}</span>
+      ) : node.type === 'pet' && isCurrent ? (
+        <span class="node-card__name node-card__name--current">
+          {isRoot ? `🌟 ${node.name}` : node.name}
+          <span class="node-current-tag">目前</span>
+        </span>
+      ) : (
+        <a href={hrefFor(node)}>{isRoot ? `🌟 ${node.name}` : node.name}</a>
+      )
+    }
+    {node.qty != null && <span class="count">× {node.qty}</span>}
+    {node.countLabel && <span class="count">{node.countLabel}</span>}
+    {node.npc && <div class="npc-info">{node.npc}</div>}
+  </div>
+
+  {
+    node.children && node.children.length > 0 && (
+      <ul>
+        {node.children.map((child) => (
+          <Astro.self node={child} base={base} depth={depth + 1} currentName={currentName} />
+        ))}
+      </ul>
+    )
+  }
+</li>
