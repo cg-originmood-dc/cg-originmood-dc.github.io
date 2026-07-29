@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlparse
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, NavigableString
 
 from sync_official_news import ARTICLE_CACHE, DATA, NewsRef, clean, fetch, parse_index
 
@@ -60,11 +60,22 @@ def article_path(ref: NewsRef) -> Path:
     return ARTICLE_CACHE / Path(urlparse(ref.url).path).name
 
 
+def table_cell_text(cell) -> str:
+    """保留 <br> 的分隔，但不在巢狀 inline 標籤間插入空白。"""
+    parts: list[str] = []
+    for node in cell.descendants:
+        if isinstance(node, NavigableString):
+            parts.append(str(node))
+        elif getattr(node, "name", None) == "br":
+            parts.append(" ")
+    return clean("".join(parts))
+
+
 def table_rows(table) -> list[list[str]]:
     rows: list[list[str]] = []
     for tr in table.find_all("tr"):
         cells = [
-            clean(cell.get_text(" ", strip=True))
+            table_cell_text(cell)
             for cell in tr.find_all(["th", "td"], recursive=False)
         ]
         if any(cells):
@@ -183,17 +194,46 @@ def pet_key(value: str) -> str:
 
 
 def output_parts(value: str) -> list[str]:
+    value = clean(value)
+    probability_matches = list(
+        re.finditer(
+            r"(?:概率|機率)\s*[\d.]+\s*%(?:\s*[）)])?",
+            value,
+        )
+    )
+    if len(probability_matches) > 1:
+        parts: list[str] = []
+        start = 0
+        for match in probability_matches:
+            part = clean(value[start : match.end()]).strip("、，；; ")
+            if part:
+                parts.append(part)
+            start = match.end()
+        remainder = clean(value[start:]).strip("、，；; ")
+        if remainder:
+            parts.append(remainder)
+        return unique(parts)
+
     probability_outputs = re.findall(
         r"([^（(]{1,100}[（(](?:概率|機率)[^）)]*[）)])",
         value,
     )
-    return unique(probability_outputs or re.split(r"(?=Lv\d)|[；;\n]", value))
+    return unique(
+        probability_outputs
+        or re.split(r"(?=Lv\.?\s*\d)|[；;\n]", value, flags=re.I)
+    )
 
 
 def format_materials(value: str) -> str:
     value = clean(value).replace("*", "×")
     # 官方有「50,000G金幣」和「金幣100,000G」兩種寫法，統一後再拆材料。
     value = re.sub(r"(\d[\d,]*G)\s*金幣", r"金幣\1", value, flags=re.I)
+    value = re.sub(
+        r"金幣\s*(\d[\d,]*)G",
+        lambda match: f"金幣{int(match.group(1).replace(',', '')):,}G",
+        value,
+        flags=re.I,
+    )
     value = re.sub(
         r"([0-9G）)])\s+(?=[\u3400-\u9fffA-Za-z])",
         r"\1 ＋ ",
@@ -205,6 +245,11 @@ def format_materials(value: str) -> str:
 def format_result(value: str) -> str:
     value = clean(value).replace("*", "×")
     value = re.sub(r"\s+([（(](?:概率|機率))", r"\1", value)
+    value = re.sub(
+        r"(?<![（(])\s*((?:概率|機率)\s*[\d.]+\s*%)",
+        r"（\1）",
+        value,
+    )
     return value
 
 
@@ -447,7 +492,12 @@ def parse_recipes(ref: NewsRef, source: str) -> list[Recipe]:
 def write_csv(path: Path, columns: tuple[str, ...], rows: list[dict[str, str]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8-sig", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=columns, extrasaction="ignore")
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=columns,
+            extrasaction="ignore",
+            lineterminator="\n",
+        )
         writer.writeheader()
         writer.writerows(rows)
 
