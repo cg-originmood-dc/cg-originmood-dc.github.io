@@ -1,22 +1,37 @@
 ---
 /**
- * 全站統一的出處標示。內容是從原 Google Sites 站台整理過來的，
- * 每一頁都連回它對應的來源頁面。
+ * 全站統一的出處標示，每一頁都連回它的來源。
+ *
+ * 大部分頁面來自原 Google Sites 站台，顯示站內路徑就夠了；少數頁面抄自別的站
+ * （料理配方就來自蔚藍幻境），那要把網域寫出來，不然讀者會以為也是原站的東西。
+ * 我們自己編的索引頁沒有來源，整塊不顯示。
  */
 interface Props {
-  sourceUrl: string;
+  sourceUrl?: string;
 }
 const { sourceUrl } = Astro.props;
+const ORIGIN = 'https://sites.google.com/view/goodluck2cg/';
+const fromOrigin = sourceUrl?.startsWith(ORIGIN) ?? false;
+const label = !sourceUrl
+  ? ''
+  : fromOrigin
+    ? decodeURIComponent(sourceUrl.slice(ORIGIN.length)) || '原站首頁'
+    : new URL(sourceUrl).host;
 ---
 
-<aside class="source-note">
-  <span class="source-note__label">資料來源</span>
-  <a href={sourceUrl} target="_blank" rel="noopener noreferrer">
-    {decodeURIComponent(sourceUrl.replace('https://sites.google.com/view/goodluck2cg/', ''))
-      || '原站首頁'}
-  </a>
-  <span class="source-note__hint">內容經重新整理，如有出入以原站為準</span>
-</aside>
+{
+  sourceUrl && (
+    <aside class="source-note">
+      <span class="source-note__label">資料來源</span>
+      <a href={sourceUrl} target="_blank" rel="noopener noreferrer">
+        {label}
+      </a>
+      <span class="source-note__hint">
+        {fromOrigin ? '內容經重新整理，如有出入以原站為準' : '外站資料，與永恆初心可能有出入'}
+      </span>
+    </aside>
+  )
+}
 
 <style>
   .source-note {

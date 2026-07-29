@@ -10,8 +10,11 @@ const pages = defineCollection({
   schema: z.object({
     /** 頁面標題 */
     title: z.string(),
-    /** 原始 Google Sites 對應頁面，全站都會顯示出處 */
-    sourceUrl: z.string().url(),
+    /**
+     * 這頁內容的出處，顯示在頁尾。多數是原 Google Sites 的對應頁，
+     * 也可以是別的站（例如外站的配方表）。我們自己編的索引頁沒有出處，留空。
+     */
+    sourceUrl: z.string().url().optional(),
     /** 上層分類，用來組麵包屑與側邊導覽 */
     breadcrumb: z.array(z.string()).default([]),
     /** 這頁要渲染哪些 content/data/*.csv 資料集 */
