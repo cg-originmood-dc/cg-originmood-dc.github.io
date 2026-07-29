@@ -34,6 +34,16 @@ function imgSrc(path?: string): string {
 }
 
 const nodeHref = hrefFor(node);
+
+/** 無圖時以文字分類標示，不使用 emoji */
+function typeFallback(n: FusionNode): string {
+  if (n.type === 'gold') return '金幣';
+  if (n.type === 'pet') return '寵物';
+  if (n.type === 'material') return '材料';
+  return '道具';
+}
+
+const displayName = node.name;
 ---
 
 <li>
@@ -48,24 +58,22 @@ const nodeHref = hrefFor(node);
     {
       node.image ? (
         <img src={imgSrc(node.image)} alt={node.name} loading="lazy" decoding="async" />
-      ) : node.icon ? (
-        <span class="node-card__icon">{node.icon}</span>
       ) : (
-        <span class="node-card__icon">📦</span>
+        <span class="node-card__icon node-card__icon--text">{typeFallback(node)}</span>
       )
     }
     {
       node.type === 'gold' ? (
-        <span class="node-card__name">{node.name}</span>
+        <span class="node-card__name">{displayName}</span>
       ) : node.type === 'pet' && isCurrent ? (
         <span class="node-card__name node-card__name--current">
-          {isRoot ? `🌟 ${node.name}` : node.name}
+          {displayName}
           <span class="node-current-tag">目前</span>
         </span>
       ) : nodeHref ? (
-        <a href={nodeHref}>{isRoot ? `🌟 ${node.name}` : node.name}</a>
+        <a href={nodeHref}>{displayName}</a>
       ) : (
-        <span class="node-card__name">{isRoot ? `🌟 ${node.name}` : node.name}</span>
+        <span class="node-card__name">{displayName}</span>
       )
     }
     {node.qty != null && <span class="count">× {node.qty}</span>}

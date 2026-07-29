@@ -66,16 +66,18 @@ export function hasItem(name: string): boolean {
   return !!getItem(name);
 }
 
-/** 預設分類 emoji（無圖時） */
+/**
+ * 無圖時的文字佔位（不用 emoji）。
+ * 回傳分類短標，UI 以樣式呈現即可。
+ */
+export function itemFallbackLabel(name: string): string {
+  const cat = (getItem(name)?.分類 ?? '').trim();
+  if (cat) return cat;
+  if (/金幣|\d+G$/.test(name)) return '金幣';
+  return '道具';
+}
+
+/** @deprecated 改用 itemFallbackLabel，保留別名避免舊呼叫炸掉 */
 export function itemFallbackIcon(name: string): string {
-  const cat = getItem(name)?.分類 ?? '';
-  if (cat === '武器') return '⚔️';
-  if (cat === '防具') return '🛡️';
-  if (cat === '料理') return '🍱';
-  if (cat === '藥水') return '🧪';
-  if (cat === '採集') return '🌿';
-  if (cat === '材料') return '🧱';
-  if (cat === '活動道具') return '🎟️';
-  if (/金幣|G$/.test(name)) return '🪙';
-  return '📦';
+  return itemFallbackLabel(name);
 }
