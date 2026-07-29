@@ -1,5 +1,6 @@
 ---
 import { LIST_SEP, loadDataset } from '../lib/datasets';
+import { synthesisActivityId } from '../lib/synthesis';
 
 type Row = Record<string, string>;
 
@@ -9,6 +10,8 @@ interface NpcGroup {
 }
 
 interface ActivityGroup {
+  /** 頁內錨點 id，供 /寵物資料 以 # 跳轉 */
+  id: string;
   year: string;
   title: string;
   period: string;
@@ -35,6 +38,7 @@ for (const row of rows) {
   let activity = activityMap.get(key);
   if (!activity) {
     activity = {
+      id: synthesisActivityId(announcementDate, title, period),
       year: announcementDate.slice(0, 4) || '其他',
       title,
       period,
@@ -103,6 +107,7 @@ const splitLines = (value: string) => value.split(LIST_SEP).filter(Boolean);
           </thead>
           {yearActivities.map((activity) => (
             <tbody
+              id={activity.id}
               data-synthesis-group
               data-search={activity.search}
               data-rows={activity.rows.length}
@@ -116,7 +121,9 @@ const splitLines = (value: string) => value.split(LIST_SEP).filter(Boolean);
                         scope="rowgroup"
                         rowspan={activity.rows.length}
                       >
-                        <strong>{activity.title}</strong>
+                        <strong>
+                          <a class="synthesis__anchor" href={`#${activity.id}`}>{activity.title}</a>
+                        </strong>
                         <span>{activity.period}</span>
                         <small>公告日：{activity.announcementDate}</small>
                         {activity.url && (
@@ -188,11 +195,28 @@ const splitLines = (value: string) => value.split(LIST_SEP).filter(Boolean);
       }
     };
 
+    /** 表格在 overflow 容器內，原生 # 跳轉常停在表外；改成捲動到目標 tbody */
+    const scrollToHash = () => {
+      const id = decodeURIComponent(location.hash.replace(/^#/, ''));
+      if (!id) return;
+      const el = root.querySelector<HTMLElement>(`#${CSS.escape(id)}`);
+      if (!el) return;
+      el.hidden = false;
+      const year = el.closest<HTMLElement>('[data-year-section]');
+      if (year) year.hidden = false;
+      el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    };
+
     input?.addEventListener('input', apply);
     clear?.addEventListener('click', () => {
       if (input) input.value = '';
       apply();
     });
+
+    apply();
+    // 等 layout 後再捲（Astro 水合／字體）
+    requestAnimationFrame(() => scrollToHash());
+    window.addEventListener('hashchange', scrollToHash);
   });
 </script>
 
@@ -303,6 +327,33 @@ const splitLines = (value: string) => value.split(LIST_SEP).filter(Boolean);
 
   .synthesis__activity a {
     margin-top: 0.55rem;
+  }
+
+  .synthesis__activity a.synthesis__anchor {
+    margin-top: 0;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .synthesis__activity a.synthesis__anchor:hover {
+    color: var(--link, #1565c0);
+    text-decoration: underline;
+  }
+
+  /* 從寵物頁 # 跳轉時高亮該活動 */
+  .synthesis tbody[id]:target {
+    outline: 2px solid #1565c0;
+    outline-offset: -2px;
+    background: #e3f2fd;
+  }
+
+  .synthesis tbody[id]:target .synthesis__activity {
+    background: #e3f2fd;
+  }
+
+  /* 錨點被 sticky 表頭擋到時預留空間 */
+  .synthesis tbody[id] {
+    scroll-margin-top: 3.5rem;
   }
 
   .synthesis__npc {

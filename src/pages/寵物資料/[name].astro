@@ -18,6 +18,10 @@ import {
   obtainTypeLabel,
 } from '../../lib/pets';
 import {
+  listActivitiesForPet,
+  synthesisActivityHref,
+} from '../../lib/synthesis';
+import {
   parseGrowFromPet,
   calculatePetStats,
   roundStat,
@@ -61,6 +65,9 @@ const growJson = grow ? JSON.stringify(grow) : 'null';
 const { tree: fusionRoot, hasFullData: hasFusionData } = pet
   ? resolveFusionTree(pet.名稱, img)
   : { tree: null as any, hasFullData: false };
+
+/** 相關合成活動（連到 /寵物合成活動#act-…） */
+const synthesisActivities = pet ? listActivitiesForPet(pet.名稱) : [];
 
 const grades = pet
   ? [
@@ -443,10 +450,60 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
                     </p>
                   )
                 }
+                {
+                  hasFusionData && synthesisActivities.length > 0 && (
+                    <p class="tree-source-hint">
+                      合成資料來自
+                      <a href={`${base}/寵物合成活動`}>寵物合成活動</a>
+                      配方表（可點下方活動直接跳到對應列）
+                    </p>
+                  )
+                }
               </div>
             </td>
           </tr>
         </table>
+
+        {/* 9. 相關合成活動（# 錨點跳到活動列） */}
+        {
+          synthesisActivities.length > 0 && (
+            <table class="info-table">
+              <tr class="head">
+                <td>相關合成活動</td>
+              </tr>
+              <tr>
+                <td>
+                  <ul class="synth-act-list">
+                    {
+                      synthesisActivities.map((a) => (
+                        <li>
+                          <a href={synthesisActivityHref(a.id, base)}>{a.title}</a>
+                          {
+                            a.period && (
+                              <span class="synth-act-period">{a.period}</span>
+                            )
+                          }
+                          {
+                            a.url && (
+                              <a
+                                class="synth-act-official"
+                                href={a.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                官方公告
+                              </a>
+                            )
+                          }
+                        </li>
+                      ))
+                    }
+                  </ul>
+                </td>
+              </tr>
+            </table>
+          )
+        }
       </div>
 
       <script is:inline define:vars={{ growJson, formulaJson }}>
@@ -781,6 +838,44 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
     color: #9e9e9e;
     font-size: 14px;
     text-align: center;
+  }
+  .tree-source-hint {
+    margin: 8px 0 0;
+    padding: 0 12px;
+    font-size: 13px;
+    color: #5f6368;
+    text-align: center;
+  }
+  .tree-source-hint a {
+    color: #1155cc;
+    font-weight: 700;
+  }
+  .synth-act-list {
+    margin: 0;
+    padding: 8px 16px 12px 1.6em;
+    line-height: 1.7;
+  }
+  .synth-act-list li {
+    margin: 4px 0;
+  }
+  .synth-act-list a {
+    color: #1155cc;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .synth-act-list a:hover {
+    text-decoration: underline;
+  }
+  .synth-act-period {
+    margin-left: 0.6em;
+    font-size: 13px;
+    color: #5f6368;
+    font-variant-numeric: tabular-nums;
+  }
+  .synth-act-official {
+    margin-left: 0.75em;
+    font-size: 12px;
+    font-weight: 600 !important;
   }
 
   /* ---- 合成樹 ---- */
