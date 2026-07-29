@@ -1,7 +1,10 @@
 import { readFileSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse } from 'csv-parse/sync';
-import { buildFusionTreeForPet } from './synthesis';
+import {
+  buildFusionTreeFromGraph,
+  setHandwrittenFusionTrees,
+} from './fusionGraph';
 import { itemImagePath } from './items';
 
 export interface PetRecord {
@@ -348,50 +351,46 @@ export function applyPetImagesFromSsot(node: FusionNode): FusionNode {
 
 /**
  * 取得要顯示的「完整」合成樹。
- * 優先序：
- * 1. 手寫 extras（風之使徒模板、寵物詳情補充.json）
- * 2. 其他 extras 樹中包含本寵的最大樹
- * 3. 寵物合成配方.csv 自動建樹（產物；若僅為材料則掛到可合成的產物樹）
- * 4. 僅樹尖本寵
- * 回傳前會對所有寵物節點套用 petImagePath SSOT。
+ *
+ * 統一圖管線（見 src/lib/fusion/）：
+ * - 各來源 adapter → FusionReaction → compile 成圖
+ * - 顯示：反向找全部根 → 各根向下完整展開（不挑主配方）
+ * - 手寫 extras 的 fusionTree 拆成反應邊入圖，不再整棵覆蓋
  */
 function treeHasBody(node: FusionNode | null | undefined): boolean {
   if (!node) return false;
   return Boolean(node.children?.length || node.heads?.length);
 }
 
+let fusionHandwrittenHooked = false;
+
+/** 把 extras 手寫樹注入合成圖（整站建置期間只掛一次） */
+function ensureFusionGraphHandwritten(): void {
+  if (fusionHandwrittenHooked) return;
+  fusionHandwrittenHooked = true;
+  setHandwrittenFusionTrees(() => {
+    const extras = loadExtras();
+    const trees: FusionNode[] = [];
+    for (const extra of extras.values()) {
+      if (extra.fusionTree && treeHasBody(extra.fusionTree)) {
+        trees.push(extra.fusionTree);
+      }
+    }
+    return trees;
+  });
+}
+
 export function resolveFusionTree(
   petName: string,
   image: string,
 ): { tree: FusionNode; hasFullData: boolean } {
-  const extras = loadExtras();
-  const self = extras.get(petName)?.fusionTree;
-  if (treeHasBody(self)) {
-    return { tree: applyPetImagesFromSsot(self!), hasFullData: true };
+  ensureFusionGraphHandwritten();
+
+  const fromGraph = buildFusionTreeFromGraph(petName);
+  if (fromGraph && treeHasBody(fromGraph)) {
+    return { tree: applyPetImagesFromSsot(fromGraph), hasFullData: true };
   }
 
-  // 在所有已知完整樹中尋找包含本寵的最大樹
-  let best: FusionNode | null = null;
-  let bestSize = 0;
-  for (const extra of extras.values()) {
-    const t = extra.fusionTree;
-    if (!treeHasBody(t)) continue;
-    const names = collectPetNamesInTree(t!);
-    if (!names.has(petName)) continue;
-    if (names.size > bestSize) {
-      best = t!;
-      bestSize = names.size;
-    }
-  }
-  if (best) return { tree: applyPetImagesFromSsot(best), hasFullData: true };
-
-  // 活動配方自動建樹（寵物合成配方.csv）
-  const auto = buildFusionTreeForPet(petName);
-  if (treeHasBody(auto)) {
-    return { tree: applyPetImagesFromSsot(auto!), hasFullData: true };
-  }
-
-  // 無資料：只顯示本寵節點（圖仍走 SSOT）
   return {
     tree: applyPetImagesFromSsot({
       type: 'pet',
@@ -430,29 +429,9 @@ const WIND_APOSTLE_EXTRA: PetDetailExtra = {
         npc: 'NPC: 愛卡勒恩 @ 寵物研究所 (15，8)',
         children: [
           {
+            // 材料由軍方研究所一改接上（enrich）；此處只掛產物節點
             type: 'pet',
             name: '光精靈',
-            children: [
-              {
-                type: 'pet',
-                name: '風精靈',
-              },
-              {
-                type: 'item',
-                name: '風精之心',
-                qty: 3,
-              },
-              {
-                type: 'item',
-                name: '元素石',
-                qty: 10,
-              },
-              {
-                type: 'item',
-                name: '元素精華',
-                qty: 30,
-              },
-            ],
           },
           {
             type: 'item',

@@ -21,6 +21,10 @@ import {
   listActivitiesForPet,
   synthesisActivityHref,
 } from '../../lib/synthesis';
+import { militaryLabObtainMethods } from '../../lib/militaryLab';
+import { MILITARY_LAB_PAGE } from '../../lib/militaryLabData';
+import { remodelVendorObtainMethods } from '../../lib/remodelVendor';
+import { REMODEL_VENDOR_PAGE } from '../../lib/remodelVendorData';
 import {
   parseGrowFromPet,
   calculatePetStats,
@@ -66,8 +70,33 @@ const { tree: fusionRoot, hasFullData: hasFusionData } = pet
   ? resolveFusionTree(pet.名稱, img)
   : { tree: null as any, hasFullData: false };
 
-/** 相關合成活動（連到 /寵物合成活動#act-…） */
+/** 相關合成活動（活動表錨點／常態改造／購買 NPC 等，不區分資料來源標籤） */
 const synthesisActivities = pet ? listActivitiesForPet(pet.名稱) : [];
+const militaryObtain = pet ? militaryLabObtainMethods(pet.名稱, base) : [];
+const remodelObtain = pet ? remodelVendorObtainMethods(pet.名稱, base) : [];
+const relatedActivityRows: Array<{
+  href: string;
+  title: string;
+  period?: string;
+  url?: string;
+}> = [
+  ...synthesisActivities.map((a) => ({
+    href: synthesisActivityHref(a.id, base),
+    title: a.title,
+    period: a.period || undefined,
+    url: a.url || undefined,
+  })),
+  ...militaryObtain.map((m) => ({
+    href: m.link || `${base}${MILITARY_LAB_PAGE}`,
+    title: m.map || '軍方研究所',
+    period: m.note,
+  })),
+  ...remodelObtain.map((m) => ({
+    href: m.link || `${base}${REMODEL_VENDOR_PAGE}`,
+    title: m.map || '改造寵購買',
+    period: m.note,
+  })),
+];
 
 const grades = pet
   ? [
@@ -97,7 +126,8 @@ const isCardUnknown = !extra.cardLevel || extra.cardLevel === '未知';
 
 const obtainText = (pet?.入手方法 ?? '').trim();
 const obtainType = (pet?.入手類型 ?? '').trim();
-const obtainExtra = extra.obtainMethods ?? [];
+/** JSON 細項 + 改造購買 NPC（魔力豆知識）等程式注入來源 */
+const obtainExtra = [...(extra.obtainMethods ?? []), ...remodelObtain];
 const hasObtain = Boolean(obtainText || obtainType || obtainExtra.length);
 
 // 可選等級 1~160（第三列預設 140）
@@ -439,7 +469,7 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
           </tr>
           <tr>
             <td style="padding: 10px 0;">
-              <div class="tree-container">
+              <div class="tree-container" data-fusion-tree>
                 <ul class="tree-diagram">
                   <FusionTree node={fusionRoot} base={base} currentName={pet.名稱} />
                 </ul>
@@ -450,23 +480,14 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
                     </p>
                   )
                 }
-                {
-                  hasFusionData && synthesisActivities.length > 0 && (
-                    <p class="tree-source-hint">
-                      合成資料來自
-                      <a href={`${base}/寵物合成活動`}>寵物合成活動</a>
-                      配方表（可點下方活動直接跳到對應列）
-                    </p>
-                  )
-                }
               </div>
             </td>
           </tr>
         </table>
 
-        {/* 9. 相關合成活動（# 錨點跳到活動列） */}
+        {/* 9. 相關合成活動 */}
         {
-          synthesisActivities.length > 0 && (
+          relatedActivityRows.length > 0 && (
             <table class="info-table">
               <tr class="head">
                 <td>相關合成活動</td>
@@ -475,9 +496,9 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
                 <td>
                   <ul class="synth-act-list">
                     {
-                      synthesisActivities.map((a) => (
+                      relatedActivityRows.map((a) => (
                         <li>
-                          <a href={synthesisActivityHref(a.id, base)}>{a.title}</a>
+                          <a href={a.href}>{a.title}</a>
                           {
                             a.period && (
                               <span class="synth-act-period">{a.period}</span>
@@ -563,6 +584,232 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
 
           sel.addEventListener('change', apply);
           sel.addEventListener('input', apply);
+        })();
+      </script>
+
+      {/* 合成樹連線：依卡片實際座標畫 SVG，避免深子樹把 li 撐寬後半線偏移 */}
+      <script is:inline>
+        (function () {
+          var COLOR = '#e65100';
+          var STROKE = 2;
+          var GAP = 18;
+
+          function rectOf(el, root) {
+            var r = el.getBoundingClientRect();
+            var b = root.getBoundingClientRect();
+            return {
+              left: r.left - b.left + root.scrollLeft,
+              top: r.top - b.top + root.scrollTop,
+              right: r.right - b.left + root.scrollLeft,
+              bottom: r.bottom - b.top + root.scrollTop,
+              midX: (r.left + r.right) / 2 - b.left + root.scrollLeft,
+              midY: (r.top + r.bottom) / 2 - b.top + root.scrollTop,
+              width: r.width,
+              height: r.height,
+            };
+          }
+
+          function childAnchor(li) {
+            if (li.classList.contains('tree-forest-root')) return null;
+            if (li.classList.contains('tree-multi-head')) {
+              var heads = li.querySelectorAll(
+                ':scope > .tree-multi-head__tops .tree-multi-head__head > .node-card'
+              );
+              if (!heads.length) return null;
+              return { type: 'multi', cards: Array.prototype.slice.call(heads), li: li };
+            }
+            var card = li.querySelector(':scope > .node-card');
+            return card ? { type: 'card', card: card, li: li } : null;
+          }
+
+          function line(svg, x1, y1, x2, y2) {
+            var el = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            el.setAttribute('x1', String(x1));
+            el.setAttribute('y1', String(y1));
+            el.setAttribute('x2', String(x2));
+            el.setAttribute('y2', String(y2));
+            el.setAttribute('stroke', COLOR);
+            el.setAttribute('stroke-width', String(STROKE));
+            el.setAttribute('stroke-linecap', 'square');
+            svg.appendChild(el);
+          }
+
+          /** 父點 → 多個子錨點：先垂直到橫梁，再水平，再各垂直下去 */
+          function connectParentToChildren(svg, root, parentBottomMid, childTops) {
+            if (!childTops.length) return;
+            if (childTops.length === 1) {
+              var only = childTops[0];
+              line(svg, parentBottomMid.x, parentBottomMid.y, only.x, only.y);
+              return;
+            }
+            var xs = childTops.map(function (c) {
+              return c.x;
+            });
+            var minX = Math.min.apply(null, xs);
+            var maxX = Math.max.apply(null, xs);
+            var barY = childTops[0].y - GAP;
+            if (barY < parentBottomMid.y + 4) barY = (parentBottomMid.y + childTops[0].y) / 2;
+            line(svg, parentBottomMid.x, parentBottomMid.y, parentBottomMid.x, barY);
+            line(svg, minX, barY, maxX, barY);
+            childTops.forEach(function (c) {
+              line(svg, c.x, barY, c.x, c.y);
+            });
+          }
+
+          function drawContainer(container) {
+            var diagram = container.querySelector('.tree-diagram');
+            if (!diagram) return;
+
+            var old = container.querySelector('svg.tree-lines');
+            if (old) old.remove();
+
+            var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.classList.add('tree-lines');
+            svg.setAttribute('aria-hidden', 'true');
+            container.insertBefore(svg, container.firstChild);
+
+            var w = Math.max(container.scrollWidth, container.clientWidth);
+            var h = Math.max(container.scrollHeight, container.clientHeight);
+            svg.setAttribute('width', String(w));
+            svg.setAttribute('height', String(h));
+            svg.style.width = w + 'px';
+            svg.style.height = h + 'px';
+
+            // 多產物：各頭往下匯到一點，再接到材料列
+            diagram.querySelectorAll('.tree-multi-head').forEach(function (mh) {
+              var headCards = mh.querySelectorAll(
+                ':scope > .tree-multi-head__tops .tree-multi-head__head > .node-card'
+              );
+              var kidsUl = mh.querySelector(':scope > ul.tree-children, :scope > ul');
+              if (!headCards.length) return;
+
+              var headBottoms = Array.prototype.map.call(headCards, function (c) {
+                var r = rectOf(c, container);
+                return { x: r.midX, y: r.bottom };
+              });
+
+              var childTops = [];
+              if (kidsUl) {
+                Array.prototype.forEach.call(kidsUl.children, function (li) {
+                  if (!(li instanceof HTMLElement)) return;
+                  var a = childAnchor(li);
+                  if (!a) return;
+                  if (a.type === 'card') {
+                    var r = rectOf(a.card, container);
+                    childTops.push({ x: r.midX, y: r.top });
+                  } else if (a.type === 'multi') {
+                    a.cards.forEach(function (c) {
+                      var rr = rectOf(c, container);
+                      childTops.push({ x: rr.midX, y: rr.top });
+                    });
+                  }
+                });
+              }
+
+              if (headBottoms.length === 1 && childTops.length) {
+                connectParentToChildren(svg, container, headBottoms[0], childTops);
+                return;
+              }
+
+              if (headBottoms.length > 1) {
+                var hxs = headBottoms.map(function (p) {
+                  return p.x;
+                });
+                var minHX = Math.min.apply(null, hxs);
+                var maxHX = Math.max.apply(null, hxs);
+                var mergeY = Math.max.apply(
+                  null,
+                  headBottoms.map(function (p) {
+                    return p.y;
+                  })
+                ) + GAP;
+                headBottoms.forEach(function (p) {
+                  line(svg, p.x, p.y, p.x, mergeY);
+                });
+                line(svg, minHX, mergeY, maxHX, mergeY);
+                var mergeX = (minHX + maxHX) / 2;
+                if (childTops.length) {
+                  connectParentToChildren(svg, container, { x: mergeX, y: mergeY }, childTops);
+                }
+              }
+            });
+
+            // 一般節點：父卡片 → 子列（略過多頭本體，已在上面處理）
+            diagram.querySelectorAll('ul').forEach(function (ul) {
+              if (ul.classList.contains('tree-multi-head__heads')) return;
+              if (ul.classList.contains('tree-children--forest')) return;
+
+              var parentLi = ul.parentElement;
+              if (!parentLi || parentLi === diagram) {
+                // 根層：若只有一個子樹，不畫「來自虛空」的線
+                if (ul === diagram || parentLi === diagram) {
+                  // 根 ul.tree-diagram 的直接子節點之間不需父線
+                  return;
+                }
+              }
+
+              // 多頭的材料 ul 已在 multi-head 區塊畫過
+              if (parentLi && parentLi.classList.contains('tree-multi-head')) return;
+              // 森林容器不連線
+              if (parentLi && parentLi.classList.contains('tree-forest-root')) return;
+
+              var parentCard =
+                parentLi && parentLi.querySelector
+                  ? parentLi.querySelector(':scope > .node-card')
+                  : null;
+              if (!parentCard) return;
+
+              var pr = rectOf(parentCard, container);
+              var parentPt = { x: pr.midX, y: pr.bottom };
+
+              var childTops = [];
+              Array.prototype.forEach.call(ul.children, function (li) {
+                if (!(li instanceof HTMLElement)) return;
+                var a = childAnchor(li);
+                if (!a) return;
+                if (a.type === 'card') {
+                  var r = rectOf(a.card, container);
+                  childTops.push({ x: r.midX, y: r.top });
+                } else if (a.type === 'multi') {
+                  // 子層是多頭：連到多頭頂部中心
+                  var tops = a.cards.map(function (c) {
+                    return rectOf(c, container);
+                  });
+                  var minT = Math.min.apply(
+                    null,
+                    tops.map(function (t) {
+                      return t.top;
+                    })
+                  );
+                  var mid =
+                    tops.reduce(function (s, t) {
+                      return s + t.midX;
+                    }, 0) / tops.length;
+                  childTops.push({ x: mid, y: minT });
+                }
+              });
+
+              connectParentToChildren(svg, container, parentPt, childTops);
+            });
+          }
+
+          function drawAll() {
+            document.querySelectorAll('[data-fusion-tree]').forEach(drawContainer);
+          }
+
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', drawAll);
+          } else {
+            drawAll();
+          }
+          window.addEventListener('resize', drawAll);
+          if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(drawAll).catch(function () {});
+          }
+          // 圖片載入後重算（節點高度會變）
+          document.querySelectorAll('[data-fusion-tree] img').forEach(function (img) {
+            if (!img.complete) img.addEventListener('load', drawAll, { once: true });
+          });
         })();
       </script>
     </Base>
@@ -878,19 +1125,55 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
     font-weight: 600 !important;
   }
 
-  /* ---- 合成樹 ---- */
-  /* 多產物：多個頭並列，線接到共用材料 */
+  /* ---- 合成樹（版面 flex；連線由 SVG 依卡片座標繪製） ---- */
+  .tree-container {
+    position: relative;
+    width: 100%;
+    overflow-x: auto;
+    padding: 15px 8px;
+  }
+  .tree-container > svg.tree-lines {
+    position: absolute;
+    left: 0;
+    top: 0;
+    pointer-events: none;
+    z-index: 1;
+    overflow: visible;
+  }
+  .tree-diagram,
+  .tree-diagram ul {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    position: relative;
+  }
+  .tree-diagram ul,
+  .tree-diagram .tree-children {
+    padding-top: 28px;
+    gap: 0 8px;
+  }
+  .tree-diagram .tree-children--forest {
+    padding-top: 0;
+    gap: 24px;
+  }
+  .tree-diagram > li,
+  .tree-diagram li.tree-node,
+  .tree-diagram li.tree-multi-head,
+  .tree-diagram li.tree-forest-root {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    padding: 0 4px;
+  }
+  /* 多產物：多頭並列 → 共用材料 */
   .tree-multi-head {
     display: flex;
     flex-direction: column;
     align-items: center;
-  }
-  .tree-multi-head--root {
-    padding-top: 0;
-  }
-  .tree-multi-head--root::before,
-  .tree-multi-head--root::after {
-    display: none !important;
   }
   .tree-multi-head__tops {
     display: flex;
@@ -899,7 +1182,6 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
     position: relative;
     z-index: 2;
   }
-  /* 蓋掉 .tree-diagram ul 預設（padding／中線），改為多頭橫排 */
   .tree-diagram .tree-multi-head__heads {
     display: flex;
     flex-wrap: wrap;
@@ -908,11 +1190,8 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
     gap: 10px 14px;
     list-style: none;
     margin: 0;
-    padding: 0 0 14px;
+    padding: 0;
     position: relative;
-  }
-  .tree-diagram .tree-multi-head__heads::before {
-    display: none;
   }
   .tree-diagram .tree-multi-head__head {
     display: flex;
@@ -921,119 +1200,8 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
     position: relative;
     padding: 0;
   }
-  /* 取消一般樹 li 左右橫線，改畫頭→橫梁的短豎線 */
-  .tree-diagram .tree-multi-head__head::before {
-    display: none !important;
-  }
-  .tree-diagram .tree-multi-head__head::after {
-    content: '';
-    display: block !important;
-    position: absolute;
-    top: auto;
-    left: 50%;
-    right: auto;
-    bottom: -14px;
-    width: 0;
-    height: 14px;
-    border: none;
-    border-left: 2px solid #e65100;
-    transform: translateX(-50%);
-  }
-  /* 連接各頭的橫線 */
-  .tree-diagram .tree-multi-head__heads::after {
-    content: '';
-    position: absolute;
-    left: 12%;
-    right: 12%;
-    bottom: 0;
-    height: 0;
-    border-top: 2px solid #e65100;
-  }
-  .tree-diagram .tree-multi-head__heads:has(> :only-child)::after,
-  .tree-diagram .tree-multi-head__head:only-child::after {
-    display: none !important;
-  }
-  .tree-multi-head__npc {
-    margin-top: 4px;
-  }
-  /* 多頭 → 材料列：橫梁中點往下 */
-  .tree-diagram .tree-multi-head > ul {
-    padding-top: 20px;
-  }
-  .tree-diagram .tree-multi-head > ul::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 50%;
-    border-left: 2px solid #e65100;
-    width: 0;
-    height: 20px;
-  }
-  .tree-container {
-    width: 100%;
-    overflow-x: auto;
-    padding: 15px 8px;
-  }
-  .tree-diagram,
-  .tree-diagram ul {
-    display: flex;
-    justify-content: center;
-    margin: 0;
+  .tree-diagram .tree-forest-root {
     padding: 0;
-    list-style: none;
-    position: relative;
-  }
-  .tree-diagram ul {
-    padding-top: 20px;
-  }
-  .tree-diagram li {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    position: relative;
-    padding: 20px 4px 0 4px;
-  }
-  .tree-diagram li::before,
-  .tree-diagram li::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 50%;
-    border-top: 2px solid #e65100;
-    width: 50%;
-    height: 20px;
-  }
-  .tree-diagram li::after {
-    right: auto;
-    left: 50%;
-    border-left: 2px solid #e65100;
-  }
-  .tree-diagram li:only-child::after,
-  .tree-diagram li:only-child::before {
-    display: none;
-  }
-  .tree-diagram li:only-child {
-    padding-top: 0;
-  }
-  .tree-diagram li:first-child::before,
-  .tree-diagram li:last-child::after {
-    border: 0 none;
-  }
-  .tree-diagram li:last-child::before {
-    border-right: 2px solid #e65100;
-    border-radius: 0 4px 0 0;
-  }
-  .tree-diagram li:first-child::after {
-    border-radius: 4px 0 0 0;
-  }
-  .tree-diagram ul::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 50%;
-    border-left: 2px solid #e65100;
-    width: 0;
-    height: 20px;
   }
 
   .node-card {
