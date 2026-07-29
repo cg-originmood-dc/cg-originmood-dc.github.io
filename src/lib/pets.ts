@@ -1,8 +1,7 @@
 import { readFileSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse } from 'csv-parse/sync';
-import { buildFusionTreeForPet, listFusionOutcomesForPet } from './synthesis';
-import type { ProductOutcome } from './synthesis';
+import { buildFusionTreeForPet } from './synthesis';
 import { itemImagePath } from './items';
 
 export interface PetRecord {
@@ -43,7 +42,12 @@ export interface FusionNode {
   npc?: string;
   /** 是否為樹尖目標 */
   target?: boolean;
-  /** 子節點（向下解構） */
+  /**
+   * 多產物時的「多個頭」（同層並列的產物節點）。
+   * 與 children（共用材料）並存：頭在上、材料在下，多拉幾條線即可。
+   */
+  heads?: FusionNode[];
+  /** 子節點（向下解構＝材料） */
   children?: FusionNode[];
 }
 
@@ -310,6 +314,7 @@ export function petImagePath(name: string, fromCsv?: string): string {
 /** 收集樹上所有寵物名稱 */
 export function collectPetNamesInTree(node: FusionNode, out = new Set<string>()): Set<string> {
   if (node.type === 'pet' && node.name) out.add(node.name);
+  for (const h of node.heads ?? []) collectPetNamesInTree(h, out);
   for (const c of node.children ?? []) collectPetNamesInTree(c, out);
   return out;
 }
@@ -322,7 +327,12 @@ export function collectPetNamesInTree(node: FusionNode, out = new Set<string>())
  */
 export function applyPetImagesFromSsot(node: FusionNode): FusionNode {
   const children = node.children?.map(applyPetImagesFromSsot);
-  const base = children ? { ...node, children } : { ...node };
+  const heads = node.heads?.map(applyPetImagesFromSsot);
+  const base: FusionNode = {
+    ...node,
+    ...(children ? { children } : {}),
+    ...(heads ? { heads } : {}),
+  };
   // 不再沿用手填 emoji
   if (base.icon) delete base.icon;
 
@@ -345,24 +355,19 @@ export function applyPetImagesFromSsot(node: FusionNode): FusionNode {
  * 4. 僅樹尖本寵
  * 回傳前會對所有寵物節點套用 petImagePath SSOT。
  */
+function treeHasBody(node: FusionNode | null | undefined): boolean {
+  if (!node) return false;
+  return Boolean(node.children?.length || node.heads?.length);
+}
+
 export function resolveFusionTree(
   petName: string,
   image: string,
-): {
-  tree: FusionNode;
-  hasFullData: boolean;
-  /** 多產物機率（樹外橫列顯示；經典樹本身只畫目前產物→材料） */
-  outcomes: ProductOutcome[];
-} {
-  const outcomes = listFusionOutcomesForPet(petName);
+): { tree: FusionNode; hasFullData: boolean } {
   const extras = loadExtras();
   const self = extras.get(petName)?.fusionTree;
-  if (self?.children?.length) {
-    return {
-      tree: applyPetImagesFromSsot(self),
-      hasFullData: true,
-      outcomes,
-    };
+  if (treeHasBody(self)) {
+    return { tree: applyPetImagesFromSsot(self!), hasFullData: true };
   }
 
   // 在所有已知完整樹中尋找包含本寵的最大樹
@@ -370,30 +375,20 @@ export function resolveFusionTree(
   let bestSize = 0;
   for (const extra of extras.values()) {
     const t = extra.fusionTree;
-    if (!t?.children?.length) continue;
-    const names = collectPetNamesInTree(t);
+    if (!treeHasBody(t)) continue;
+    const names = collectPetNamesInTree(t!);
     if (!names.has(petName)) continue;
     if (names.size > bestSize) {
-      best = t;
+      best = t!;
       bestSize = names.size;
     }
   }
-  if (best) {
-    return {
-      tree: applyPetImagesFromSsot(best),
-      hasFullData: true,
-      outcomes,
-    };
-  }
+  if (best) return { tree: applyPetImagesFromSsot(best), hasFullData: true };
 
   // 活動配方自動建樹（寵物合成配方.csv）
   const auto = buildFusionTreeForPet(petName);
-  if (auto?.children?.length) {
-    return {
-      tree: applyPetImagesFromSsot(auto),
-      hasFullData: true,
-      outcomes,
-    };
+  if (treeHasBody(auto)) {
+    return { tree: applyPetImagesFromSsot(auto!), hasFullData: true };
   }
 
   // 無資料：只顯示本寵節點（圖仍走 SSOT）
@@ -406,7 +401,6 @@ export function resolveFusionTree(
       children: [],
     }),
     hasFullData: false,
-    outcomes,
   };
 }
 
