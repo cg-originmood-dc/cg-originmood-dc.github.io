@@ -97,32 +97,15 @@ const ACTIONS: Record<string, NonNullable<Dataset['action']>> = {
 };
 
 /**
- * 指定下拉篩選要用哪一欄，蓋掉 pickFilterColumn 的猜測。
- *
- * 武器與防具兩張表同時有「分類」（劍、斧、頭盔…）和「類型」（單手武器、頭部防具…）。
- * 猜的規則挑重複度最高的，會挑到只有兩三種值的「類型」，但那不是使用者要切的維度——
- * 練劍製造的人要的是只看劍，不是只看單手武器。
- */
-const FILTER_COLUMN: Record<string, string> = { 武器: '分類', 防具: '分類' };
-
-/**
  * 猜哪一欄適合當下拉篩選。
  * 判準是「重複度高、選項數少」——像種族、屬性、職業這種分類欄；
  * 名稱、數值那種幾乎每列都不同的欄不會中。
  */
 function pickFilterColumn(
-  name: string,
   columns: string[],
   rows: Record<string, string>[],
   skip: string | null,
 ): Dataset['filterColumn'] {
-  const forced = FILTER_COLUMN[name];
-  if (forced && columns.includes(forced)) {
-    // 照 CSV 裡出現的順序，不照字典序 —— 劍斧槍弓杖是有慣例的排法，
-    // 跟 nav-order.json 同一個道理，排序本身就是資料的一部分。
-    const values = [...new Set(rows.map((r) => (r[forced] ?? '').trim()).filter(Boolean))];
-    return { name: forced, values };
-  }
   if (rows.length < 12) return null;
   let best: { name: string; values: string[]; ratio: number } | null = null;
   for (const col of columns) {
@@ -193,7 +176,7 @@ export function loadDataset(name: string): Dataset | null {
         .sort((a, b) => a.linked - b.linked)[0]?.name ?? null,
     action: ACTIONS[name] && columns.includes(ACTIONS[name].column) ? ACTIONS[name] : null,
     defaultSort: pickDefaultSort(columns, records),
-    filterColumn: pickFilterColumn(name, columns, records, imageColumn),
+    filterColumn: pickFilterColumn(columns, records, imageColumn),
     wrapColumns: columns.filter((c) => {
       if (c === imageColumn) return false;
       const longest = records.reduce((m, r) => Math.max(m, (r[c] ?? '').length), 0);

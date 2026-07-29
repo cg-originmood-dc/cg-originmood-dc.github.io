@@ -2,7 +2,7 @@
 """整理官方公告中的寵物合成活動與逐階配方。
 
 產物：
-  content/data/寵物合成期別.csv
+  content/data/寵物合成總覽.csv
   content/data/寵物合成配方.csv
 
 判定依據是公告表格同時具有「所需寵物、所需道具、獲得寵物」三欄。
@@ -32,6 +32,7 @@ DATE_TEXT = (
 )
 RANGE_SEP = r"(?:--+|－+|—+|~|～|至)"
 SYNTH_HEADERS = ("所需寵物", "所需道具", "獲得寵物")
+CELL_LINE_BREAK = " / "
 
 
 @dataclass
@@ -187,6 +188,36 @@ def output_parts(value: str) -> list[str]:
         value,
     )
     return unique(probability_outputs or re.split(r"(?=Lv\d)|[；;\n]", value))
+
+
+def format_materials(value: str) -> str:
+    value = clean(value).replace("*", "×")
+    # 官方有「50,000G金幣」和「金幣100,000G」兩種寫法，統一後再拆材料。
+    value = re.sub(r"(\d[\d,]*G)\s*金幣", r"金幣\1", value, flags=re.I)
+    value = re.sub(
+        r"([0-9G）)])\s+(?=[\u3400-\u9fffA-Za-z])",
+        r"\1 ＋ ",
+        value,
+    )
+    return value
+
+
+def format_result(value: str) -> str:
+    value = clean(value).replace("*", "×")
+    value = re.sub(r"\s+([（(](?:概率|機率))", r"\1", value)
+    return value
+
+
+def synthesis_formula(required_pet: str, required_item: str, result_pet: str) -> str:
+    left = f"{clean(required_pet)} ＋ {format_materials(required_item)}"
+    results = [format_result(result) for result in output_parts(result_pet)]
+    if len(results) == 1:
+        return f"{left} ＝ {results[0]}"
+    branches = [
+        f"{'└' if index == len(results) - 1 else '├'} {result}"
+        for index, result in enumerate(results)
+    ]
+    return CELL_LINE_BREAK.join([f"{left} ＝", *branches])
 
 
 def text_sources(soup: BeautifulSoup) -> list[Source]:
@@ -387,7 +418,7 @@ def parse_recipes(ref: NewsRef, source: str) -> list[Recipe]:
                     required_pet=required_pet,
                     required_item=required_item,
                     result_pet=result_pet,
-                    tree=f"{required_pet} ＋ {required_item} → {result_pet}",
+                    tree=synthesis_formula(required_pet, required_item, result_pet),
                 )
             )
 
@@ -463,22 +494,15 @@ def main() -> int:
     )
     write_csv(DATA / "寵物合成配方.csv", detail_columns, detail_rows)
 
-    grouped: dict[tuple[str, str, str], list[Recipe]] = {}
-    for recipe in all_recipes:
-        grouped.setdefault((recipe.date, recipe.url, recipe.period), []).append(recipe)
     overview_rows: list[dict[str, str]] = []
-    for recipes in grouped.values():
-        first = recipes[0]
-        periods = unique([recipe.period for recipe in recipes])
+    for recipe in all_recipes:
         overview_rows.append(
             {
-                "活動日期": "；".join(periods),
-                "公告日": first.date,
-                "活動／期別": first.title,
-                "合成寵物": "；".join(unique([recipe.result_pet for recipe in recipes])),
-                "所需道具": "；".join(unique([recipe.required_item for recipe in recipes])),
-                "合成樹": "；".join(recipe.tree for recipe in recipes),
-                "公告連結": f"[查看]({first.url})",
+                "活動日期": recipe.period,
+                "公告日": recipe.date,
+                "活動／期別": recipe.title,
+                "合成公式": recipe.tree,
+                "公告連結": f"[查看]({recipe.url})",
             }
         )
     overview_rows.sort(
@@ -489,16 +513,14 @@ def main() -> int:
         "活動日期",
         "公告日",
         "活動／期別",
-        "合成寵物",
-        "所需道具",
-        "合成樹",
+        "合成公式",
         "公告連結",
     )
-    write_csv(DATA / "寵物合成期別.csv", overview_columns, overview_rows)
+    write_csv(DATA / "寵物合成總覽.csv", overview_columns, overview_rows)
 
     print(f"官方公告：{len(refs)} 篇")
     print(f"含合成表公告：{matching_articles} 篇")
-    print(f"寵物合成期別：{len(overview_rows)} 期")
+    print(f"寵物合成公式：{len(overview_rows)} 條")
     print(f"寵物合成配方：{len(all_recipes)} 條")
     return 0
 
