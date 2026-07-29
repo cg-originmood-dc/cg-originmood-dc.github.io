@@ -1,6 +1,7 @@
 import { readFileSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse } from 'csv-parse/sync';
+import { buildFusionTreeForPet } from './synthesis';
 
 export interface PetRecord {
   名稱: string;
@@ -329,9 +330,11 @@ export function applyPetImagesFromSsot(node: FusionNode): FusionNode {
 
 /**
  * 取得要顯示的「完整」合成樹。
- * - 若本寵自有 fusionTree → 用它
- * - 若本寵出現在其他寵的完整樹中 → 顯示那棵完整樹（並由 UI 標示當前寵）
- * - 否則 → 僅樹尖本寵
+ * 優先序：
+ * 1. 手寫 extras（風之使徒模板、寵物詳情補充.json）
+ * 2. 其他 extras 樹中包含本寵的最大樹
+ * 3. 寵物合成配方.csv 自動建樹（活動產物）
+ * 4. 僅樹尖本寵
  * 回傳前會對所有寵物節點套用 petImagePath SSOT。
  */
 export function resolveFusionTree(
@@ -358,6 +361,12 @@ export function resolveFusionTree(
     }
   }
   if (best) return { tree: applyPetImagesFromSsot(best), hasFullData: true };
+
+  // 活動配方自動建樹（寵物合成配方.csv）
+  const auto = buildFusionTreeForPet(petName);
+  if (auto?.children?.length) {
+    return { tree: applyPetImagesFromSsot(auto), hasFullData: true };
+  }
 
   // 無資料：只顯示本寵節點（圖仍走 SSOT）
   return {
