@@ -1,6 +1,6 @@
 {
-  "downloaded": 1507,
-  "failed": 12,
+  "downloaded": 1519,
+  "failed": 6,
   "map": {
     "https://cdn.gamerch.com/contents/wiki/3759/entry/4Pi0d78E.gif": "/img/專屬寵物/鸚鵡綠螺.gif",
     "https://cdn.gamerch.com/contents/wiki/3759/entry/GHV7mIVN.gif": "/img/專屬寵物/懷舊樹精.gif",
@@ -1508,7 +1508,19 @@
     "https://cg.skyey.tw/images/item/14940.gif": "/img/藥水/生命力回復藥(500).gif",
     "https://cg.skyey.tw/images/item/251642.gif": "/img/藥水/水龍藥水.gif",
     "https://cg.skyey.tw/images/item/14913.gif": "/img/藥水/香水：深藍九號.gif",
-    "https://cg.skyey.tw/images/item/15218.gif": "/img/藥水/生命力回復藥(1000).gif"
+    "https://cg.skyey.tw/images/item/15218.gif": "/img/藥水/生命力回復藥(1000).gif",
+    "https://files.originmood.com/pic/7fd53469e896a57ba33b04e23ccfc033/picture/362ddc47ba0705313727fb51d7dc2c9d.png": "/img/專屬寵物/烈風龍蝦.png",
+    "https://files.originmood.com/pic/7fd53469e896a57ba33b04e23ccfc033/picture/4ea9f54c4ff0f38603d888b7d873979a.png": "/img/專屬寵物/龍蝦霸王.png",
+    "https://files.originmood.com/pic/7fd53469e896a57ba33b04e23ccfc033/picture/521cce3e7d3bc807c09a3ce921db3008.png": "/img/專屬寵物/紫翎.png",
+    "https://files.originmood.com/pic/7fd53469e896a57ba33b04e23ccfc033/picture/7372ce0f2660f1e4b9ee0dc7e5fdaffb.png": "/img/專屬寵物/沼澤龍蝦.png",
+    "https://files.originmood.com/pic/7fd53469e896a57ba33b04e23ccfc033/picture/9c1bd0be0e89201f59f6d65887377e04.png": "/img/專屬寵物/海龍蝦.png",
+    "https://files.originmood.com/pic/7fd53469e896a57ba33b04e23ccfc033/picture/f034130c5c6f0b437fc8ce72c8874617.png": "/img/專屬寵物/烈焰龍蝦.png",
+    "https://truth.bahamut.com.tw/s01/202109/4b62aff0df233e0f6b1d2f98389ead35.gif": "/img/專屬寵物/紫翎.png",
+    "https://truth.bahamut.com.tw/s01/202110/1cbda942b3473bc802e71e5acdc8ccd4.gif": "/img/專屬寵物/烈風龍蝦.png",
+    "https://truth.bahamut.com.tw/s01/202110/29df05b21964fd866095a815e4c40fb3.gif": "/img/專屬寵物/烈焰龍蝦.png",
+    "https://truth.bahamut.com.tw/s01/202110/8843a72a1e7c981e7fd42c95fda006ae.gif": "/img/專屬寵物/海龍蝦.png",
+    "https://truth.bahamut.com.tw/s01/202110/980e1590fd935432f2d1124ac96b44dc.gif": "/img/專屬寵物/沼澤龍蝦.png",
+    "https://truth.bahamut.com.tw/s01/202110/d5db76058dade44370d8ad3b9864152a.gif": "/img/專屬寵物/龍蝦霸王.png"
   },
   "failures": [
     {
@@ -1533,30 +1545,6 @@
     },
     {
       "url": "https://media.discordapp.net/attachments/1091232618101620789/1137944537944313987/114292.gif?width=135&height=93",
-      "reason": "HTTP 404"
-    },
-    {
-      "url": "https://truth.bahamut.com.tw/s01/202109/4b62aff0df233e0f6b1d2f98389ead35.gif",
-      "reason": "HTTP 404"
-    },
-    {
-      "url": "https://truth.bahamut.com.tw/s01/202110/1cbda942b3473bc802e71e5acdc8ccd4.gif",
-      "reason": "HTTP 404"
-    },
-    {
-      "url": "https://truth.bahamut.com.tw/s01/202110/29df05b21964fd866095a815e4c40fb3.gif",
-      "reason": "HTTP 404"
-    },
-    {
-      "url": "https://truth.bahamut.com.tw/s01/202110/8843a72a1e7c981e7fd42c95fda006ae.gif",
-      "reason": "HTTP 404"
-    },
-    {
-      "url": "https://truth.bahamut.com.tw/s01/202110/980e1590fd935432f2d1124ac96b44dc.gif",
-      "reason": "HTTP 404"
-    },
-    {
-      "url": "https://truth.bahamut.com.tw/s01/202110/d5db76058dade44370d8ad3b9864152a.gif",
       "reason": "HTTP 404"
     }
   ],
