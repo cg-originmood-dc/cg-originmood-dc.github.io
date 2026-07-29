@@ -18,8 +18,18 @@ interface Props {
 const { node, base = '', depth = 0, currentName = '' } = Astro.props;
 
 const isMultiHead = Boolean(node.heads && node.heads.length > 1);
+/** 多根森林：無名 material 只當容器，不畫卡片 */
+const isForestRoot =
+  !isMultiHead &&
+  !node.name &&
+  node.type === 'material' &&
+  Boolean(node.children?.length);
 const isCurrent =
-  !isMultiHead && node.type === 'pet' && currentName !== '' && node.name === currentName;
+  !isMultiHead &&
+  !isForestRoot &&
+  node.type === 'pet' &&
+  currentName !== '' &&
+  node.name === currentName;
 const isRoot = depth === 0 || !!node.target;
 
 function hrefFor(n: FusionNode): string | null {
@@ -94,18 +104,19 @@ const displayName = node.name;
                     }
                     {h.qty != null && <span class="count">× {h.qty}</span>}
                     {h.countLabel && <span class="count">{h.countLabel}</span>}
+                    {/* 製造 NPC：產物名稱／機率底下，不放材料列後 */}
+                    {h.npc && <div class="npc-info">{h.npc}</div>}
                   </div>
                 </li>
               );
             })
           }
         </ul>
-        {node.npc && <div class="npc-info tree-multi-head__npc">{node.npc}</div>}
       </div>
 
       {
         node.children && node.children.length > 0 && (
-          <ul>
+          <ul class="tree-children">
             {node.children.map((child) => (
               <Astro.self
                 node={child}
@@ -118,8 +129,23 @@ const displayName = node.name;
         )
       }
     </li>
+  ) : isForestRoot ? (
+    <li class="tree-forest-root">
+      <ul class="tree-children tree-children--forest">
+        {
+          node.children!.map((child) => (
+            <Astro.self
+              node={child}
+              base={base}
+              depth={depth}
+              currentName={currentName}
+            />
+          ))
+        }
+      </ul>
+    </li>
   ) : (
-    <li>
+    <li class="tree-node">
       <div
         class:list={[
           'node-card',
@@ -161,7 +187,7 @@ const displayName = node.name;
 
       {
         node.children && node.children.length > 0 && (
-          <ul>
+          <ul class="tree-children">
             {node.children.map((child) => (
               <Astro.self
                 node={child}

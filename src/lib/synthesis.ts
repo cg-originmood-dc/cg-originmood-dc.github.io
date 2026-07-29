@@ -327,12 +327,26 @@ function parseRecipe(raw: SynthesisRecipe): ParsedRecipe {
   }
 
   const matTokens = splitLeftIngredients(left);
-  const ingredients =
-    matTokens.length > 0
-      ? matTokens.map(ingredientNode)
-      : findPetNamesInText(raw['所需寵物']).map(
-          (n): FusionNode => ({ type: 'pet', name: n, image: ssotImage(n) }),
-        );
+  const ingredients: FusionNode[] = [];
+  if (matTokens.length > 0) {
+    for (const tok of matTokens) {
+      // 「A或B」：拆成多隻材料寵（擇一投入）
+      if (/或/.test(tok)) {
+        const pets = findPetNamesInText(tok);
+        if (pets.length) {
+          for (const n of pets) {
+            ingredients.push({ type: 'pet', name: n, image: ssotImage(n) });
+          }
+          continue;
+        }
+      }
+      ingredients.push(ingredientNode(tok));
+    }
+  } else {
+    for (const n of findPetNamesInText(raw['所需寵物'])) {
+      ingredients.push({ type: 'pet', name: n, image: ssotImage(n) });
+    }
+  }
 
   const productLabels = splitRightProducts(right);
   const labels =
@@ -567,9 +581,31 @@ function pickRecipeForProduct(petName: string): ParsedRecipe | null {
 
 /** 僅在「本寵是產物」時建樹（經典：產物在上 → 材料往下） */
 function buildTreeForProduct(petName: string, maxDepth: number): FusionNode | null {
+  return expandCsvFusionForPet(petName, {
+    stack: new Set(),
+    depth: 0,
+    maxDepth,
+  });
+}
+
+/**
+ * 若此寵為活動配方產物，展開為合成樹節點（供統一 merge 接葉用）。
+ * stack 已出現過的寵不再當產物展開，避免循環。
+ */
+export function expandCsvFusionForPet(
+  petName: string,
+  opts: { stack?: Set<string>; depth?: number; maxDepth?: number } = {},
+): FusionNode | null {
+  ensureParsed();
+  const maxDepth = opts.maxDepth ?? 6;
+  const depth = opts.depth ?? 0;
+  const stack = opts.stack ?? new Set<string>();
+  if (!petName || stack.has(petName) || depth > maxDepth) return null;
   const pick = pickRecipeForProduct(petName);
   if (!pick) return null;
-  return expandProduct(petName, pick, new Set([petName]), 0, maxDepth);
+  const next = new Set(stack);
+  next.add(petName);
+  return expandProduct(petName, pick, next, depth, maxDepth);
 }
 
 /** 產物分支 → 樹頂「頭」節點（無 children，只顯示名稱／機率／圖） */
