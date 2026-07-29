@@ -27,11 +27,27 @@ function rehypeBasePath() {
   };
 }
 
+/**
+ * 搬過位置的頁面。GitHub Pages 沒有伺服器端轉址，Astro 會產出一張 meta refresh 的
+ * HTML 頂著，讓外面既有的連結還能到得了。搬頁面時記得補一筆。
+ */
+const moved = {
+  '/生產製造/s階武器': '/生產製造/特殊製造/s階武器',
+  '/生產製造/s階防具': '/生產製造/特殊製造/s階防具',
+  '/生產製造/s階生產採集': '/生產製造/特殊製造/s階生產採集',
+  '/生產製造/神器寵物裝備屬性': '/生產製造/特殊製造/神器寵物裝備屬性',
+  '/生產製造/傳奇套裝': '/生產製造/特殊製造/傳奇套裝',
+  '/生產製造/寶石袋': '/生產製造/特殊製造/寶石袋',
+  // 技能在遊戲裡叫伐木，蔚藍那邊寫伐採
+  '/採集/伐採': '/採集/伐木',
+};
+
 export default defineConfig({
   site,
   base,
   trailingSlash: 'ignore',
   build: { format: 'directory' },
+  redirects: moved,
   markdown: {
     smartypants: false,
     rehypePlugins: [rehypeBasePath()],
