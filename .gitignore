@@ -3,9 +3,10 @@ dist/
 .astro/
 
 # 從原站搬移用的一次性工具。搬完就不會再改，留在 repo 只會讓人以為
-# 網站需要 Python 才能跑。官方公告同步器例外，因為公告會持續更新。
+# 網站需要 Python 才能跑。官方公告相關同步器例外，因為公告會持續更新。
 scripts/*
 !scripts/sync_official_news.py
+!scripts/sync_pet_synthesis.py
 
 # 抓取用的中繼檔：原始 HTML 快取很大且可重新產生
 .cache/
