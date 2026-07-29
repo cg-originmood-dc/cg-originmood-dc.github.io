@@ -32,6 +32,19 @@ export interface Dataset {
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
+ * 欄位超過幾個字才開放換行。折行會讓一列變兩三行，橫著讀就斷掉；
+ * 但不折的話表格會寬到要一直左右捲。門檻就是在這兩件事之間取捨。
+ *
+ * 預設 18 是照原站表格的密度抓的，多數表格這樣剛好。
+ * 個別表格可以自己調——料理的材料欄最長 42 字
+ * （「銀露蜂王漿(20)、牛奶(40)、砂糖(20)、烏克蘭巧克力(5)、櫻桃(40)」），
+ * 一行讀得完，折成兩行反而看不出哪些材料是同一道菜的。
+ * 它的備註欄 93 字還是會折，那種長度不折沒有意義。
+ */
+const WRAP_AT_DEFAULT = 18;
+const WRAP_AT: Record<string, number> = { 料理: 48 };
+
+/**
  * 找出「CSV 本來就照它排好」的日期欄。
  *
  * 條件刻意訂得嚴：必須是日期欄，而且整份資料已經單調遞增或遞減。
@@ -157,7 +170,7 @@ export function loadDataset(name: string): Dataset | null {
     wrapColumns: columns.filter((c) => {
       if (c === imageColumn) return false;
       const longest = records.reduce((m, r) => Math.max(m, (r[c] ?? '').length), 0);
-      return longest > 18;
+      return longest > (WRAP_AT[name] ?? WRAP_AT_DEFAULT);
     }),
   };
   cache.set(name, dataset);
