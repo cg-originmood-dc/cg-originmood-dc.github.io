@@ -2,6 +2,7 @@ import { readFileSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse } from 'csv-parse/sync';
 import { buildFusionTreeForPet } from './synthesis';
+import { itemImagePath } from './items';
 
 export interface PetRecord {
   名稱: string;
@@ -31,7 +32,7 @@ export interface FusionNode {
   name: string;
   /** 寵物圖或道具圖路徑 */
   image?: string;
-  /** 顯示用 emoji（無圖時） */
+  /** 無圖時的文字標籤（分類短名；勿放 emoji） */
   icon?: string;
   /** 數量，如 × 3 */
   qty?: number | string;
@@ -313,19 +314,25 @@ export function collectPetNamesInTree(node: FusionNode, out = new Set<string>())
 }
 
 /**
- * 合成樹寵物節點的 image 一律改寫為 SSOT（專屬寵物 CSV），
- * 忽略 fusionTree 內手填／複製貼上的錯誤路徑。
+ * 合成樹節點圖檔改寫為 SSOT：
+ * - 寵物 → 專屬寵物 CSV / 預設路徑
+ * - 道具／材料 → 道具庫 image（有則填）
+ * 並去掉 emoji icon，避免 UI 再顯示。
  */
 export function applyPetImagesFromSsot(node: FusionNode): FusionNode {
   const children = node.children?.map(applyPetImagesFromSsot);
-  if (node.type === 'pet' && node.name) {
-    return {
-      ...node,
-      image: petImagePath(node.name),
-      ...(children ? { children } : {}),
-    };
+  const base = children ? { ...node, children } : { ...node };
+  // 不再沿用手填 emoji
+  if (base.icon) delete base.icon;
+
+  if (base.type === 'pet' && base.name) {
+    return { ...base, image: petImagePath(base.name) };
   }
-  return children ? { ...node, children } : node;
+  if ((base.type === 'item' || base.type === 'material') && base.name) {
+    const image = itemImagePath(base.name);
+    if (image) return { ...base, image };
+  }
+  return base;
 }
 
 /**
@@ -417,19 +424,16 @@ const WIND_APOSTLE_EXTRA: PetDetailExtra = {
               {
                 type: 'item',
                 name: '風精之心',
-                icon: '💚',
                 qty: 3,
               },
               {
                 type: 'item',
                 name: '元素石',
-                icon: '🪨',
                 qty: 10,
               },
               {
                 type: 'item',
                 name: '元素精華',
-                icon: '🧪',
                 qty: 30,
               },
             ],
@@ -437,19 +441,16 @@ const WIND_APOSTLE_EXTRA: PetDetailExtra = {
           {
             type: 'item',
             name: '風元素之卵',
-            icon: '🥚',
             qty: 3,
           },
           {
             type: 'item',
             name: '閃耀變異之源',
-            icon: '💎',
             qty: 10,
           },
           {
             type: 'item',
             name: '精靈王契約',
-            icon: '📜',
             qty: 100,
           },
         ],
@@ -457,19 +458,16 @@ const WIND_APOSTLE_EXTRA: PetDetailExtra = {
       {
         type: 'item',
         name: '風元素之卵',
-        icon: '🥚',
         qty: 1,
       },
       {
         type: 'item',
         name: '閃耀變異之源',
-        icon: '💎',
         qty: 10,
       },
       {
         type: 'gold',
         name: '50,000G',
-        icon: '💰',
         countLabel: '金幣',
       },
     ],

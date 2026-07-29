@@ -13,7 +13,7 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse } from 'csv-parse/sync';
 import type { FusionNode, ObtainMethod } from './pets';
-import { getItem, itemFallbackIcon, itemImagePath } from './items';
+import { getItem, itemImagePath } from './items';
 
 export interface SynthesisRecipe {
   活動日期: string;
@@ -194,7 +194,6 @@ function ingredientNode(token: string): FusionNode {
     return {
       type: 'gold',
       name: num ? `${num} G` : raw,
-      icon: '🪙',
       countLabel: '金幣',
     };
   }
@@ -211,13 +210,13 @@ function ingredientNode(token: string): FusionNode {
 
   const { name, qty } = parseQty(raw.replace(LV_PREFIX_RE, ''));
   const itemName = name || raw;
-  // 道具圖／圖示從道具庫引用（有列才有 image；否則用分類 emoji）
+  // 道具圖從道具庫引用；無圖不塞 emoji，留給 UI 顯示分類文字
   const fromLib = getItem(itemName);
   const image = itemImagePath(itemName);
   return {
     type: 'item',
     name: fromLib?.名稱 ?? itemName,
-    ...(image ? { image } : { icon: itemFallbackIcon(itemName) }),
+    ...(image ? { image } : {}),
     ...(qty != null ? { qty } : {}),
   };
 }

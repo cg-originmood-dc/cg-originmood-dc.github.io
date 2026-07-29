@@ -425,7 +425,7 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
               }
               {
                 extra.questNote && (
-                  <div class="quest-tip">💡 {extra.questNote}</div>
+                  <div class="quest-tip">{extra.questNote}</div>
                 )
               }
             </td>
@@ -970,6 +970,19 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
     display: block;
     line-height: 1.2;
     margin-bottom: 2px;
+  }
+  .node-card__icon--text {
+    display: inline-block;
+    min-width: 38px;
+    padding: 4px 6px;
+    margin: 0 auto 3px auto;
+    font-size: 10px;
+    font-weight: 700;
+    color: #5f6368;
+    background: #f5f5f5;
+    border: 1px solid #e8e8e8;
+    border-radius: 3px;
+    box-sizing: border-box;
   }
   .node-card a,
   .node-card__name {

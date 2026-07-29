@@ -3,7 +3,7 @@
  * 道具詳情：資料來自 content/data/道具庫.csv（SSOT）
  */
 import Base from '../../layouts/Base.astro';
-import { getItem, listItems, itemFallbackIcon } from '../../lib/items';
+import { getItem, listItems, itemFallbackLabel } from '../../lib/items';
 import { renderCell } from '../../lib/richtext';
 
 export function getStaticPaths() {
@@ -47,7 +47,7 @@ const img = (item?.image ?? '').trim();
               img ? (
                 <img class="item-hero__img" src={src(img)} alt={item.名稱} />
               ) : (
-                <span class="item-hero__icon">{itemFallbackIcon(item.名稱)}</span>
+                <span class="item-hero__icon item-hero__icon--text">{itemFallbackLabel(item.名稱)}</span>
               )
             }
             <div>
@@ -120,6 +120,20 @@ const img = (item?.image ?? '').trim();
   .item-hero__icon {
     font-size: 2.5rem;
     line-height: 1;
+  }
+  .item-hero__icon--text {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 64px;
+    height: 64px;
+    padding: 0 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #5f6368;
+    background: #f5f5f5;
+    border: 1px solid #e0e0e0;
+    box-sizing: border-box;
   }
   .item-hero__name {
     font-size: 1.25rem;
