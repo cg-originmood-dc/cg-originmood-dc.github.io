@@ -5,7 +5,8 @@
   content/data/寵物合成總覽.csv
   content/data/寵物合成配方.csv
 
-判定依據是公告表格同時具有「所需寵物、所需材料、產物寵物」三類欄位；
+判定依據是公告表格同時具有「所需寵物、所需材料、產物寵物」三類欄位，
+或是不需投入原寵、直接交付改造設計圖取得寵物；
 官方歷年使用過的「所需道具／所需材料與數量」及
 「獲得寵物／寵物／寵物名稱」欄名都會保留原文並納入。
 下載的公告 HTML 與官方大事記同步器共用 .cache/official-news。
@@ -13,14 +14,24 @@
 from __future__ import annotations
 
 import csv
+import difflib
 import re
+from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup, NavigableString
 
-from sync_official_news import ARTICLE_CACHE, DATA, NewsRef, clean, fetch, parse_index
+from sync_official_news import (
+    ARTICLE_CACHE,
+    DATA,
+    NewsRef,
+    clean,
+    fetch,
+    parse_index,
+    parse_pet_table,
+)
 
 
 DATE_TOKEN = re.compile(
@@ -65,6 +76,16 @@ class Source:
     kind: str
 
 
+@dataclass
+class DesignGroup:
+    result_pet: str
+    items: list[str]
+    item_sources: list[str]
+    descriptions: list[str]
+    summons: list[str]
+    table: object
+
+
 def article_path(ref: NewsRef) -> Path:
     return ARTICLE_CACHE / Path(urlparse(ref.url).path).name
 
@@ -106,16 +127,16 @@ def normalized_header(row: list[str]) -> list[str]:
 
 def synthesis_header(
     rows: list[list[str]],
-) -> tuple[int, int, int, int] | None:
+) -> tuple[int, int | None, int, int] | None:
     for index, row in enumerate(rows):
         header = normalized_header(row)
         pet_name = next((name for name in REQUIRED_PET_HEADERS if name in header), None)
         item_name = next((name for name in REQUIRED_ITEM_HEADERS if name in header), None)
         result_name = next((name for name in RESULT_PET_HEADERS if name in header), None)
-        if pet_name and item_name and result_name:
+        if item_name and result_name:
             return (
                 index,
-                header.index(pet_name),
+                header.index(pet_name) if pet_name else None,
                 header.index(item_name),
                 header.index(result_name),
             )
@@ -262,7 +283,7 @@ def format_materials(value: str) -> str:
         flags=re.I,
     )
     value = re.sub(
-        r"([0-9G）)])\s+(?=[\u3400-\u9fffA-Za-z])",
+        r"([0-9A-Za-z）)])\s+(?=[\u3400-\u9fffA-Za-z])",
         r"\1 ＋ ",
         value,
     )
@@ -280,8 +301,267 @@ def format_result(value: str) -> str:
     return value
 
 
+DESIGN_ITEM = re.compile(r"(.+?)設計圖([A-E])(?:\D|$)", re.I)
+PRONOUN_BASES = {"它", "他", "他們", "牠", "牠們", "此寵物", "該寵物"}
+
+
+def compact_name(value: str) -> str:
+    return re.sub(r"\s+", "", clean(value)).strip("「」『』【】[]（）()，,。；;：:")
+
+
+def design_groups(soup: BeautifulSoup) -> list[DesignGroup]:
+    groups: dict[str, DesignGroup] = {}
+    for table in soup.find_all("table"):
+        rows = table_rows(table)
+        summons = unique(
+            [
+                compact_name(match.group(1))
+                for row in rows
+                for cell in row
+                for match in re.finditer(r"([^、，；|]{1,40}?)召喚書", cell)
+            ]
+        )
+        for row in rows:
+            compact_cells = [compact_name(cell) for cell in row]
+            item_at = next(
+                (
+                    index
+                    for index, cell in enumerate(compact_cells)
+                    if DESIGN_ITEM.search(cell)
+                ),
+                None,
+            )
+            if item_at is None:
+                continue
+            match = DESIGN_ITEM.search(compact_cells[item_at])
+            if not match:
+                continue
+            result_pet = compact_name(match.group(1))
+            letter = match.group(2).upper()
+            item = f"{result_pet}設計圖{letter}"
+            key = compact_name(result_pet)
+            group = groups.get(key)
+            if not group:
+                group = DesignGroup(
+                    result_pet=result_pet,
+                    items=[],
+                    item_sources=[],
+                    descriptions=[],
+                    summons=summons,
+                    table=table,
+                )
+                groups[key] = group
+            if item not in group.items:
+                group.items.append(item)
+                chance = next(
+                    (
+                        compact_name(cell)
+                        for cell in row
+                        if re.fullmatch(r"\d+(?:\.\d+)?%", compact_name(cell))
+                    ),
+                    "",
+                )
+                group.item_sources.append(
+                    f"{item}{f'（{chance}）' if chance else ''}"
+                )
+            description = clean(" ".join(row[item_at + 1 :]))
+            if description and description not in group.descriptions:
+                group.descriptions.append(description)
+
+    # 至少 A、B、C 三張才視為一組改造設計圖，排除單一道具名稱誤判。
+    return [
+        group
+        for group in groups.values()
+        if {"A", "B", "C"}.issubset(
+            {DESIGN_ITEM.search(item).group(2).upper() for item in group.items}
+        )
+    ]
+
+
+def explicit_design_base(
+    group: DesignGroup,
+    article_text: str,
+) -> str:
+    result = re.escape(compact_name(group.result_pet))
+    compact_descriptions = [compact_name(value) for value in group.descriptions]
+    compact_article = re.sub(r"\s+", "", article_text)
+    for value in [*compact_descriptions, compact_article]:
+        for pattern in (
+            rf"(?:把|將)([^，。；！!]{{1,35}}?)改造成{result}",
+            rf"可將([^，。；！!]{{1,35}}?)改造為{result}",
+            r"用於改造([^，。；！!]{1,30}?)的其中",
+        ):
+            match = re.search(pattern, value)
+            if not match:
+                continue
+            base = compact_name(match.group(1))
+            if (
+                base
+                and base not in PRONOUN_BASES
+                and "設計圖" not in base
+                and len(base) <= 20
+            ):
+                return base
+    return ""
+
+
+def common_suffix_length(left: str, right: str) -> int:
+    length = 0
+    for a, b in zip(reversed(left), reversed(right)):
+        if a != b:
+            break
+        length += 1
+    return length
+
+
+def official_pet_names(soup: BeautifulSoup, ref: NewsRef) -> list[str]:
+    return unique(
+        [
+            compact_name(pet.name)
+            for table in soup.find_all("table")
+            for pet in parse_pet_table(table, ref)
+            if compact_name(pet.name)
+        ]
+    )
+
+
+def canonical_pet_name(value: str, pet_names: list[str]) -> str:
+    value = compact_name(value)
+    candidates = [
+        (
+            difflib.SequenceMatcher(None, value, name).ratio(),
+            name,
+        )
+        for name in pet_names
+        if abs(len(value) - len(name)) <= 1
+    ]
+    if not candidates:
+        return value
+    candidates.sort(reverse=True)
+    score, name = candidates[0]
+    return name if score >= 0.8 else value
+
+
+def inferred_design_base(group: DesignGroup) -> str:
+    result = compact_name(group.result_pet)
+    scored: list[tuple[int, str]] = []
+    for summon in group.summons:
+        base = compact_name(summon)
+        contained = len(base) if base and base in result else 0
+        suffix = common_suffix_length(result, base)
+        score = max(contained, suffix)
+        if score >= 2:
+            scored.append((score, base))
+    if not scored:
+        return ""
+    scored.sort(reverse=True)
+    best_score = scored[0][0]
+    best = unique([base for score, base in scored if score == best_score])
+    return best[0] if len(best) == 1 else ""
+
+
+def design_relation_catalog(
+    articles: list[tuple[NewsRef, str]],
+) -> dict[str, str]:
+    evidence: dict[str, set[str]] = defaultdict(set)
+    for _, source in articles:
+        if "設計圖" not in source:
+            continue
+        soup = BeautifulSoup(source, "html.parser")
+        article_text = clean(soup.get_text(" ", strip=True))
+        for group in design_groups(soup):
+            base = explicit_design_base(group, article_text) or inferred_design_base(group)
+            if base:
+                evidence[compact_name(group.result_pet)].add(base)
+    return {
+        result: next(iter(bases))
+        for result, bases in evidence.items()
+        if len(bases) == 1
+    }
+
+
+def legacy_design_recipes(
+    ref: NewsRef,
+    source: str,
+    relation_catalog: dict[str, str],
+) -> list[Recipe]:
+    if "設計圖" not in source:
+        return []
+    soup = BeautifulSoup(source, "html.parser")
+    article_text = clean(soup.get_text(" ", strip=True))
+    pet_names = official_pet_names(soup, ref)
+    recipes: list[Recipe] = []
+    for group in design_groups(soup):
+        result_key = compact_name(group.result_pet)
+        required_pet = (
+            explicit_design_base(group, article_text)
+            or inferred_design_base(group)
+            or relation_catalog.get(result_key, "")
+        )
+        if not required_pet:
+            continue
+        result_pet = canonical_pet_name(group.result_pet, pet_names)
+        suffix_bases = [
+            name
+            for name in pet_names
+            if name != result_pet and result_pet.endswith(name)
+        ]
+        required_pet = (
+            max(suffix_bases, key=len)
+            if suffix_bases
+            else canonical_pet_name(required_pet, pet_names)
+        )
+        if compact_name(required_pet) == compact_name(result_pet):
+            continue
+        required_item = " ".join(f"{item}*1" for item in group.items)
+        npc_match = re.search(r"找([^，。；]{1,20}?)進行改造", article_text)
+        npc = (
+            f"NPC：{compact_name(npc_match.group(1))}（公告未載明座標）"
+            if npc_match
+            else "公告未載明"
+        )
+        summons = [
+            summon
+            for summon in group.summons
+            if canonical_pet_name(summon, [required_pet]) == required_pet
+        ]
+        pet_source = (
+            f"當期寶盒／活動抽取：{summons[0]}召喚書"
+            if summons
+            else "公告明載需投入此寵物"
+        )
+        item_source = (
+            "當期寶盒／活動抽取：" + "、".join(group.item_sources)
+        )
+        recipes.append(
+            Recipe(
+                date=ref.date,
+                period=activity_period(group.table, ref.date),
+                title=ref.title,
+                url=ref.url,
+                npc=npc,
+                required_pet=required_pet,
+                required_item=required_item,
+                result_pet=result_pet,
+                tree=synthesis_formula(
+                    required_pet,
+                    required_item,
+                    result_pet,
+                ),
+                acquisition=f"所需寵物：{pet_source}；所需道具：{item_source}",
+            )
+        )
+    return recipes
+
+
 def synthesis_formula(required_pet: str, required_item: str, result_pet: str) -> str:
-    left = f"{clean(required_pet)} ＋ {format_materials(required_item)}"
+    materials = format_materials(required_item)
+    pet = clean(required_pet)
+    left = (
+        materials
+        if pet in {"", "/", "／", "-", "無", "不需要"}
+        else f"{pet} ＋ {materials}"
+    )
     results = [format_result(result) for result in output_parts(result_pet)]
     if len(results) == 1:
         return f"{left} ＝ {results[0]}"
@@ -351,28 +631,42 @@ def source_tables(soup: BeautifulSoup) -> list[Source]:
         if not rows:
             continue
 
-        chance_at = header_index(rows, ("物品名稱",))
-        if chance_at is not None:
-            header = normalized_header(rows[chance_at])
-            probability_name = next(
-                (name for name in ("概率", "機率") if name in header),
+        chance_spec: tuple[int, int, int] | None = None
+        for index, row in enumerate(rows):
+            header = normalized_header(row)
+            item_name = next(
+                (
+                    name
+                    for name in ("物品名稱", "道具名稱", "名字", "獎品名稱", "獎品")
+                    if name in header
+                ),
                 None,
             )
-            if probability_name:
-                item_col = header.index("物品名稱")
-                probability_col = header.index(probability_name)
-                for row in rows[chance_at + 1 :]:
-                    if item_col >= len(row):
-                        continue
-                    item = row[item_col]
-                    probability = row[probability_col] if probability_col < len(row) else ""
-                    if item:
-                        detail = f"當期寶盒／活動抽取：{item}"
-                        if probability:
-                            detail += f"（{probability}）"
-                        sources.append(
-                            Source(source_key(item), detail, source_kind(item))
-                        )
+            probability_col = next(
+                (
+                    column
+                    for column, name in enumerate(header)
+                    if "概率" in name or "機率" in name
+                ),
+                None,
+            )
+            if item_name and probability_col is not None:
+                chance_spec = (index, header.index(item_name), probability_col)
+                break
+        if chance_spec is not None:
+            chance_at, item_col, probability_col = chance_spec
+            for row in rows[chance_at + 1 :]:
+                if item_col >= len(row):
+                    continue
+                item = row[item_col]
+                probability = row[probability_col] if probability_col < len(row) else ""
+                if item:
+                    detail = f"當期寶盒／活動抽取：{item}"
+                    if probability:
+                        detail += f"（{probability}）"
+                    sources.append(
+                        Source(source_key(item), detail, source_kind(item))
+                    )
 
         output_at = header_index(rows, ("所需寵物", "所需道具", "獲得道具"))
         if output_at is not None:
@@ -465,18 +759,24 @@ def parse_recipes(ref: NewsRef, source: str) -> list[Recipe]:
         npc = npc_of(rows, header_at, table)
         period = activity_period(table, ref.date)
         for row in rows[header_at + 1 :]:
-            if max(pet_col, item_col, result_col) >= len(row):
+            required_columns = [item_col, result_col]
+            if pet_col is not None:
+                required_columns.append(pet_col)
+            if max(required_columns) >= len(row):
                 continue
-            required_pet = row[pet_col]
+            required_pet = row[pet_col] if pet_col is not None else "不需要"
             required_item = row[item_col]
             result_pet = row[result_col]
+            no_required_pet = required_pet.strip() in {"/", "／", "-", "無", "不需要"}
             if (
-                not required_pet
-                or required_pet.strip() in {"/", "／", "-", "無"}
-                or not required_item
+                not required_item
+                or required_item.strip() in {"/", "／", "-", "無"}
                 or not result_pet
+                or (no_required_pet and "設計圖" not in required_item)
             ):
                 continue
+            if no_required_pet:
+                required_pet = "不需要"
             recipes.append(
                 Recipe(
                     date=ref.date,
@@ -507,7 +807,11 @@ def parse_recipes(ref: NewsRef, source: str) -> list[Recipe]:
                 )
         pet_sources = matching_sources(recipe.required_pet, recipe_sources, "pet")
         item_sources = matching_sources(recipe.required_item, recipe_sources, "item")
-        pet_method = "、".join(unique(pet_sources)) or "公告未另載"
+        pet_method = (
+            "不需要"
+            if recipe.required_pet == "不需要"
+            else "、".join(unique(pet_sources)) or "公告未另載"
+        )
         item_method = "、".join(unique(item_sources)) or "公告未另載"
         recipe.acquisition = f"所需寵物：{pet_method}；所需道具：{item_method}"
     return recipes
@@ -528,12 +832,27 @@ def write_csv(path: Path, columns: tuple[str, ...], rows: list[dict[str, str]]) 
 
 def main() -> int:
     refs = parse_index(refresh=True)
-    all_recipes: list[Recipe] = []
-    matching_articles = 0
+    articles: list[tuple[NewsRef, str]] = []
     for ref in refs:
         path = article_path(ref)
-        source = fetch(ref.url, path, refresh=False)
+        articles.append((ref, fetch(ref.url, path, refresh=False)))
+
+    relation_catalog = design_relation_catalog(articles)
+    all_recipes: list[Recipe] = []
+    matching_articles = 0
+    for ref, source in articles:
         recipes = parse_recipes(ref, source)
+        legacy_recipes = legacy_design_recipes(ref, source, relation_catalog)
+        existing_results = {
+            source_key(output)
+            for recipe in recipes
+            for output in output_parts(recipe.result_pet)
+        }
+        recipes.extend(
+            recipe
+            for recipe in legacy_recipes
+            if source_key(recipe.result_pet) not in existing_results
+        )
         if recipes:
             matching_articles += 1
             all_recipes.extend(recipes)
