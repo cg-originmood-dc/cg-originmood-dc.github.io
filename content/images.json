@@ -1,5 +1,5 @@
 {
-  "downloaded": 1116,
+  "downloaded": 1115,
   "failed": 12,
   "map": {
     "https://cdn.gamerch.com/contents/wiki/3759/entry/4Pi0d78E.gif": "/img/專屬寵物/鸚鵡綠螺.gif",
@@ -1116,8 +1116,7 @@
     "https://cg.skyey.tw/images/item/15076.gif": "/img/料理/醋飯壽司.gif",
     "https://cg.skyey.tw/images/item/15012.gif": "/img/料理/豪華壽司組.gif",
     "https://cg.skyey.tw/images/item/15123.gif": "/img/料理/魚翅湯.gif",
-    "https://cg.skyey.tw/images/item/15133.gif": "/img/料理/鱉料理.gif",
-    "https://cg.skyey.tw/images/item/15125.gif": "/img/料理/韓式海鮮鍋.gif"
+    "https://cg.skyey.tw/images/item/15133.gif": "/img/料理/鱉料理.gif"
   },
   "failures": [
     {
