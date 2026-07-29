@@ -20,6 +20,11 @@ const pages = defineCollection({
     order: z.number().optional(),
     /** 選填：從導覽隱藏 */
     draft: z.boolean().default(false),
+    /**
+     * 選填：內嵌 public/資料庫/ 下的靜態 HTML 到右側主內容區
+     * （例如 skills.html、items.html），不另開頁、不跳轉
+     */
+    embed: z.string().optional(),
   }),
 });
 

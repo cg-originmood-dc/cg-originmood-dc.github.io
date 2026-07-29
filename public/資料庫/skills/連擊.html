@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>連擊 - 技能詳情</title>
+  <style>
+    :root {
+      --db-bg: #ffffff;
+      --db-surface: #f8f9fa;
+      --db-border: #e0e0e0;
+      --db-text: #212121;
+      --db-text-2: #5f6368;
+      --db-accent: #1155cc;
+      --db-gold: #e65100;
+      --db-header: #f1f3f4;
+    }
+    body {
+      background-color: var(--db-bg);
+      color: var(--db-text);
+      font-family: "Open Sans", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+      margin: 0;
+      padding: 0;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+    #wrapper {
+      width: 100%;
+      max-width: none;
+      margin: 0;
+      padding: 0 4px 24px;
+      box-sizing: border-box;
+    }
+    .back-btn {
+      display: inline-block;
+      margin-bottom: 14px;
+      color: var(--db-accent);
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .back-btn:hover { text-decoration: underline; }
+    .info-table {
+      width: 100%;
+      background-color: var(--db-border);
+      border-collapse: separate;
+      border-spacing: 1px;
+      margin-bottom: 16px;
+    }
+    .info-table td, .info-table th {
+      background-color: #ffffff;
+      padding: 10px 12px;
+      vertical-align: middle;
+      color: var(--db-text);
+    }
+    .info-table .head {
+      background-color: var(--db-header);
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--db-text);
+      border-left: 5px solid var(--db-accent);
+      text-align: left;
+    }
+    .skill-title-cell, .title-cell { display: flex; align-items: center; }
+    .skill-icon {
+      width: 50px; height: 50px;
+      background-color: var(--db-surface);
+      border: 1px solid var(--db-accent);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; margin-right: 15px;
+    }
+    .skill-title-text h2, .title-text h2 {
+      font-size: 22px; color: var(--db-text); margin: 0 0 4px 0;
+    }
+    .title-text span { font-size: 13px; color: var(--db-text-2); }
+    .title-cell img {
+      margin-right: 15px;
+      border: 1px solid var(--db-border);
+      border-radius: 4px;
+      max-width: 64px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 3px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #212121;
+      background-color: var(--db-accent);
+    }
+    .level-table, .grade-table, .stats-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+    }
+    .level-table th, .grade-table th, .stats-table th {
+      background-color: var(--db-header);
+      color: var(--db-accent);
+      font-size: 12px;
+      padding: 8px;
+      border-bottom: 2px solid var(--db-accent);
+      font-weight: 700;
+    }
+    .level-table td, .grade-table td, .stats-table td {
+      padding: 9px 6px;
+      border-bottom: 1px solid #eee;
+      font-size: 13px;
+      color: var(--db-text);
+    }
+    .pet-large-pic {
+      text-align: center;
+      background-color: var(--db-surface);
+      padding: 16px;
+      border: 1px solid var(--db-border);
+      margin-bottom: 16px;
+      border-radius: 6px;
+    }
+    .pet-large-pic img {
+      max-width: 100%;
+      max-height: 360px;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+      image-rendering: pixelated;
+    }
+    .pet-chip-wrapper, .pet-mini-wrapper {
+      display: flex; flex-wrap: wrap; gap: 8px; padding: 5px 0;
+    }
+    .pet-skill-chip, .pet-mini-chip {
+      display: inline-flex; align-items: center;
+      background-color: #fff8e1;
+      border: 1px solid #ffe082;
+      padding: 4px 10px; border-radius: 4px;
+      text-decoration: none; color: var(--db-gold);
+      font-size: 12px; font-weight: 700;
+    }
+    .pet-skill-chip:hover, .pet-mini-chip:hover {
+      background: var(--db-accent); color: #212121; border-color: var(--db-accent);
+    }
+    .pet-skill-chip img, .pet-mini-chip img {
+      width: 24px; height: 24px; object-fit: contain; margin-right: 6px;
+    }
+    .total-grade-text { font-size: 18px; color: var(--db-gold); font-weight: 700; }
+    .grade-bar {
+      display: inline-block; background-color: #eee;
+      width: 60px; height: 8px; border-radius: 4px;
+      overflow: hidden; margin-left: 8px; vertical-align: middle;
+    }
+    .grade-fill { background-color: var(--db-gold); height: 100%; }
+    .tree-container { width: 100%; overflow-x: auto; padding: 15px 0; }
+    .tree-diagram, .tree-diagram ul {
+      display: flex; justify-content: center; margin: 0; padding: 0;
+      list-style: none; position: relative;
+    }
+    .tree-diagram ul { padding-top: 20px; }
+    .tree-diagram li {
+      display: flex; flex-direction: column; align-items: center;
+      position: relative; padding: 20px 4px 0 4px;
+    }
+    .tree-diagram li::before, .tree-diagram li::after {
+      content: ''; position: absolute; top: 0; right: 50%;
+      border-top: 2px solid var(--db-accent); width: 50%; height: 20px;
+    }
+    .tree-diagram li::after {
+      right: auto; left: 50%; border-left: 2px solid var(--db-accent);
+    }
+    .tree-diagram li:only-child::after, .tree-diagram li:only-child::before { display: none; }
+    .tree-diagram li:only-child { padding-top: 0; }
+    .tree-diagram li:first-child::before, .tree-diagram li:last-child::after { border: 0 none; }
+    .tree-diagram li:last-child::before {
+      border-right: 2px solid var(--db-accent); border-radius: 0 4px 0 0;
+    }
+    .tree-diagram li:first-child::after { border-radius: 4px 0 0 0; }
+    .tree-diagram ul::before {
+      content: ''; position: absolute; top: 0; left: 50%;
+      border-left: 2px solid var(--db-accent); width: 0; height: 20px;
+    }
+    .node-card {
+      background-color: #ffffff; border: 1px solid var(--db-border);
+      border-radius: 5px; padding: 6px 8px; text-align: center;
+      min-width: 70px; position: relative; z-index: 2; box-sizing: border-box;
+    }
+    .node-card img {
+      width: 38px; height: 38px; object-fit: contain;
+      display: block; margin: 0 auto 3px auto;
+    }
+    .node-card a {
+      color: var(--db-accent); font-size: 11px; text-decoration: none;
+      font-weight: 700; display: block; white-space: nowrap;
+    }
+    .node-card .count { font-size: 10px; color: var(--db-text-2); display: block; }
+    .node-card .npc-info {
+      font-size: 9px; color: var(--db-text-2); background-color: var(--db-surface);
+      border-radius: 3px; padding: 2px 4px; margin-top: 3px; white-space: nowrap;
+    }
+    .node-target {
+      border: 2px solid var(--db-accent);
+      background-color: #e8f0fe;
+      box-shadow: 0 0 6px rgba(17, 85, 204, 0.2);
+    }
+</style>
+</head>
+<body>
+<div id="wrapper">
+  <a href="/技能總覽" class="back-btn">⬅️ 返回技能總表</a>
+
+  <table class="info-table">
+    <tr>
+      <td>
+        <div class="skill-title-cell">
+          <div class="skill-icon">⚔️</div>
+          <div class="skill-title-text">
+            <h2>連擊</h2>
+            <span>LV 1 ~ LV 15（改版後僅 LV11 已確認）</span>
+          </div>
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  <table class="info-table">
+    <tr class="head"><td colspan="4">技能概覽與類別資訊</td></tr>
+    <tr>
+      <td width="120"><b>技能分類</b></td>
+      <td width="230"><span class="badge">戰鬥攻擊技能</span></td>
+      <td width="120"><b>最高等級</b></td>
+      <td width="230"><span style="color: #e65100; font-weight:bold;">LV 15</span></td>
+    </tr>
+  </table>
+
+  <table class="info-table">
+    <tr class="head"><td>⚡ LV 1 ~ LV 15 技能效果明細（改版後多數待確認）</td></tr>
+    <tr>
+      <td style="padding: 0;">
+        <table class="level-table">
+          <thead>
+            <tr>
+              <th width="70">等級</th>
+              <th width="110">魔力消耗</th>
+              <th>等級效果說明</th>
+              <th width="280">持有寵物</th>
+            </tr>
+          </thead>
+          <tbody>
+          <tr>
+            <td style="font-weight: bold; color: #008be3;">LV 1</td>
+            <td style="color: #e65100; font-weight: bold;">—</td>
+            <td style="text-align: left; color: #9e9e9e;">—（改版後待確認）</td>
+          <td><span style="color:#9e9e9e;">—</span></td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; color: #008be3;">LV 2</td>
+            <td style="color: #e65100; font-weight: bold;">—</td>
+            <td style="text-align: left; color: #9e9e9e;">—（改版後待確認）</td>
+          <td><span style="color:#9e9e9e;">—</span></td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; color: #008be3;">LV 3</td>
+            <td style="color: #e65100; font-weight: bold;">—</td>
+            <td style="text-align: left; color: #9e9e9e;">—（改版後待確認）</td>
+          <td><span style="color:#9e9e9e;">—</span></td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; color: #008be3;">LV 4</td>
+            <td style="color: #e65100; font-weight: bold;">—</td>
+            <td style="text-align: left; color: #9e9e9e;">—（改版後待確認）</td>
+          <td><span style="color:#9e9e9e;">—</span></td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; color: #008be3;">LV 5</td>
+            <td style="color: #e65100; font-weight: bold;">—</td>
+            <td style="text-align: left; color: #9e9e9e;">—（改版後待確認）</td>
+          <td><span style="color:#9e9e9e;">—</span></td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; color: #008be3;">LV 6</td>
+            <td style="color: #e65100; font-weight: bold;">—</td>
+            <td style="text-align: left; color: #9e9e9e;">—（改版後待確認）</td>
+          <td><span style="color:#9e9e9e;">—</span></td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; color: #008be3;">LV 7</td>
+            <td style="color: #e65100; font-weight: bold;">—</td>
+            <td style="text-align: left; color: #9e9e9e;">—（改版後待確認）</td>
+          <td><span style="color:#9e9e9e;">—</span></td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; color: #008be3;">LV 8</td>
+            <td style="color: #e65100; font-weight: bold;">—</td>
+            <td style="text-align: left; color: #9e9e9e;">—（改版後待確認）</td>
+          <td><span style="color:#9e9e9e;">—</span></td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; color: #008be3;">LV 9</td>
+            <td style="color: #e65100; font-weight: bold;">—</td>
+            <td style="text-align: left; color: #9e9e9e;">—（改版後待確認）</td>
+          <td><span style="color:#9e9e9e;">—</span></td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; color: #008be3;">LV 10</td>
+            <td style="color: #e65100; font-weight: bold;">—</td>
+            <td style="text-align: left; color: #9e9e9e;">—（改版後待確認）</td>
+          <td><div class="pet-mini-wrapper"><a href="/寵物資料/青銅魚怪" class="pet-mini-chip"><img src="/img/專屬寵物/青銅魚怪.gif" alt="青銅魚怪" onerror="this.style.visibility='hidden'" /><span>青銅魚怪</span></a><a href="/寵物資料/碧空飛龍" class="pet-mini-chip"><img src="/img/專屬寵物/碧空飛龍.gif" alt="碧空飛龍" onerror="this.style.visibility='hidden'" /><span>碧空飛龍</span></a><a href="/寵物資料/赤鏈蛇姬" class="pet-mini-chip"><img src="/img/專屬寵物/赤鏈蛇姬.gif" alt="赤鏈蛇姬" onerror="this.style.visibility='hidden'" /><span>赤鏈蛇姬</span></a><a href="/寵物資料/帝國少女士兵" class="pet-mini-chip"><img src="/img/專屬寵物/帝國少女士兵.gif" alt="帝國少女士兵" onerror="this.style.visibility='hidden'" /><span>帝國少女士兵</span></a><a href="/寵物資料/七夕水藍鼠" class="pet-mini-chip"><img src="/img/專屬寵物/七夕水藍鼠.gif" alt="七夕水藍鼠" onerror="this.style.visibility='hidden'" /><span>七夕水藍鼠</span></a></div></td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; color: #008be3;">LV 11</td>
+            <td style="color: #e65100; font-weight: bold;">—</td>
+            <td style="text-align: left;">4 下攻擊，單次 57%（合計 228%）</td>
+          <td><div class="pet-mini-wrapper"><a href="/寵物資料/黑潮龍蝦" class="pet-mini-chip"><img src="/img/專屬寵物/黑潮龍蝦.gif" alt="黑潮龍蝦" onerror="this.style.visibility='hidden'" /><span>黑潮龍蝦</span></a><a href="/寵物資料/檸黃飛魟" class="pet-mini-chip"><img src="/img/專屬寵物/檸黃飛魟.gif" alt="檸黃飛魟" onerror="this.style.visibility='hidden'" /><span>檸黃飛魟</span></a><a href="/寵物資料/百合騎士" class="pet-mini-chip"><img src="/img/專屬寵物/百合聖騎士.gif" alt="百合騎士" onerror="this.style.visibility='hidden'" /><span>百合騎士</span></a><a href="/寵物資料/御魂雷影" class="pet-mini-chip"><img src="/img/專屬寵物/御魂雷影.gif" alt="御魂雷影" onerror="this.style.visibility='hidden'" /><span>御魂雷影</span></a><a href="/寵物資料/影" class="pet-mini-chip"><img src="/img/專屬寵物/影.gif" alt="影" onerror="this.style.visibility='hidden'" /><span>影</span></a><a href="/寵物資料/天叢雲神樂" class="pet-mini-chip"><img src="/img/專屬寵物/天叢雲神樂.gif" alt="天叢雲神樂" onerror="this.style.visibility='hidden'" /><span>天叢雲神樂</span></a><a href="/寵物資料/神樂" class="pet-mini-chip"><img src="/img/專屬寵物/神樂.gif" alt="神樂" onerror="this.style.visibility='hidden'" /><span>神樂</span></a><a href="/寵物資料/天叢雲櫻" class="pet-mini-chip"><img src="/img/專屬寵物/天叢雲櫻.gif" alt="天叢雲櫻" onerror="this.style.visibility='hidden'" /><span>天叢雲櫻</span></a><a href="/寵物資料/小鹽巴Kylie" class="pet-mini-chip"><img src="/img/專屬寵物/小鹽巴Kylie.gif" alt="小鹽巴Kylie" onerror="this.style.visibility='hidden'" /><span>小鹽巴Kylie</span></a><a href="/寵物資料/異型火蜂" class="pet-mini-chip"><img src="/img/專屬寵物/異型火蜂.gif" alt="異型火蜂" onerror="this.style.visibility='hidden'" /><span>異型火蜂</span></a><a href="/寵物資料/天叢雲雪" class="pet-mini-chip"><img src="/img/專屬寵物/天叢雲雪.gif" alt="天叢雲雪" onerror="this.style.visibility='hidden'" /><span>天叢雲雪</span></a><a href="/寵物資料/天叢雲舞" class="pet-mini-chip"><img src="/img/專屬寵物/天叢雲舞.gif" alt="天叢雲舞" onerror="this.style.visibility='hidden'" /><span>天叢雲舞</span></a><a href="/寵物資料/舞" class="pet-mini-chip"><img src="/img/專屬寵物/舞.gif" alt="舞" onerror="this.style.visibility='hidden'" /><span>舞</span></a><a href="/寵物資料/改造飛馬公主" class="pet-mini-chip"><img src="/img/專屬寵物/改造飛馬公主.gif" alt="改造飛馬公主" onerror="this.style.visibility='hidden'" /><span>改造飛馬公主</span></a><a href="/寵物資料/噗栗大王" class="pet-mini-chip"><img src="/img/專屬寵物/噗栗大王.gif" alt="噗栗大王" onerror="this.style.visibility='hidden'" /><span>噗栗大王</span></a><a href="/寵物資料/噗栗醬" class="pet-mini-chip"><img src="/img/專屬寵物/噗栗大王.gif" alt="噗栗醬" onerror="this.style.visibility='hidden'" /><span>噗栗醬</span></a><a href="/寵物資料/噬歲狼王" class="pet-mini-chip"><img src="/img/專屬寵物/噬歲狼王.gif" alt="噬歲狼王" onerror="this.style.visibility='hidden'" /><span>噬歲狼王</span></a><a href="/寵物資料/劍術大師里昂" class="pet-mini-chip"><img src="/img/專屬寵物/劍術大師里昂.gif" alt="劍術大師里昂" onerror="this.style.visibility='hidden'" /><span>劍術大師里昂</span></a><a href="/寵物資料/劍士里昂" class="pet-mini-chip"><img src="/img/專屬寵物/劍術大師里昂.gif" alt="劍士里昂" onerror="this.style.visibility='hidden'" /><span>劍士里昂</span></a><a href="/寵物資料/改造聖誕水藍鼠" class="pet-mini-chip"><img src="/img/專屬寵物/改造聖誕水藍鼠.gif" alt="改造聖誕水藍鼠" onerror="this.style.visibility='hidden'" /><span>改造聖誕水藍鼠</span></a><a href="/寵物資料/紫獄龍王" class="pet-mini-chip"><img src="/img/專屬寵物/紫獄龍王.gif" alt="紫獄龍王" onerror="this.style.visibility='hidden'" /><span>紫獄龍王</span></a><a href="/寵物資料/第16期亞軍寵" class="pet-mini-chip"><img src="/img/專屬寵物/第16期亞軍寵.gif" alt="第16期亞軍寵" onerror="this.style.visibility='hidden'" /><span>第16期亞軍寵</span></a><a href="/寵物資料/強擊漂浮炸彈" class="pet-mini-chip"><img src="/img/專屬寵物/強擊漂浮炸彈.gif" alt="強擊漂浮炸彈" onerror="this.style.visibility='hidden'" /><span>強擊漂浮炸彈</span></a><a href="/寵物資料/綾香" class="pet-mini-chip"><img src="/img/專屬寵物/綾香.gif" alt="綾香" onerror="this.style.visibility='hidden'" /><span>綾香</span></a><a href="/寵物資料/聖槍騎士" class="pet-mini-chip"><img src="/img/專屬寵物/聖槍騎士.gif" alt="聖槍騎士" onerror="this.style.visibility='hidden'" /><span>聖槍騎士</span></a><a href="/寵物資料/白焰" class="pet-mini-chip"><img src="/img/專屬寵物/白焰.gif" alt="白焰" onerror="this.style.visibility='hidden'" /><span>白焰</span></a><a href="/寵物資料/衝浪小黃鴨" class="pet-mini-chip"><img src="/img/專屬寵物/衝浪小黃鴨.gif" alt="衝浪小黃鴨" onerror="this.style.visibility='hidden'" /><span>衝浪小黃鴨</span></a><a href="/寵物資料/墮落天使" class="pet-mini-chip"><img src="/img/專屬寵物/墮落天使.gif" alt="墮落天使" onerror="this.style.visibility='hidden'" /><span>墮落天使</span></a><a href="/寵物資料/流星" class="pet-mini-chip"><img src="/img/專屬寵物/流星.gif" alt="流星" onerror="this.style.visibility='hidden'" /><span>流星</span></a><a href="/寵物資料/裁決白龍王" class="pet-mini-chip"><img src="/img/專屬寵物/裁決白龍王.gif" alt="裁決白龍王" onerror="this.style.visibility='hidden'" /><span>裁決白龍王</span></a><a href="/寵物資料/阿德基姆" class="pet-mini-chip"><img src="/img/專屬寵物/阿德基姆.gif" alt="阿德基姆" onerror="this.style.visibility='hidden'" /><span>阿德基姆</span></a><a href="/寵物資料/地底龍龜" class="pet-mini-chip"><img src="/img/專屬寵物/地底龍龜.gif" alt="地底龍龜" onerror="this.style.visibility='hidden'" /><span>地底龍龜</span></a><a href="/寵物資料/緋紅巨龍" class="pet-mini-chip"><img src="/img/專屬寵物/緋紅巨龍.gif" alt="緋紅巨龍" onerror="this.style.visibility='hidden'" /><span>緋紅巨龍</span></a><a href="/寵物資料/雷暴殺人蜂" class="pet-mini-chip"><img src="/img/專屬寵物/雷暴殺人蜂.gif" alt="雷暴殺人蜂" onerror="this.style.visibility='hidden'" /><span>雷暴殺人蜂</span></a><a href="/寵物資料/霸天魔鷹" class="pet-mini-chip"><img src="/img/專屬寵物/霸天魔鷹.gif" alt="霸天魔鷹" onerror="this.style.visibility='hidden'" /><span>霸天魔鷹</span></a><a href="/寵物資料/戰鬥獅鷲獸" class="pet-mini-chip"><img src="/img/專屬寵物/戰鬥獅鷲獸.gif" alt="戰鬥獅鷲獸" onerror="this.style.visibility='hidden'" /><span>戰鬥獅鷲獸</span></a><a href="/寵物資料/黃金泰坦" class="pet-mini-chip"><img src="/img/專屬寵物/黃金泰坦.gif" alt="黃金泰坦" onerror="this.style.visibility='hidden'" /><span>黃金泰坦</span></a><a href="/寵物資料/聖劍賽格梅特" class="pet-mini-chip"><img src="/img/專屬寵物/聖劍賽格梅特.gif" alt="聖劍賽格梅特" onerror="this.style.visibility='hidden'" /><span>聖劍賽格梅特</span></a><a href="/寵物資料/時雨天" class="pet-mini-chip"><img src="/img/專屬寵物/時雨天.gif" alt="時雨天" onerror="this.style.visibility='hidden'" /><span>時雨天</span></a><a href="/寵物資料/烏莉兒" class="pet-mini-chip"><img src="/img/專屬寵物/烏莉兒.gif" alt="烏莉兒" onerror="this.style.visibility='hidden'" /><span>烏莉兒</span></a><a href="/寵物資料/白銀騎士" class="pet-mini-chip"><img src="/img/專屬寵物/白銀騎士.gif" alt="白銀騎士" onerror="this.style.visibility='hidden'" /><span>白銀騎士</span></a><a href="/寵物資料/聖誕豬王" class="pet-mini-chip"><img src="/img/專屬寵物/聖誕豬王.gif" alt="聖誕豬王" onerror="this.style.visibility='hidden'" /><span>聖誕豬王</span></a><a href="/寵物資料/惡魔女帝" class="pet-mini-chip"><img src="/img/專屬寵物/惡魔女帝.gif" alt="惡魔女帝" onerror="this.style.visibility='hidden'" /><span>惡魔女帝</span></a><a href="/寵物資料/黯星使者" class="pet-mini-chip"><img src="/img/專屬寵物/黯星使者.gif" alt="黯星使者" onerror="this.style.visibility='hidden'" /><span>黯星使者</span></a><a href="/寵物資料/沙暴仙人掌" class="pet-mini-chip"><img src="/img/專屬寵物/沙暴仙人掌.gif" alt="沙暴仙人掌" onerror="this.style.visibility='hidden'" /><span>沙暴仙人掌</span></a><a href="/寵物資料/月見紗" class="pet-mini-chip"><img src="/img/專屬寵物/月見紗.gif" alt="月見紗" onerror="this.style.visibility='hidden'" /><span>月見紗</span></a></div></td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; color: #008be3;">LV 12</td>
+            <td style="color: #e65100; font-weight: bold;">—</td>
+            <td style="text-align: left; color: #9e9e9e;">—（改版後待確認）</td>
+          <td><div class="pet-mini-wrapper"><a href="/寵物資料/拉扎紅魟" class="pet-mini-chip"><img src="/img/專屬寵物/拉扎紅魟.gif" alt="拉扎紅魟" onerror="this.style.visibility='hidden'" /><span>拉扎紅魟</span></a><a href="/寵物資料/虛空魔龍" class="pet-mini-chip"><img src="/img/專屬寵物/虛空魔龍.gif" alt="虛空魔龍" onerror="this.style.visibility='hidden'" /><span>虛空魔龍</span></a><a href="/寵物資料/梅莉珊卓" class="pet-mini-chip"><img src="/img/專屬寵物/梅莉珊卓.gif" alt="梅莉珊卓" onerror="this.style.visibility='hidden'" /><span>梅莉珊卓</span></a><a href="/寵物資料/魔官遊獄石" class="pet-mini-chip"><img src="/img/專屬寵物/魔官遊獄石.gif" alt="魔官遊獄石" onerror="this.style.visibility='hidden'" /><span>魔官遊獄石</span></a><a href="/寵物資料/天叢雲舞" class="pet-mini-chip"><img src="/img/專屬寵物/天叢雲舞.gif" alt="天叢雲舞" onerror="this.style.visibility='hidden'" /><span>天叢雲舞</span></a><a href="/寵物資料/赤金翼獅" class="pet-mini-chip"><img src="/img/專屬寵物/赤金翼獅.gif" alt="赤金翼獅" onerror="this.style.visibility='hidden'" /><span>赤金翼獅</span></a><a href="/寵物資料/食夢貘" class="pet-mini-chip"><img src="/img/專屬寵物/食夢貘.gif" alt="食夢貘" onerror="this.style.visibility='hidden'" /><span>食夢貘</span></a><a href="/寵物資料/方塊喵" class="pet-mini-chip"><img src="/img/專屬寵物/方塊喵.gif" alt="方塊喵" onerror="this.style.visibility='hidden'" /><span>方塊喵</span></a><a href="/寵物資料/白銀冥鬥士" class="pet-mini-chip"><img src="/img/專屬寵物/白銀冥鬥士.gif" alt="白銀冥鬥士" onerror="this.style.visibility='hidden'" /><span>白銀冥鬥士</span></a><a href="/寵物資料/綾香" class="pet-mini-chip"><img src="/img/專屬寵物/綾香.gif" alt="綾香" onerror="this.style.visibility='hidden'" /><span>綾香</span></a><a href="/寵物資料/雪見大福兔兔" class="pet-mini-chip"><img src="/img/專屬寵物/雪見大福兔兔.gif" alt="雪見大福兔兔" onerror="this.style.visibility='hidden'" /><span>雪見大福兔兔</span></a><a href="/寵物資料/中元腐屍" class="pet-mini-chip"><img src="/img/專屬寵物/中元腐屍.gif" alt="中元腐屍" onerror="this.style.visibility='hidden'" /><span>中元腐屍</span></a><a href="/寵物資料/鬼眼村正" class="pet-mini-chip"><img src="/img/專屬寵物/鬼眼村正.gif" alt="鬼眼村正" onerror="this.style.visibility='hidden'" /><span>鬼眼村正</span></a><a href="/寵物資料/皮娜" class="pet-mini-chip"><img src="/img/專屬寵物/皮娜.gif" alt="皮娜" onerror="this.style.visibility='hidden'" /><span>皮娜</span></a><a href="/寵物資料/紅甲蠍" class="pet-mini-chip"><img src="/img/專屬寵物/紅甲蠍.gif" alt="紅甲蠍" onerror="this.style.visibility='hidden'" /><span>紅甲蠍</span></a><a href="/寵物資料/札拉庫" class="pet-mini-chip"><img src="/img/專屬寵物/札拉庫.gif" alt="札拉庫" onerror="this.style.visibility='hidden'" /><span>札拉庫</span></a><a href="/寵物資料/暴狨獸" class="pet-mini-chip"><img src="/img/專屬寵物/暴狨獸.gif" alt="暴狨獸" onerror="this.style.visibility='hidden'" /><span>暴狨獸</span></a><a href="/寵物資料/飛櫻螳螂" class="pet-mini-chip"><img src="/img/專屬寵物/飛櫻螳螂.gif" alt="飛櫻螳螂" onerror="this.style.visibility='hidden'" /><span>飛櫻螳螂</span></a><a href="/寵物資料/火焰詛咒者" class="pet-mini-chip"><img src="/img/專屬寵物/虛弱的火焰詛咒者.png" alt="火焰詛咒者" onerror="this.style.visibility='hidden'" /><span>火焰詛咒者</span></a><a href="/寵物資料/雷霆詛咒者" class="pet-mini-chip"><img src="/img/專屬寵物/虛弱的雷霆詛咒者.gif" alt="雷霆詛咒者" onerror="this.style.visibility='hidden'" /><span>雷霆詛咒者</span></a><a href="/寵物資料/聖魂阿爾卡迪亞" class="pet-mini-chip"><img src="/img/專屬寵物/聖魂阿爾卡迪亞.gif" alt="聖魂阿爾卡迪亞" onerror="this.style.visibility='hidden'" /><span>聖魂阿爾卡迪亞</span></a><a href="/寵物資料/武魂阿爾卡迪亞" class="pet-mini-chip"><img src="/img/專屬寵物/武魂阿爾卡迪亞.gif" alt="武魂阿爾卡迪亞" onerror="this.style.visibility='hidden'" /><span>武魂阿爾卡迪亞</span></a><a href="/寵物資料/聖誕北極熊" class="pet-mini-chip"><img src="/img/專屬寵物/聖誕北極熊.gif" alt="聖誕北極熊" onerror="this.style.visibility='hidden'" /><span>聖誕北極熊</span></a><a href="/寵物資料/豬剛鬣" class="pet-mini-chip"><img src="/img/專屬寵物/魔豬.gif" alt="豬剛鬣" onerror="this.style.visibility='hidden'" /><span>豬剛鬣</span></a><a href="/寵物資料/冰魄龍骨" class="pet-mini-chip"><img src="/img/專屬寵物/冰魄龍骨.gif" alt="冰魄龍骨" onerror="this.style.visibility='hidden'" /><span>冰魄龍骨</span></a><a href="/寵物資料/地獄殺人螳螂" class="pet-mini-chip"><img src="/img/專屬寵物/地獄殺人螳螂.gif" alt="地獄殺人螳螂" onerror="this.style.visibility='hidden'" /><span>地獄殺人螳螂</span></a><a href="/寵物資料/藍色香煙鬼" class="pet-mini-chip"><img src="/img/專屬寵物/藍色香煙鬼.gif" alt="藍色香煙鬼" onerror="this.style.visibility='hidden'" /><span>藍色香煙鬼</span></a><a href="/寵物資料/黃金翼龍" class="pet-mini-chip"><img src="/img/專屬寵物/黃金翼龍.gif" alt="黃金翼龍" onerror="this.style.visibility='hidden'" /><span>黃金翼龍</span></a><a href="/寵物資料/戰鬥火龍蜥" class="pet-mini-chip"><img src="/img/專屬寵物/戰鬥火龍蜥.gif" alt="戰鬥火龍蜥" onerror="this.style.visibility='hidden'" /><span>戰鬥火龍蜥</span></a><a href="/寵物資料/雷鳴穴龍" class="pet-mini-chip"><img src="/img/專屬寵物/雷鳴穴龍.gif" alt="雷鳴穴龍" onerror="this.style.visibility='hidden'" /><span>雷鳴穴龍</span></a><a href="/寵物資料/九頭巨蛇" class="pet-mini-chip"><img src="/img/專屬寵物/達哈卡.gif" alt="九頭巨蛇" onerror="this.style.visibility='hidden'" /><span>九頭巨蛇</span></a></div></td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; color: #008be3;">LV 13</td>
+            <td style="color: #e65100; font-weight: bold;">—</td>
+            <td style="text-align: left; color: #9e9e9e;">—（改版後待確認）</td>
+          <td><div class="pet-mini-wrapper"><a href="/寵物資料/百合聖騎士" class="pet-mini-chip"><img src="/img/專屬寵物/百合聖騎士.gif" alt="百合聖騎士" onerror="this.style.visibility='hidden'" /><span>百合聖騎士</span></a><a href="/寵物資料/黑潮水母" class="pet-mini-chip"><img src="/img/專屬寵物/黑潮水母.gif" alt="黑潮水母" onerror="this.style.visibility='hidden'" /><span>黑潮水母</span></a></div></td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; color: #008be3;">LV 14</td>
+            <td style="color: #e65100; font-weight: bold;">—</td>
+            <td style="text-align: left; color: #9e9e9e;">—（改版後待確認）</td>
+          <td><span style="color:#9e9e9e;">—</span></td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; color: #008be3;">LV 15</td>
+            <td style="color: #e65100; font-weight: bold;">—</td>
+            <td style="text-align: left; color: #9e9e9e;">—（改版後待確認）</td>
+          <td><span style="color:#9e9e9e;">—</span></td>
+          </tr>
+          </tbody>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  <table class="info-table">
+    <tr class="head"><td>已知持有此技能的寵物</td></tr>
+    <tr>
+      <td>
+        <div class="pet-chip-wrapper">
+                <a href="/寵物資料/帝國少女士兵" class="pet-skill-chip">
+                  <img src="/img/專屬寵物/帝國少女士兵.gif" alt="帝國少女士兵" onerror="this.style.visibility='hidden'" />
+                  <span>帝國少女士兵</span>
+                </a>
+                <a href="/寵物資料/青銅魚怪" class="pet-skill-chip">
+                  <img src="/img/專屬寵物/青銅魚怪.gif" alt="青銅魚怪" onerror="this.style.visibility='hidden'" />
+                  <span>青銅魚怪</span>
+                </a>
+                <a href="/寵物資料/七夕水藍鼠" class="pet-skill-chip">
+                  <img src="/img/專屬寵物/七夕水藍鼠.gif" alt="七夕水藍鼠" onerror="this.style.visibility='hidden'" />
+                  <span>七夕水藍鼠</span>
+                </a>
+                <a href="/寵物資料/碧空飛龍" class="pet-skill-chip">
+                  <img src="/img/專屬寵物/碧空飛龍.gif" alt="碧空飛龍" onerror="this.style.visibility='hidden'" />
+                  <span>碧空飛龍</span>
+                </a>
+                <a href="/寵物資料/墮落天使" class="pet-skill-chip">
+                  <img src="/img/專屬寵物/墮落天使.gif" alt="墮落天使" onerror="this.style.visibility='hidden'" />
+                  <span>墮落天使</span>
+                </a>
+                <a href="/寵物資料/戰鬥獅鷲獸" class="pet-skill-chip">
+                  <img src="/img/專屬寵物/戰鬥獅鷲獸.gif" alt="戰鬥獅鷲獸" onerror="this.style.visibility='hidden'" />
+                  <span>戰鬥獅鷲獸</span>
+                </a>
+                <a href="/寵物資料/衝浪小黃鴨" class="pet-skill-chip">
+                  <img src="/img/專屬寵物/衝浪小黃鴨.gif" alt="衝浪小黃鴨" onerror="this.style.visibility='hidden'" />
+                  <span>衝浪小黃鴨</span>
+                </a>
+                <a href="/寵物資料/強擊漂浮炸彈" class="pet-skill-chip">
+                  <img src="/img/專屬寵物/強擊漂浮炸彈.gif" alt="強擊漂浮炸彈" onerror="this.style.visibility='hidden'" />
+                  <span>強擊漂浮炸彈</span>
+                </a>
+                <a href="/寵物資料/梅莉珊卓" class="pet-skill-chip">
+                  <img src="/img/專屬寵物/梅莉珊卓.gif" alt="梅莉珊卓" onerror="this.style.visibility='hidden'" />
+                  <span>梅莉珊卓</span>
+                </a>
+                <a href="/寵物資料/豬剛鬣" class="pet-skill-chip">
+                  <img src="/img/專屬寵物/豬剛鬣.gif" alt="豬剛鬣" onerror="this.style.visibility='hidden'" />
+                  <span>豬剛鬣</span>
+                </a>
+                <a href="/寵物資料/飛櫻螳螂" class="pet-skill-chip">
+                  <img src="/img/專屬寵物/飛櫻螳螂.gif" alt="飛櫻螳螂" onerror="this.style.visibility='hidden'" />
+                  <span>飛櫻螳螂</span>
+                </a>
+                <a href="/寵物資料/雷鳴穴龍" class="pet-skill-chip">
+                  <img src="/img/專屬寵物/雷鳴穴龍.gif" alt="雷鳴穴龍" onerror="this.style.visibility='hidden'" />
+                  <span>雷鳴穴龍</span>
+                </a>
+                <a href="/寵物資料/黑潮水母" class="pet-skill-chip">
+                  <img src="/img/專屬寵物/黑潮水母.gif" alt="黑潮水母" onerror="this.style.visibility='hidden'" />
+                  <span>黑潮水母</span>
+                </a>
+                <a href="/寵物資料/百合聖騎士" class="pet-skill-chip">
+                  <img src="/img/專屬寵物/百合聖騎士.gif" alt="百合聖騎士" onerror="this.style.visibility='hidden'" />
+                  <span>百合聖騎士</span>
+                </a>
+        </div>
+      </td>
+    </tr>
+  </table>
+</div>
+</body>
+</html>

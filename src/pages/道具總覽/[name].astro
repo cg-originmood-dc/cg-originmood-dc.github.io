@@ -1,0 +1,23 @@
+---
+import Base from '../../layouts/Base.astro';
+import DbEmbed from '../../components/DbEmbed.astro';
+import { readdirSync } from 'node:fs';
+import { join } from 'node:path';
+
+export function getStaticPaths() {
+  const dir = join(process.cwd(), 'public', '資料庫', 'items');
+  try {
+    return readdirSync(dir)
+      .filter((f) => f.endsWith('.html'))
+      .map((f) => ({ params: { name: f.replace(/\.html$/, '') } }));
+  } catch {
+    return [];
+  }
+}
+
+const { name } = Astro.params;
+---
+
+<Base title={`${name} - 道具詳情`} dbEmbed>
+  <DbEmbed src={`items/${name}.html`} />
+</Base>

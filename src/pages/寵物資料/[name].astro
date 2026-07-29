@@ -1,0 +1,935 @@
+---
+/**
+ * 寵物詳情頁 — 版面結構對齊 pet_page_template.html
+ * 素質：套用 petStats 公式（永恆初心算檔器）
+ * 合成樹：顯示完整樹，並框出目前瀏覽的寵物
+ */
+import Base from '../../layouts/Base.astro';
+import FusionTree from '../../components/FusionTree.astro';
+import {
+  listPets,
+  getPet,
+  getPetExtra,
+  splitSkills,
+  skillBaseName,
+  gradePct,
+  petImagePath,
+  resolveFusionTree,
+  obtainTypeLabel,
+} from '../../lib/pets';
+import {
+  parseGrowFromPet,
+  calculatePetStats,
+  roundStat,
+  clientFormulaPayload,
+} from '../../lib/petStats';
+import { renderCell } from '../../lib/richtext';
+
+export function getStaticPaths() {
+  return listPets().map((p) => ({ params: { name: p.名稱 } }));
+}
+
+const { name } = Astro.params;
+const pet = name ? getPet(name) : null;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const src = (v: string) => (v.startsWith('/') ? base + v : v);
+
+const extra = pet ? getPetExtra(pet.名稱) : {};
+const img = pet ? petImagePath(pet.名稱, pet.image) : '';
+const skills = pet ? splitSkills(pet.技能) : [];
+
+const grow = pet ? parseGrowFromPet(pet) : null;
+const statsAt = (lv: number) => {
+  if (!grow) return null;
+  const s = calculatePetStats(grow, lv);
+  return {
+    hp: roundStat(s.hp),
+    mp: roundStat(s.mp),
+    atk: roundStat(s.atk),
+    def: roundStat(s.def),
+    agi: roundStat(s.agi),
+    spt: roundStat(s.spt),
+    rec: roundStat(s.rec),
+  };
+};
+const s1 = statsAt(1);
+const s100 = statsAt(100);
+const s140 = statsAt(140);
+const formulaJson = JSON.stringify(clientFormulaPayload());
+const growJson = grow ? JSON.stringify(grow) : 'null';
+
+const { tree: fusionRoot, hasFullData: hasFusionData } = pet
+  ? resolveFusionTree(pet.名稱, img)
+  : { tree: null as any, hasFullData: false };
+
+const grades = pet
+  ? [
+      { label: '體 (體力)', key: '體力', val: pet.體力 },
+      { label: '力 (力量)', key: '力量', val: pet.力量 },
+      { label: '強 (強度)', key: '防禦', val: pet.防禦 },
+      { label: '速 (速度)', key: '速度', val: pet.速度 },
+      { label: '魔 (魔法)', key: '魔法', val: pet.魔法 },
+    ]
+  : [];
+
+function fmtGrade(v: string): string {
+  if (!v?.trim()) return '—';
+  return /D$/i.test(v) ? v : `${v}D`;
+}
+
+function skillHref(sk: string): string {
+  return `${base}/技能總覽/${encodeURIComponent(skillBaseName(sk))}`;
+}
+
+function skillNote(sk: string): string {
+  return extra.skillNotes?.[sk] ?? extra.skillNotes?.[skillBaseName(sk)] ?? '';
+}
+
+const cardLabel = extra.cardLevel?.trim() || '未知';
+const isCardUnknown = !extra.cardLevel || extra.cardLevel === '未知';
+
+const obtainText = (pet?.入手方法 ?? '').trim();
+const obtainType = (pet?.入手類型 ?? '').trim();
+const obtainExtra = extra.obtainMethods ?? [];
+const hasObtain = Boolean(obtainText || obtainType || obtainExtra.length);
+
+// 可選等級 1~160（第三列預設 140）
+const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
+---
+
+{
+  !pet ? (
+    <Base title={`${name ?? '未知'} - 寵物資料`}>
+      <h1 class="page-title">找不到寵物</h1>
+      <p>資料庫中沒有「{name}」的紀錄。</p>
+      <p>
+        <a href={`${base}/專屬寵物`}>← 返回專屬寵物</a>
+      </p>
+    </Base>
+  ) : (
+    <Base title={`${pet.名稱} - 寵物資料`} dbEmbed>
+      <div class="pet-page">
+        <a class="pet-page__back" href={`${base}/專屬寵物`}>
+          ← 返回專屬寵物
+        </a>
+
+        {/* 1. 大圖 */}
+        <div class="pet-large-pic">
+          {img ? (
+            <img src={src(img)} alt={`${pet.名稱} 大圖`} />
+          ) : (
+            <div class="pet-large-pic__empty">暫無圖示</div>
+          )}
+        </div>
+
+        {/* 2. 寵物名稱與頭像 */}
+        <table class="info-table">
+          <tr>
+            <td>
+              <div class="title-cell">
+                {img && (
+                  <img src={src(img)} alt={`${pet.名稱} 頭像`} width="60" height="60" />
+                )}
+                <div class="title-text">
+                  <h2>{pet.名稱}</h2>
+                  <span>專屬寵物</span>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        {/* 3. 基本資訊 + 檔次 */}
+        <table class="info-table">
+          <tr class="head">
+            <td colspan="4">基本資訊</td>
+          </tr>
+          <tr>
+            <td width="120"><b>種族</b></td>
+            <td width="230">{pet.種族 || '—'}</td>
+            <td width="120"><b>可否封印</b></td>
+            <td width="230">
+              {
+                extra.sealable === true ? (
+                  <span class="badge badge-yes">可封印</span>
+                ) : extra.sealable === false ? (
+                  <span class="badge badge-no">不可封印</span>
+                ) : (
+                  <span class="badge badge-unknown">未知</span>
+                )
+              }
+            </td>
+          </tr>
+          <tr>
+            <td><b>屬性</b></td>
+            <td>{pet.屬性 || '—'}</td>
+            <td><b>卡片等級</b></td>
+            <td>
+              <span class:list={['badge', isCardUnknown ? 'badge-unknown' : 'badge-card']}>
+                {cardLabel}
+              </span>
+            </td>
+          </tr>
+          <tr>
+            <td><b>技能欄位</b></td>
+            <td colspan="3">{pet.技格 ? `${pet.技格} 格` : '—'}</td>
+          </tr>
+          <tr>
+            <td valign="top"><b>檔次分佈</b></td>
+            <td colspan="3" style="padding: 0;">
+              <table class="grade-table">
+                <thead>
+                  <tr>
+                    {grades.map((g) => (
+                      <th>{g.label}</th>
+                    ))}
+                    <th>總檔次</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    {grades.map((g) => (
+                      <td>
+                        {fmtGrade(g.val)}
+                        {g.val && (
+                          <div class="grade-bar">
+                            <div
+                              class="grade-fill"
+                              style={`width: ${gradePct(g.val)}%;`}
+                            />
+                          </div>
+                        )}
+                      </td>
+                    ))}
+                    <td>
+                      <span class="total-grade-text">{fmtGrade(pet.總檔)}</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        {/* 4. 初始技能 */}
+        <table class="info-table">
+          <tr class="head">
+            <td>初始技能 (點擊可查看技能詳情)</td>
+          </tr>
+          <tr>
+            <td>
+              {
+                skills.length === 0 ? (
+                  <span class="muted">尚無技能資料</span>
+                ) : (
+                  <div class="skill-list">
+                    {skills.map((sk) => (
+                      <div class="skill-chip">
+                        <a class="skill-link" href={skillHref(sk)}>
+                          {sk}
+                        </a>
+                        {skillNote(sk) && (
+                          <span class="skill-note">{skillNote(sk)}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )
+              }
+            </td>
+          </tr>
+        </table>
+
+        {/* 5. 入手方法（CSV 短述 + JSON 細項；與「相關任務」分開） */}
+        <table class="info-table">
+          <tr class="head">
+            <td>入手方法</td>
+          </tr>
+          <tr>
+            <td class="quest-cell obtain-cell">
+              {
+                !hasObtain ? (
+                  <div class="muted">尚無入手資料</div>
+                ) : (
+                  <>
+                    {
+                      (obtainType || obtainText) && (
+                        <div class="obtain-main">
+                          {
+                            obtainType && (
+                              <span class="badge badge-card obtain-type">
+                                {obtainTypeLabel(obtainType)}
+                              </span>
+                            )
+                          }
+                          {
+                            obtainText ? (
+                              <div class="obtain-text" set:html={renderCell(obtainText, base)} />
+                            ) : null
+                          }
+                        </div>
+                      )
+                    }
+                    {
+                      obtainExtra.length > 0 && (
+                        <ul class="obtain-list">
+                          {
+                            obtainExtra.map((m) => {
+                              const label = obtainTypeLabel(m.type);
+                              const head = [m.map, m.coords].filter(Boolean).join(' ');
+                              const body = m.note?.trim() || '';
+                              const link = m.link?.trim() || '';
+                              return (
+                                <li class="obtain-item">
+                                  {
+                                    label && (
+                                      <span class="badge badge-card obtain-type">{label}</span>
+                                    )
+                                  }
+                                  {
+                                    head && <span class="obtain-head">{head}</span>
+                                  }
+                                  {
+                                    body && <span class="obtain-note">{body}</span>
+                                  }
+                                  {
+                                    link && (
+                                      <a
+                                        class="obtain-link"
+                                        href={
+                                          link.startsWith('http') || link.startsWith('//')
+                                            ? link
+                                            : `${base}${link.startsWith('/') ? link : `/${link}`}`
+                                        }
+                                      >
+                                        詳見
+                                      </a>
+                                    )
+                                  }
+                                </li>
+                              );
+                            })
+                          }
+                        </ul>
+                      )
+                    }
+                  </>
+                )
+              }
+            </td>
+          </tr>
+        </table>
+
+        {/* 6. 成長素質（公式計算；第三列可選等級） */}
+        <table class="info-table">
+          <tr class="head">
+            <td>
+              各階段素質預估
+              <span class="head-note">（依檔次公式 · 無隨機檔 · 無手動配點 · 成長率 20%）</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 0;">
+              {
+                grow && s1 && s100 && s140 ? (
+                  <div
+                    class="growth-wrap"
+                    data-grow={growJson}
+                    data-formula={formulaJson}
+                  >
+                    <table class="stats-table">
+                      <thead>
+                        <tr>
+                          <th>等級</th>
+                          <th>生命 (HP)</th>
+                          <th>魔力 (MP)</th>
+                          <th>攻擊</th>
+                          <th>防禦</th>
+                          <th>敏捷</th>
+                          <th>精神</th>
+                          <th>回復</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td><b>1 等</b></td>
+                          <td>{s1.hp}</td>
+                          <td>{s1.mp}</td>
+                          <td>{s1.atk}</td>
+                          <td>{s1.def}</td>
+                          <td>{s1.agi}</td>
+                          <td>{s1.spt}</td>
+                          <td>{s1.rec}</td>
+                        </tr>
+                        <tr>
+                          <td><b>100 等</b></td>
+                          <td>{s100.hp}</td>
+                          <td>{s100.mp}</td>
+                          <td>{s100.atk}</td>
+                          <td>{s100.def}</td>
+                          <td>{s100.agi}</td>
+                          <td>{s100.spt}</td>
+                          <td>{s100.rec}</td>
+                        </tr>
+                        <tr class="growth-row-custom">
+                          <td>
+                            <label class="level-pick">
+                              <select id="pet-level-select" aria-label="選擇等級">
+                                {levelOptions.map((lv) => (
+                                  <option value={lv} selected={lv === 140}>
+                                    {lv} 等
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          </td>
+                          <td data-stat="hp">{s140.hp}</td>
+                          <td data-stat="mp">{s140.mp}</td>
+                          <td data-stat="atk">{s140.atk}</td>
+                          <td data-stat="def">{s140.def}</td>
+                          <td data-stat="agi">{s140.agi}</td>
+                          <td data-stat="spt">{s140.spt}</td>
+                          <td data-stat="rec">{s140.rec}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div class="section-placeholder">缺少檔次資料，無法計算素質</div>
+                )
+              }
+            </td>
+          </tr>
+        </table>
+
+        {/* 7. 相關任務（攜帶效益；非入手方式） */}
+        <table class="info-table">
+          <tr class="head">
+            <td>相關任務</td>
+          </tr>
+          <tr>
+            <td class="quest-cell">
+              {
+                pet.任務用途?.trim() ? (
+                  <div set:html={renderCell(pet.任務用途, base)} />
+                ) : (
+                  <div class="muted">尚無任務關聯</div>
+                )
+              }
+              {
+                extra.questNote && (
+                  <div class="quest-tip">💡 {extra.questNote}</div>
+                )
+              }
+            </td>
+          </tr>
+        </table>
+
+        {/* 8. 合成樹（完整樹 + 目前寵物邊框） */}
+        <table class="info-table">
+          <tr class="head">
+            <td>合成樹 (由頂點向下解構)</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0;">
+              <div class="tree-container">
+                <ul class="tree-diagram">
+                  <FusionTree node={fusionRoot} base={base} currentName={pet.名稱} />
+                </ul>
+                {
+                  !hasFusionData && (
+                    <p class="tree-placeholder">
+                      完整合成樹待補（目前僅顯示本寵物；藍框 = 目前瀏覽）
+                    </p>
+                  )
+                }
+              </div>
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <script is:inline define:vars={{ growJson, formulaJson }}>
+        (function () {
+          const wrap = document.querySelector('.growth-wrap');
+          const sel = document.getElementById('pet-level-select');
+          if (!wrap || !sel) return;
+
+          let grow, formula;
+          try {
+            grow = JSON.parse(wrap.getAttribute('data-grow') || growJson);
+            formula = JSON.parse(wrap.getAttribute('data-formula') || formulaJson);
+          } catch (e) {
+            return;
+          }
+          if (!grow || !formula) return;
+
+          const matrix = formula.matrix;
+          const BASE = formula.base;
+          const rates = formula.rates;
+          const bpRate = formula.bpRate || 0.2;
+
+          function getRate(g) {
+            const k = Math.max(0, Math.min(52, Math.floor(g)));
+            return rates[k] != null ? rates[k] : rates[String(k)] || 0;
+          }
+
+          function calc(level) {
+            const lvldiff = Math.max(0, level - 1);
+            const bp = grow.map(function (g) {
+              return (g + 0) * bpRate + getRate(g) * lvldiff;
+            });
+            function row(r) {
+              var sum = 0;
+              for (var i = 0; i < 5; i++) sum += matrix[r][i] * bp[i];
+              return sum;
+            }
+            return {
+              hp: Math.floor(row(0) + BASE),
+              mp: Math.floor(row(1) + BASE),
+              atk: Math.floor(row(2) + BASE),
+              def: Math.floor(row(3) + BASE),
+              agi: Math.floor(row(4) + BASE),
+              spt: Math.floor(row(5) + 100),
+              rec: Math.floor(row(6) + 100),
+            };
+          }
+
+          function apply() {
+            const lv = parseInt(sel.value, 10) || 140;
+            const s = calc(lv);
+            wrap.querySelectorAll('.growth-row-custom [data-stat]').forEach(function (td) {
+              const key = td.getAttribute('data-stat');
+              if (key && s[key] != null) td.textContent = String(s[key]);
+            });
+          }
+
+          sel.addEventListener('change', apply);
+          sel.addEventListener('input', apply);
+        })();
+      </script>
+    </Base>
+  )
+}
+
+<style is:global>
+  .page.is-db-embed:has(.pet-page) {
+    max-width: none;
+    width: 100%;
+    padding: 0;
+    background: #fff;
+    border: 1px solid var(--border, #e0e0e0);
+  }
+
+  .pet-page {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 16px clamp(12px, 2vw, 28px) 40px;
+    box-sizing: border-box;
+    color: #212121;
+    font-family: 'Open Sans', 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  .pet-page__back {
+    display: inline-block;
+    margin-bottom: 14px;
+    color: #1155cc;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .pet-page__back:hover {
+    text-decoration: underline;
+  }
+
+  .pet-large-pic {
+    text-align: center;
+    background: #f5f5f5;
+    padding: 16px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    margin-bottom: 16px;
+  }
+  .pet-large-pic img {
+    max-width: 100%;
+    max-height: 360px;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+    image-rendering: pixelated;
+  }
+  .pet-large-pic__empty {
+    color: #9e9e9e;
+    padding: 2rem;
+  }
+
+  .info-table {
+    width: 100%;
+    background: #e0e0e0;
+    border-collapse: separate;
+    border-spacing: 1px;
+    margin-bottom: 16px;
+  }
+  .info-table td,
+  .info-table th {
+    background: #fff;
+    padding: 10px 12px;
+    vertical-align: middle;
+    color: #212121;
+  }
+  .info-table .head td,
+  .info-table tr.head td {
+    background: #f1f3f4;
+    font-weight: 700;
+    font-size: 15px;
+    color: #212121;
+    border-left: 5px solid #e65100;
+    text-align: left;
+  }
+  .head-note {
+    font-weight: 400;
+    font-size: 12px;
+    color: #5f6368;
+    margin-left: 8px;
+  }
+
+  .title-cell {
+    display: flex;
+    align-items: center;
+  }
+  .title-cell img {
+    margin-right: 15px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+    image-rendering: pixelated;
+    background: #fafafa;
+  }
+  .title-text h2 {
+    font-size: 22px;
+    color: #212121;
+    margin: 0 0 5px 0;
+  }
+  .title-text span {
+    font-size: 13px;
+    color: #5f6368;
+  }
+
+  .grade-table,
+  .stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: center;
+    margin: 0;
+  }
+  .grade-table th,
+  .stats-table th {
+    background: #f8f9fa;
+    color: #5f6368;
+    font-size: 12px;
+    padding: 8px;
+    font-weight: 600;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  .grade-table td,
+  .stats-table td {
+    padding: 10px 6px;
+    border-bottom: 1px solid #eee;
+    background: #fff;
+  }
+  .grade-bar {
+    display: block;
+    background: #eee;
+    width: 60px;
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 6px auto 0;
+  }
+  .grade-fill {
+    background: #e65100;
+    height: 100%;
+  }
+  .total-grade-text {
+    font-size: 18px;
+    color: #e65100;
+    font-weight: 700;
+  }
+
+  .level-pick select {
+    font: inherit;
+    font-weight: 700;
+    padding: 4px 8px;
+    border: 1px solid #b0b0b0;
+    border-radius: 4px;
+    background: #fff;
+    color: #1155cc;
+    cursor: pointer;
+  }
+  .growth-row-custom td {
+    background: #f5f8ff !important;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .badge-yes {
+    background: #2e7d32;
+  }
+  .badge-no {
+    background: #c62828;
+  }
+  .badge-card {
+    background: #1565c0;
+  }
+  .badge-unknown {
+    background: #9e9e9e;
+  }
+
+  .skill-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .skill-chip {
+    background: #fff8e1;
+    border: 1px solid #ffe082;
+    padding: 6px 12px;
+    border-radius: 4px;
+  }
+  .skill-link {
+    color: #1155cc;
+    text-decoration: none;
+    font-weight: 700;
+  }
+  .skill-link:hover {
+    text-decoration: underline;
+  }
+  .skill-note {
+    font-size: 12px;
+    color: #5f6368;
+    margin-left: 5px;
+  }
+
+  .quest-cell {
+    line-height: 1.8;
+  }
+  .quest-cell a {
+    color: #1155cc;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .quest-cell a:hover {
+    text-decoration: underline;
+  }
+  .quest-tip {
+    font-size: 13px;
+    color: #5f6368;
+    margin-top: 8px;
+  }
+
+  .obtain-main {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 8px 12px;
+  }
+  .obtain-type {
+    flex-shrink: 0;
+  }
+  .obtain-text {
+    flex: 1;
+    min-width: 12em;
+  }
+  .obtain-list {
+    margin: 10px 0 0;
+    padding-left: 1.2em;
+  }
+  .obtain-item {
+    margin: 4px 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 10px;
+  }
+  .obtain-head {
+    font-weight: 700;
+  }
+  .obtain-note {
+    color: #5f6368;
+    font-size: 14px;
+  }
+  .obtain-link {
+    font-size: 13px;
+  }
+
+  .muted {
+    color: #9e9e9e;
+  }
+  .section-placeholder,
+  .tree-placeholder {
+    padding: 14px 16px;
+    color: #9e9e9e;
+    font-size: 14px;
+    text-align: center;
+  }
+
+  /* ---- 合成樹 ---- */
+  .tree-container {
+    width: 100%;
+    overflow-x: auto;
+    padding: 15px 8px;
+  }
+  .tree-diagram,
+  .tree-diagram ul {
+    display: flex;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    position: relative;
+  }
+  .tree-diagram ul {
+    padding-top: 20px;
+  }
+  .tree-diagram li {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    padding: 20px 4px 0 4px;
+  }
+  .tree-diagram li::before,
+  .tree-diagram li::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 50%;
+    border-top: 2px solid #e65100;
+    width: 50%;
+    height: 20px;
+  }
+  .tree-diagram li::after {
+    right: auto;
+    left: 50%;
+    border-left: 2px solid #e65100;
+  }
+  .tree-diagram li:only-child::after,
+  .tree-diagram li:only-child::before {
+    display: none;
+  }
+  .tree-diagram li:only-child {
+    padding-top: 0;
+  }
+  .tree-diagram li:first-child::before,
+  .tree-diagram li:last-child::after {
+    border: 0 none;
+  }
+  .tree-diagram li:last-child::before {
+    border-right: 2px solid #e65100;
+    border-radius: 0 4px 0 0;
+  }
+  .tree-diagram li:first-child::after {
+    border-radius: 4px 0 0 0;
+  }
+  .tree-diagram ul::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    border-left: 2px solid #e65100;
+    width: 0;
+    height: 20px;
+  }
+
+  .node-card {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+    padding: 6px 8px;
+    text-align: center;
+    min-width: 70px;
+    position: relative;
+    z-index: 2;
+    box-sizing: border-box;
+  }
+  .node-card img {
+    width: 38px;
+    height: 38px;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto 3px auto;
+    image-rendering: pixelated;
+  }
+  .node-card__icon {
+    font-size: 20px;
+    display: block;
+    line-height: 1.2;
+    margin-bottom: 2px;
+  }
+  .node-card a,
+  .node-card__name {
+    color: #e65100;
+    font-size: 11px;
+    text-decoration: none;
+    font-weight: 700;
+    display: block;
+    white-space: nowrap;
+  }
+  .node-card a:hover {
+    color: #1155cc;
+  }
+  .node-card .count {
+    font-size: 10px;
+    color: #5f6368;
+    display: block;
+  }
+  .node-card .npc-info {
+    font-size: 9px;
+    color: #5f6368;
+    background: #f5f5f5;
+    border-radius: 3px;
+    padding: 2px 4px;
+    margin-top: 3px;
+    white-space: nowrap;
+  }
+  .node-target {
+    border: 2px solid #e65100;
+    background: #fff8e1;
+    box-shadow: 0 0 8px rgba(230, 81, 0, 0.2);
+  }
+  .node-target a {
+    font-size: 13px;
+  }
+
+  /* 目前瀏覽的寵物：藍框高亮 */
+  .node-current {
+    border: 3px solid #1565c0 !important;
+    background: #e3f2fd !important;
+    box-shadow: 0 0 10px rgba(21, 101, 192, 0.35);
+  }
+  .node-card__name--current {
+    color: #1565c0 !important;
+    font-size: 13px;
+  }
+  .node-current-tag {
+    display: inline-block;
+    margin-left: 4px;
+    padding: 0 4px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #fff;
+    background: #1565c0;
+    border-radius: 3px;
+    vertical-align: middle;
+  }
+</style>

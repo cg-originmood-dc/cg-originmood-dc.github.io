@@ -25,6 +25,11 @@ const dataset = loadDataset(name);
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const src = (v: string) => (v.startsWith('/') ? base + v : v);
 const cols = dataset?.columns.filter((c) => c !== dataset.imageColumn) ?? [];
+
+/** 專屬寵物：名稱欄可點進詳情頁 */
+const linkNameCol = name === '專屬寵物' && cols.includes('名稱') ? '名稱' : null;
+const petDetailHref = (petName: string) =>
+  `${base}/寵物資料/${encodeURIComponent(petName)}`;
 ---
 
 {
@@ -71,27 +76,44 @@ const cols = dataset?.columns.filter((c) => c !== dataset.imageColumn) ?? [];
             </tr>
           </thead>
           <tbody>
-            {dataset.rows.map((row) => (
-              <tr>
-                {dataset.imageColumn && (
-                  <td class="col-img">
-                    {row[dataset.imageColumn] ? (
-                      <span class="hoverpic">
-                        <img src={src(thumbOf(row[dataset.imageColumn]))} alt="" loading="lazy" decoding="async" />
-                        <img class="hoverpic__big" src={src(row[dataset.imageColumn])} alt="" loading="lazy" decoding="async" />
-                      </span>
-                    ) : null}
-                  </td>
-                )}
-                {cols.map((c) =>
-                  c === dataset.noteColumn ? (
-                    <td class="is-wrap is-note" set:html={renderCell(row[c] ?? '', base)} />
-                  ) : (
-                    <td class={dataset.wrapColumns.includes(c) ? 'is-wrap' : undefined}>{row[c]}</td>
-                  ),
-                )}
-              </tr>
-            ))}
+            {dataset.rows.map((row) => {
+              const petName = linkNameCol ? (row[linkNameCol] ?? '').trim() : '';
+              const detail = petName ? petDetailHref(petName) : null;
+              return (
+                <tr class={detail ? 'dataset__row--link' : undefined} data-href={detail ?? undefined}>
+                  {dataset.imageColumn && (
+                    <td class="col-img">
+                      {row[dataset.imageColumn] ? (
+                        detail ? (
+                          <a class="dataset__img-link" href={detail}>
+                            <span class="hoverpic">
+                              <img src={src(thumbOf(row[dataset.imageColumn]))} alt={petName} loading="lazy" decoding="async" />
+                              <img class="hoverpic__big" src={src(row[dataset.imageColumn])} alt="" loading="lazy" decoding="async" />
+                            </span>
+                          </a>
+                        ) : (
+                          <span class="hoverpic">
+                            <img src={src(thumbOf(row[dataset.imageColumn]))} alt="" loading="lazy" decoding="async" />
+                            <img class="hoverpic__big" src={src(row[dataset.imageColumn])} alt="" loading="lazy" decoding="async" />
+                          </span>
+                        )
+                      ) : null}
+                    </td>
+                  )}
+                  {cols.map((c) =>
+                    c === dataset.noteColumn ? (
+                      <td class="is-wrap is-note" set:html={renderCell(row[c] ?? '', base)} />
+                    ) : c === linkNameCol && detail ? (
+                      <td class={dataset.wrapColumns.includes(c) ? 'is-wrap' : undefined}>
+                        <a class="dataset__name-link" href={detail}>{row[c]}</a>
+                      </td>
+                    ) : (
+                      <td class={dataset.wrapColumns.includes(c) ? 'is-wrap' : undefined}>{row[c]}</td>
+                    ),
+                  )}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -167,6 +189,15 @@ const cols = dataset?.columns.filter((c) => c !== dataset.imageColumn) ?? [];
           sort();
         }
       });
+    });
+
+    // 點整列（非連結區）也可進入寵物詳情
+    tbody.addEventListener('click', (e) => {
+      const t = e.target as HTMLElement;
+      if (t.closest('a')) return;
+      const tr = t.closest('tr[data-href]') as HTMLTableRowElement | null;
+      if (!tr?.dataset.href) return;
+      location.href = tr.dataset.href;
     });
   });
 </script>
