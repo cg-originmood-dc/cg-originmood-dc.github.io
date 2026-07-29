@@ -177,10 +177,13 @@ function matchExactPetToken(token: string): string | null {
 /**
  * 在一段文字裡找專屬寵物名（最長優先、不重疊）。
  * 用於「獲得寵物」等多名混寫欄；材料請用 matchExactPetToken。
+ *
+ * 規則：「OO召喚書」視為寵物「OO」（公告產物常寫召喚書）。
  */
 export function findPetNamesInText(text: string): string[] {
   loadPetTable();
   if (!text?.trim() || !petNamesLongest?.length) return [];
+  // 先把「OO召喚書」收成「OO」，再做最長匹配
   let clean = text
     .replace(PROB_RE, ' ')
     .replace(/召喚書/g, ' ')
@@ -205,6 +208,27 @@ export function findPetNamesInText(text: string): string[] {
     }
   }
   return found;
+}
+
+/**
+ * 產物標籤 → 寵物名（優先）。
+ * 「太晶龍蝦霸王召喚書」→ 太晶龍蝦霸王；對不到表才當道具。
+ */
+function petFromProductLabel(lab: string): string | null {
+  const { clean } = extractProb(lab);
+  const stripped = clean
+    .replace(LV_PREFIX_RE, '')
+    .replace(/\s+/g, '')
+    .replace(/召喚書$/u, '')
+    .trim();
+  if (!stripped) return null;
+  loadPetTable();
+  for (const name of petNamesLongest ?? []) {
+    if (name.replace(/\s+/g, '') === stripped) return name;
+  }
+  // 後備：全文搜尋（已含召喚書規則）
+  const hits = findPetNamesInText(lab);
+  return hits[0] ?? null;
 }
 
 function stripProb(s: string): string {
@@ -334,14 +358,28 @@ function parseRecipe(raw: SynthesisRecipe): ParsedRecipe {
 
   for (const lab of labels) {
     const { clean, prob } = extractProb(lab);
-    const pets = findPetNamesInText(lab);
-    if (pets.length > 0) {
-      for (const n of pets) pushPetOutcome(n, prob);
+    // 「OO召喚書」一律當寵物 OO（不可當道具）
+    const asPet = petFromProductLabel(lab);
+    if (asPet) {
+      pushPetOutcome(asPet, prob);
+      // 同標籤若還寫了其他寵名（少見）
+      for (const n of findPetNamesInText(lab)) {
+        if (n !== asPet) pushPetOutcome(n, prob);
+      }
       continue;
     }
     // 非寵物產物（如太晶之源×1）
     const { name, qty } = parseQty(clean.replace(LV_PREFIX_RE, ''));
-    const itemName = (name || clean).trim();
+    let itemName = (name || clean).trim();
+    // 保險：殘留「召喚書」字樣不進道具
+    if (/召喚書/.test(itemName)) {
+      const fallback = petFromProductLabel(itemName);
+      if (fallback) {
+        pushPetOutcome(fallback, prob);
+        continue;
+      }
+      itemName = itemName.replace(/召喚書/g, '').trim();
+    }
     if (!itemName) continue;
     const fromLib = getItem(itemName);
     outcomes.push({
@@ -597,11 +635,12 @@ function pickPrimaryRecipe(
         r.productPets.includes(petName),
     );
     if (!multi.length) return null;
-    // 本寵也是材料 → 進化／重抽線（影＋聖角＝三型）
-    const selfMat = multi.filter((r) =>
-      r.ingredients.some((i) => i.type === 'pet' && i.name === petName),
+    // 取得線優先（材料不含自己）：龍蝦霸王→太晶80%／太晶之源20%
+    // 若無取得線再退回重抽／進化線（影＋聖角＝三型）
+    const obtain = multi.filter(
+      (r) => !r.ingredients.some((i) => i.type === 'pet' && i.name === petName),
     );
-    pool = selfMat.length ? selfMat : multi;
+    pool = obtain.length ? obtain : multi;
   } else if (opts.preferNonSelfFeed) {
     const nonSelf = recipes.filter(
       (r) => !r.ingredients.some((i) => i.type === 'pet' && i.name === petName),
