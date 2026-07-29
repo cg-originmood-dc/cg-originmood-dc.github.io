@@ -5,7 +5,9 @@
   content/data/寵物合成總覽.csv
   content/data/寵物合成配方.csv
 
-判定依據是公告表格同時具有「所需寵物、所需道具、獲得寵物」三欄。
+判定依據是公告表格同時具有「所需寵物、所需材料、產物寵物」三類欄位；
+官方歷年使用過的「所需道具／所需材料與數量」及
+「獲得寵物／寵物／寵物名稱」欄名都會保留原文並納入。
 下載的公告 HTML 與官方大事記同步器共用 .cache/official-news。
 """
 from __future__ import annotations
@@ -31,7 +33,14 @@ DATE_TEXT = (
     r"(?:\s*\d{1,2}[:：]\d{2}(?::\d{2})?)?"
 )
 RANGE_SEP = r"(?:--+|－+|—+|~|～|至)"
-SYNTH_HEADERS = ("所需寵物", "所需道具", "獲得寵物")
+REQUIRED_PET_HEADERS = ("所需寵物", "需求寵物")
+REQUIRED_ITEM_HEADERS = (
+    "所需道具",
+    "所需材料",
+    "所需材料與數量",
+    "所需招財進寶錢幣數",
+)
+RESULT_PET_HEADERS = ("獲得寵物", "寵物", "寵物名稱")
 CELL_LINE_BREAK = " / "
 
 
@@ -95,6 +104,24 @@ def normalized_header(row: list[str]) -> list[str]:
     return [re.sub(r"\s+", "", value) for value in row]
 
 
+def synthesis_header(
+    rows: list[list[str]],
+) -> tuple[int, int, int, int] | None:
+    for index, row in enumerate(rows):
+        header = normalized_header(row)
+        pet_name = next((name for name in REQUIRED_PET_HEADERS if name in header), None)
+        item_name = next((name for name in REQUIRED_ITEM_HEADERS if name in header), None)
+        result_name = next((name for name in RESULT_PET_HEADERS if name in header), None)
+        if pet_name and item_name and result_name:
+            return (
+                index,
+                header.index(pet_name),
+                header.index(item_name),
+                header.index(result_name),
+            )
+    return None
+
+
 def preceding_text(table) -> str:
     parts = [
         clean(str(node))
@@ -149,7 +176,7 @@ def activity_period(table, announcement_date: str) -> str:
 def npc_of(rows: list[list[str]], header_at: int, table) -> str:
     for row in reversed(rows[:header_at]):
         value = clean(" ".join(row))
-        if "NPC" in value.upper() or "（" in value:
+        if "NPC" in value.upper() or "（" in value or "(" in value:
             return value
     previous = preceding_text(table)
     matches = re.findall(r"NPC[：:]\s*([^。；]{2,80}?(?:\)|）))", previous, re.I)
@@ -431,13 +458,10 @@ def parse_recipes(ref: NewsRef, source: str) -> list[Recipe]:
     recipes: list[Recipe] = []
     for table in soup.find_all("table"):
         rows = table_rows(table)
-        header_at = header_index(rows, SYNTH_HEADERS)
-        if header_at is None:
+        synthesis_at = synthesis_header(rows)
+        if synthesis_at is None:
             continue
-        header = normalized_header(rows[header_at])
-        pet_col = header.index("所需寵物")
-        item_col = header.index("所需道具")
-        result_col = header.index("獲得寵物")
+        header_at, pet_col, item_col, result_col = synthesis_at
         npc = npc_of(rows, header_at, table)
         period = activity_period(table, ref.date)
         for row in rows[header_at + 1 :]:

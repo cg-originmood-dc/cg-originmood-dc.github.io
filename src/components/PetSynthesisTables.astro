@@ -9,7 +9,6 @@ interface NpcGroup {
 }
 
 interface ActivityGroup {
-  year: string;
   title: string;
   period: string;
   announcementDate: string;
@@ -35,7 +34,6 @@ for (const row of rows) {
   let activity = activityMap.get(key);
   if (!activity) {
     activity = {
-      year: announcementDate.slice(0, 4) || '其他',
       title,
       period,
       announcementDate,
@@ -68,13 +66,6 @@ for (const activity of activities) {
     .toLowerCase();
 }
 
-const yearMap = new Map<string, ActivityGroup[]>();
-for (const activity of activities) {
-  const list = yearMap.get(activity.year) ?? [];
-  list.push(activity);
-  yearMap.set(activity.year, list);
-}
-const years = [...yearMap.entries()].sort(([a], [b]) => b.localeCompare(a, 'zh-Hant'));
 const splitLines = (value: string) => value.split(LIST_SEP).filter(Boolean);
 ---
 
@@ -88,71 +79,66 @@ const splitLines = (value: string) => value.split(LIST_SEP).filter(Boolean);
     <span class="synthesis__count" data-synthesis-count>{activities.length} 個活動／{rows.length} 條配方</span>
   </div>
 
-  {years.map(([year, yearActivities]) => (
-    <section class="synthesis-year" data-year-section>
-      <h2>{year} 年</h2>
-      <div class="synthesis__scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>活動</th>
-              <th>NPC</th>
-              <th>合成公式</th>
-              <th>入手方法</th>
-            </tr>
-          </thead>
-          {yearActivities.map((activity) => (
-            <tbody
-              data-synthesis-group
-              data-search={activity.search}
-              data-rows={activity.rows.length}
-            >
-              {activity.npcGroups.map((npcGroup, npcIndex) =>
-                npcGroup.rows.map((row, rowIndex) => (
-                  <tr>
-                    {npcIndex === 0 && rowIndex === 0 && (
-                      <th
-                        class="synthesis__activity"
-                        scope="rowgroup"
-                        rowspan={activity.rows.length}
-                      >
-                        <strong>{activity.title}</strong>
-                        <span>{activity.period}</span>
-                        <small>公告日：{activity.announcementDate}</small>
-                        {activity.url && (
-                          <a href={activity.url} target="_blank" rel="noopener noreferrer">
-                            官方公告
-                          </a>
-                        )}
-                      </th>
+  <div class="synthesis__scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>活動</th>
+          <th>NPC</th>
+          <th>合成公式</th>
+          <th>入手方法</th>
+        </tr>
+      </thead>
+      {activities.map((activity) => (
+        <tbody
+          data-synthesis-group
+          data-search={activity.search}
+          data-rows={activity.rows.length}
+        >
+          {activity.npcGroups.map((npcGroup, npcIndex) =>
+            npcGroup.rows.map((row, rowIndex) => (
+              <tr>
+                {npcIndex === 0 && rowIndex === 0 && (
+                  <th
+                    class="synthesis__activity"
+                    scope="rowgroup"
+                    rowspan={activity.rows.length}
+                  >
+                    <strong>{activity.title}</strong>
+                    <span>{activity.period}</span>
+                    <small>公告日：{activity.announcementDate}</small>
+                    {activity.url && (
+                      <a href={activity.url} target="_blank" rel="noopener noreferrer">
+                        官方公告
+                      </a>
                     )}
-                    {rowIndex === 0 && (
-                      <td class="synthesis__npc" rowspan={npcGroup.rows.length}>
-                        {npcGroup.npc}
-                      </td>
-                    )}
-                    <td class="synthesis__formula">
-                      {splitLines(row['合成樹'] ?? '').map((line) => (
-                        <span>{line}</span>
-                      ))}
-                    </td>
-                    <td class="synthesis__source">
-                      <details>
-                        <summary>查看入手方法</summary>
-                        {(row['入手方法'] ?? '').split('；').map((line) => (
-                          <span>{line}</span>
-                        ))}
-                      </details>
-                    </td>
-                  </tr>
-                )),
-              )}
-            </tbody>
-          ))}
-        </table>
-      </div>
-    </section>
-  ))}
+                  </th>
+                )}
+                {rowIndex === 0 && (
+                  <td class="synthesis__npc" rowspan={npcGroup.rows.length}>
+                    {npcGroup.npc}
+                  </td>
+                )}
+                <td class="synthesis__formula">
+                  {splitLines(row['合成樹'] ?? '').map((line) => (
+                    <span>{line}</span>
+                  ))}
+                </td>
+                <td class="synthesis__source">
+                  <details>
+                    <summary>查看入手方法</summary>
+                    {(row['入手方法'] ?? '').split('；').map((line) => (
+                      <span>{line}</span>
+                    ))}
+                  </details>
+                </td>
+              </tr>
+            )),
+          )}
+        </tbody>
+      ))}
+    </table>
+  </div>
 </div>
 
 <script>
@@ -161,7 +147,6 @@ const splitLines = (value: string) => value.split(LIST_SEP).filter(Boolean);
     const clear = root.querySelector<HTMLButtonElement>('[data-synthesis-clear]');
     const count = root.querySelector<HTMLElement>('[data-synthesis-count]');
     const groups = [...root.querySelectorAll<HTMLElement>('[data-synthesis-group]')];
-    const years = [...root.querySelectorAll<HTMLElement>('[data-year-section]')];
     const totalActivities = groups.length;
     const totalRows = groups.reduce((sum, group) => sum + Number(group.dataset.rows ?? 0), 0);
 
@@ -176,9 +161,6 @@ const splitLines = (value: string) => value.split(LIST_SEP).filter(Boolean);
           shownActivities++;
           shownRows += Number(group.dataset.rows ?? 0);
         }
-      }
-      for (const year of years) {
-        year.hidden = !year.querySelector('[data-synthesis-group]:not([hidden])');
       }
       if (count) {
         count.textContent =
@@ -233,14 +215,6 @@ const splitLines = (value: string) => value.split(LIST_SEP).filter(Boolean);
   .synthesis__count {
     color: var(--text-3);
     font-size: 0.85rem;
-  }
-
-  .synthesis-year {
-    margin-top: 1.75rem;
-  }
-
-  .synthesis-year > h2 {
-    margin: 0 0 0.65rem;
   }
 
   .synthesis__scroll {
