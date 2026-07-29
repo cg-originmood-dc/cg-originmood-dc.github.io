@@ -5,6 +5,11 @@ import { listPetsWithSkill, type PetSkillHolder } from './pets';
 export interface DbHtml {
   style: string;
   body: string;
+  /**
+   * 從 body 抽出的 inline script 內容。
+   * 注意：Astro set:html 插入的 <script> 不會執行，必須由 DbEmbed 另行注入。
+   */
+  scripts: string[];
 }
 
 /** 修正技能／道具 HTML 內錯誤的相對圖路徑 */
@@ -379,12 +384,24 @@ export function loadDbHtml(relPath: string): DbHtml {
     return {
       style: '',
       body: `<p style="padding:1rem;color:#c00;">找不到資料檔：資料庫/${relPath}</p>`,
+      scripts: [],
     };
   }
 
   const raw = readFileSync(file, 'utf8');
   let style = raw.match(/<style[^>]*>([\s\S]*?)<\/style>/i)?.[1] ?? '';
   let body = raw.match(/<body[^>]*>([\s\S]*?)<\/body>/i)?.[1] ?? raw;
+
+  // 抽出 script：set:html 不會執行，交由 DbEmbed 以 is:inline 重掛
+  const scripts: string[] = [];
+  body = body.replace(
+    /<script\b[^>]*>([\s\S]*?)<\/script>/gi,
+    (_full, code: string) => {
+      const trimmed = String(code ?? '').trim();
+      if (trimmed) scripts.push(trimmed);
+      return '';
+    },
+  );
 
   // 將 body 全域樣式限制在內嵌容器，避免蓋掉站台外殼
   style = style
@@ -513,7 +530,7 @@ export function loadDbHtml(relPath: string): DbHtml {
     }
   }
 
-  return { style, body };
+  return { style, body, scripts };
 }
 
 export function dbFileExists(relPath: string): boolean {

@@ -290,10 +290,18 @@ export function getPetExtra(name: string): PetDetailExtra {
   return loadExtras().get(name) ?? {};
 }
 
-/** 預設寵物圖路徑 */
+/**
+ * 寵物圖 SSOT：只認「專屬寵物」CSV 該寵列的 image。
+ * - 有 CSV 列且 image 有值 → 用那格（與專屬寵物列表同一來源）
+ * - 否則 → `/img/專屬寵物/{名稱}.gif`（不借用其他寵、不做模糊 fallback）
+ * `fromCsv` 僅在呼叫端已持有同一列時可傳入，避免重複查表；仍以該寵自己的路徑為準。
+ */
 export function petImagePath(name: string, fromCsv?: string): string {
-  if (fromCsv?.trim()) return fromCsv.trim();
-  return `/img/專屬寵物/${name}.gif`;
+  const n = (name ?? '').trim();
+  if (!n) return '';
+  const fromRow = (fromCsv ?? getPet(n)?.image ?? '').trim();
+  if (fromRow) return fromRow;
+  return `/img/專屬寵物/${n}.gif`;
 }
 
 /** 收集樹上所有寵物名稱 */
@@ -304,10 +312,27 @@ export function collectPetNamesInTree(node: FusionNode, out = new Set<string>())
 }
 
 /**
+ * 合成樹寵物節點的 image 一律改寫為 SSOT（專屬寵物 CSV），
+ * 忽略 fusionTree 內手填／複製貼上的錯誤路徑。
+ */
+export function applyPetImagesFromSsot(node: FusionNode): FusionNode {
+  const children = node.children?.map(applyPetImagesFromSsot);
+  if (node.type === 'pet' && node.name) {
+    return {
+      ...node,
+      image: petImagePath(node.name),
+      ...(children ? { children } : {}),
+    };
+  }
+  return children ? { ...node, children } : node;
+}
+
+/**
  * 取得要顯示的「完整」合成樹。
  * - 若本寵自有 fusionTree → 用它
  * - 若本寵出現在其他寵的完整樹中 → 顯示那棵完整樹（並由 UI 標示當前寵）
  * - 否則 → 僅樹尖本寵
+ * 回傳前會對所有寵物節點套用 petImagePath SSOT。
  */
 export function resolveFusionTree(
   petName: string,
@@ -316,7 +341,7 @@ export function resolveFusionTree(
   const extras = loadExtras();
   const self = extras.get(petName)?.fusionTree;
   if (self?.children?.length) {
-    return { tree: self, hasFullData: true };
+    return { tree: applyPetImagesFromSsot(self), hasFullData: true };
   }
 
   // 在所有已知完整樹中尋找包含本寵的最大樹
@@ -332,17 +357,17 @@ export function resolveFusionTree(
       bestSize = names.size;
     }
   }
-  if (best) return { tree: best, hasFullData: true };
+  if (best) return { tree: applyPetImagesFromSsot(best), hasFullData: true };
 
-  // 無資料：只顯示本寵節點
+  // 無資料：只顯示本寵節點（圖仍走 SSOT）
   return {
-    tree: {
+    tree: applyPetImagesFromSsot({
       type: 'pet',
       name: petName,
       image,
       target: true,
       children: [],
-    },
+    }),
     hasFullData: false,
   };
 }
@@ -360,28 +385,25 @@ const WIND_APOSTLE_EXTRA: PetDetailExtra = {
     '超強補血魔法LV7': '為我方全體回復大量生命值',
   },
   questNote: '攜帶風之使徒將在迷宮時空長廊中可獲得任意 NPC 的協助抵達終點。',
+  // 寵物節點不寫 image：resolveFusionTree 會用專屬寵物 CSV 的 SSOT 填入
   fusionTree: {
     type: 'pet',
     name: '風之使徒',
-    image: '/img/專屬寵物/風之使徒.gif',
     target: true,
     npc: '大法師安蕾雅 @ 艾爾瑪城元素師家 (216.188) (5%)',
     children: [
       {
         type: 'pet',
         name: '天空元素使',
-        image: '/img/專屬寵物/大地元素使.gif',
         npc: 'NPC: 愛卡勒恩 @ 寵物研究所 (15，8)',
         children: [
           {
             type: 'pet',
             name: '光精靈',
-            image: '/img/專屬寵物/光精靈.gif',
             children: [
               {
                 type: 'pet',
                 name: '風精靈',
-                image: '/img/專屬寵物/風精靈.gif',
               },
               {
                 type: 'item',
