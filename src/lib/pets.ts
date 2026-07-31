@@ -171,7 +171,7 @@ export function splitSkills(raw: string): string[] {
 
 /** 從「連擊LV11」取出技能名「連擊」供連結 */
 export function skillBaseName(skill: string): string {
-  return skill.replace(/LV\d+$/, '').trim();
+  return skill.replace(/(?:LV\d+|SP)$/, '').trim();
 }
 
 /**

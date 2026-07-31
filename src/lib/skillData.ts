@@ -156,10 +156,11 @@ export function skillLevelRows(
   holders = listPetsWithSkill(skill.技能名稱),
   scope: SkillScope = 'character',
 ): SkillLevelRow[] {
+  const specialLevelHolders = holders.filter((holder) => holder.skillLabel.endsWith('SP'));
   const sourceRows = getSkillLevelMap().get(`${scope === 'character' ? 'char' : 'pet'}:${skill.技能名稱}`)
     ?? (scope === 'pet' ? getSkillLevelMap().get(`char:${skill.技能名稱}`) : undefined);
   if (sourceRows?.length) {
-    return sourceRows.map((row) => {
+    const rows = sourceRows.map((row) => {
       const level = row.技能等級.match(/^LV (\d+)$/)?.[1];
       const parsedLevel = level ? Number(level) : null;
       return {
@@ -171,17 +172,28 @@ export function skillLevelRows(
         holders: parsedLevel == null ? holders : holders.filter((holder) => holder.level === parsedLevel),
       };
     });
+    if (specialLevelHolders.length > 0) {
+      rows.push({
+        level: null,
+        label: 'SP',
+        mp: '—',
+        description: skill.簡介 || '—',
+        learningInfo: '—',
+        holders: specialLevelHolders,
+      });
+    }
+    return rows;
   }
 
   const levels = holderLevels(skill, holders);
   if (levels.length === 0) {
     return [{
       level: null,
-      label: '未標示等級',
+      label: specialLevelHolders.length > 0 ? 'SP' : '未標示等級',
       mp: '未提供',
       description: skill.簡介 || '—',
       learningInfo: '—',
-      holders,
+      holders: specialLevelHolders.length > 0 ? specialLevelHolders : holders,
     }];
   }
   return levels.map((level) => ({
@@ -242,7 +254,7 @@ function issuesForToken(rawToken: string, petName: string, rows: SkillRecord[]):
   if (!findSkillForToken(rawToken, rows)) {
     issues.push({ petName, raw: rawToken, reason: '技能未收錄於技能庫' });
   }
-  if (!parseSkillLevel(rawToken)) {
+  if (!parseSkillLevel(rawToken) && !rawToken.endsWith('SP')) {
     issues.push({ petName, raw: rawToken, reason: '技能原文沒有 LV 等級' });
   }
   return issues;

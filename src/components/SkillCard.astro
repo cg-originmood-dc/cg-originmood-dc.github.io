@@ -61,7 +61,7 @@ const htmlScope = scope === 'character' ? 'char' : 'pet';
           <tbody>
             {variant.levels.map((levelRow) => (
               <tr class:list={{ 'lv-high': (levelRow.level ?? 0) >= 11 }}>
-                <td class="level-text">{levelRow.level ? levelRow.label : skill.技能名稱}</td>
+                <td class="level-text">{levelRow.label}</td>
                 <td class="mp-text">{levelRow.mp}</td>
                 <td class="skill-summary">{levelRow.description}</td>
                 <td class="learning-info">{levelRow.learningInfo}</td>
