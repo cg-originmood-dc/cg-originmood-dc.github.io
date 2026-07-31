@@ -1,0 +1,365 @@
+---
+import SkillCard from './SkillCard.astro';
+import { listSkillVariants } from '../lib/skillData';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const variants = listSkillVariants();
+const characterVariants = variants.filter((variant) => variant.scope === 'character');
+const petVariants = variants.filter((variant) => variant.scope === 'pet');
+const characterCategories = [
+  { key: 'atk_phys', label: '戰鬥攻擊技能' },
+  { key: 'def_phys', label: '戰鬥防禦技能' },
+  { key: 'sup_phys', label: '戰鬥輔助技能' },
+  { key: 'atk_magic', label: '屬性攻擊魔法' },
+  { key: 'status_magic', label: '狀態變化魔法' },
+  { key: 'sup_magic', label: '戰鬥輔助魔法' },
+  { key: 'other_skill', label: '其他特殊技能' },
+  { key: 'craft_skill', label: '生產製作技能' },
+];
+const petCategories = [
+  { key: 'pet_general', label: '寵物一般技能' },
+  { key: 'pet_combat', label: '寵物戰鬥技能' },
+  { key: 'pet_magic', label: '寵物魔法技能' },
+  { key: 'pet_status_atk', label: '狀態攻擊技能' },
+  { key: 'pet_status_magic', label: '寵物狀態變化魔法' },
+  { key: 'pet_status_def', label: '狀態抵抗技能' },
+  { key: 'pet_other', label: '其他寵物技能' },
+];
+---
+
+<div id="wrapper" class="skill-library">
+  <h2 class="db-page-title">技能總覽</h2>
+
+  <div class="filter-section" id="char-subfilter" data-filter-scope="char">
+    <div class="filter-group-title">人物技能分類</div>
+    <div class="filter-buttons">
+      <button class="filter-btn filter-btn-primary" type="button" data-scope="char" data-cat="all">全部人物技能</button>
+      {characterCategories.map((category) => (
+        <button class="filter-btn" type="button" data-scope="char" data-cat={category.key}>{category.label}</button>
+      ))}
+    </div>
+  </div>
+
+  <div class="filter-section" id="pet-subfilter" data-filter-scope="pet">
+    <div class="filter-group-title">寵物技能分類</div>
+    <div class="filter-buttons">
+      <button class="filter-btn filter-btn-primary" type="button" data-scope="pet" data-cat="all">全部寵物技能</button>
+      {petCategories.map((category) => (
+        <button class="filter-btn" type="button" data-scope="pet" data-cat={category.key}>{category.label}</button>
+      ))}
+    </div>
+  </div>
+
+  <div class="filter-section hidden-section" id="skill-name-filter">
+    <div class="filter-group-title">選擇技能</div>
+    <div class="filter-buttons" id="skill-name-buttons"></div>
+  </div>
+
+  <div id="char-skills-section">
+    <div class="section-label" id="char-section-label">人物技能列表</div>
+    <div id="skills-container">
+      {characterVariants.map((variant) => (
+        <SkillCard variant={variant} base={base} />
+      ))}
+    </div>
+  </div>
+
+  <div id="pet-skills-section">
+    <div class="section-label pet" id="pet-section-label">寵物技能列表</div>
+    <div id="pet-skills-container">
+      {petVariants.map((variant) => (
+        <SkillCard variant={variant} base={base} />
+      ))}
+    </div>
+  </div>
+</div>
+
+<script>
+  let activeScope: 'char' | 'pet' | null = null;
+  let activeCategory = 'all';
+  let activeSkill = 'all';
+
+  const cardSkillName = (card: HTMLElement) => card.querySelector('.skill-main-name')?.textContent?.trim() ?? '';
+  const cards = (scope: 'char' | 'pet') =>
+    [...document.querySelectorAll<HTMLElement>(`.skill-card-block[data-scope="${scope}"]`)];
+
+  function setSkillFilter(name: string) {
+    activeSkill = name;
+    document.querySelectorAll<HTMLButtonElement>('#skill-name-buttons .filter-btn').forEach((item) => {
+      item.classList.toggle('active', item.dataset.skillName === name);
+    });
+    applyFilters();
+  }
+
+  function rebuildSkillFilter() {
+    const section = document.getElementById('skill-name-filter');
+    const container = document.getElementById('skill-name-buttons');
+    if (!section || !container) return;
+
+    if (!activeScope) {
+      section.classList.add('hidden-section');
+      container.replaceChildren();
+      activeSkill = 'all';
+      return;
+    }
+
+    section.classList.remove('hidden-section');
+    const names = [...new Set(cards(activeScope)
+      .filter((card) => activeCategory === 'all' || card.dataset.category === activeCategory)
+      .map(cardSkillName)
+      .filter(Boolean))].sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+
+    if (activeSkill !== 'all' && !names.includes(activeSkill)) activeSkill = 'all';
+    container.replaceChildren();
+
+    const addButton = (label: string, value: string) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `filter-btn${activeSkill === value ? ' active' : ''}`;
+      button.dataset.skillName = value;
+      button.textContent = label;
+      container.appendChild(button);
+    };
+
+    addButton('全部技能', 'all');
+    names.forEach((name) => addButton(name, name));
+
+    if (container.dataset.bound !== 'true') {
+      container.addEventListener('click', (event) => {
+        const target = event.target as HTMLElement;
+        const button = target.closest<HTMLButtonElement>('button[data-skill-name]');
+        if (button && container.contains(button)) setSkillFilter(button.dataset.skillName ?? 'all');
+      });
+      container.dataset.bound = 'true';
+    }
+  }
+
+  function applyFilters() {
+    const showChar = !activeScope || activeScope === 'char';
+    const showPet = !activeScope || activeScope === 'pet';
+    document.getElementById('char-skills-section')?.classList.toggle('hidden-section', !showChar);
+    document.getElementById('pet-skills-section')?.classList.toggle('hidden-section', !showPet);
+    document.getElementById('char-section-label')?.classList.toggle('hidden-section', !showChar);
+    document.getElementById('pet-section-label')?.classList.toggle('hidden-section', !showPet);
+
+    for (const scope of ['char', 'pet'] as const) {
+      for (const card of cards(scope)) {
+        const visible = (scope === 'char' ? showChar : showPet)
+          && (!activeScope || activeScope === scope)
+          && (activeCategory === 'all' || card.dataset.category === activeCategory)
+          && (activeSkill === 'all' || cardSkillName(card) === activeSkill);
+        card.classList.toggle('hidden-block', !visible);
+      }
+    }
+  }
+
+  document.querySelectorAll<HTMLButtonElement>('#char-subfilter .filter-btn, #pet-subfilter .filter-btn').forEach((button) => {
+    button.addEventListener('click', () => {
+      activeScope = button.dataset.scope as 'char' | 'pet';
+      activeCategory = button.dataset.cat ?? 'all';
+      activeSkill = 'all';
+      document.querySelectorAll<HTMLButtonElement>('#char-subfilter .filter-btn, #pet-subfilter .filter-btn').forEach((item) => item.classList.remove('active'));
+      button.classList.add('active');
+      rebuildSkillFilter();
+      applyFilters();
+    });
+  });
+
+  rebuildSkillFilter();
+  applyFilters();
+</script>
+
+<style>
+  .skill-library {
+    --db-bg: #fff;
+    --db-surface: #f8f9fa;
+    --db-border: #e0e0e0;
+    --db-text: #212121;
+    --db-text-2: #5f6368;
+    --db-accent: #1155cc;
+    --db-header: #f1f3f4;
+    --db-row-hover: #f5f8ff;
+    --db-chip: #fff8e1;
+    --db-chip-border: #ffe082;
+    --db-chip-text: #e65100;
+    color: var(--db-text);
+    font-family: "Open Sans", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  .db-page-title {
+    color: var(--db-text);
+    border-left: 6px solid #008be3;
+    padding-left: 12px;
+    margin: 0 0 16px;
+    margin-top: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+
+  .filter-section {
+    background-color: var(--db-surface);
+    padding: 14px 16px;
+    border: 1px solid var(--db-border);
+    margin-bottom: 18px;
+    border-radius: 6px;
+  }
+
+  .filter-group-title {
+    font-size: 13px;
+    color: var(--db-accent);
+    margin-bottom: 8px;
+    font-weight: 700;
+    border-bottom: 1px dashed var(--db-border);
+    padding-bottom: 4px;
+  }
+
+  .filter-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+  :global(.filter-btn) {
+    background-color: #fff;
+    border: 1px solid var(--db-border);
+    color: var(--db-text-2);
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.15s;
+  }
+  :global(.filter-btn:hover), :global(.filter-btn.active) {
+    background-color: var(--db-accent);
+    color: #fff;
+    border-color: var(--db-accent);
+    font-weight: 600;
+  }
+  :global(.filter-btn-primary) { font-size: 14px; padding: 8px 18px; }
+  .filter-section[data-filter-scope="pet"] .filter-group-title { color: #6a1b9a; }
+  :global(.filter-section[data-filter-scope="pet"] .filter-btn:hover),
+  :global(.filter-section[data-filter-scope="pet"] .filter-btn.active) {
+    background-color: #6a1b9a;
+    border-color: #6a1b9a;
+  }
+
+  .section-label {
+    margin: 20px 0 12px;
+    padding: 8px 12px;
+    background: linear-gradient(90deg, #e8f0fe 0%, #fff 100%);
+    border-left: 4px solid var(--db-accent);
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .section-label.pet {
+    background: linear-gradient(90deg, #f3e5f5 0%, #fff 100%);
+    border-left-color: #6a1b9a;
+  }
+  :global(.hidden-block) { display: none !important; }
+  :global(.hidden-section) { display: none !important; }
+
+  :global(.skill-card-block) {
+    background-color: #fff;
+    border: 1px solid var(--db-border);
+    border-radius: 8px;
+    margin-bottom: 16px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  }
+  :global(.skill-header-bar) {
+    background: linear-gradient(90deg, #f8f9fa 0%, #eef2f7 100%);
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid var(--db-accent);
+    gap: 12px;
+  }
+  :global(.skill-header-title) { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  :global(.skill-icon-badge) { font-size: 20px; }
+  :global(.skill-main-name) { font-size: 17px; font-weight: 700; color: var(--db-text); }
+  :global(.skill-cat-badge) {
+    background-color: var(--db-accent);
+    color: #fff;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-weight: 700;
+  }
+  :global(.skill-cat-badge.pet-badge) { background-color: #6a1b9a; }
+  :global(.skill-detail-link) { color: var(--db-accent); font-size: 13px; text-decoration: none; white-space: nowrap; }
+  :global(.skill-detail-link:hover) { text-decoration: underline; }
+  :global(.skill-table-wrapper) { padding: 8px 10px 12px; overflow-x: auto; }
+  :global(.level-subtable) { width: 100%; border-collapse: collapse; text-align: center; background-color: #fff; }
+  :global(.level-subtable th) {
+    background-color: var(--db-header);
+    color: var(--db-accent);
+    font-size: 12px;
+    padding: 8px 6px;
+    border-bottom: 1px solid var(--db-border);
+    font-weight: 700;
+  }
+  :global(.level-subtable td) {
+    padding: 8px 6px;
+    border-bottom: 1px solid #eee;
+    font-size: 13px;
+    color: var(--db-text);
+    background-color: #fff;
+    vertical-align: top;
+  }
+  :global(.level-subtable tr:hover td) { background: var(--db-row-hover); }
+  :global(.level-subtable tr.lv-high td) { background-color: #fff8e1; }
+  :global(.level-subtable tr.lv-high:hover td) { background-color: #ffecb3; }
+  :global(.level-text) { color: #008be3; font-weight: 700; white-space: nowrap; }
+  :global(.mp-text) { color: #e65100; font-weight: 700; white-space: nowrap; }
+  :global(.learning-info) { text-align: left; font-size: 12px; color: var(--db-text-2); }
+  :global(.skill-summary) { min-width: 18rem; text-align: left; }
+  :global(.pet-mini-wrapper) { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; }
+  :global(.pet-mini-chip) {
+    display: inline-flex;
+    align-items: center;
+    background-color: var(--db-chip);
+    border: 1px solid var(--db-chip-border);
+    padding: 2px 6px;
+    border-radius: 3px;
+    text-decoration: none;
+    color: var(--db-chip-text);
+    font-size: 11px;
+    font-weight: 700;
+  }
+  :global(.pet-mini-chip:hover) { background-color: var(--db-accent); color: #fff; border-color: var(--db-accent); }
+  :global(.pet-mini-chip img) { width: 20px; height: 20px; object-fit: contain; margin-right: 4px; }
+  :global(.pet-more) { display: contents; }
+  :global(.pet-more__toggle) {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    list-style: none;
+    cursor: pointer;
+    user-select: none;
+    margin: 0;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #1565c0;
+    background: #e3f2fd;
+    border: 1px solid #90caf9;
+    border-radius: 3px;
+  }
+  :global(.pet-more__toggle::-webkit-details-marker) { display: none; }
+  :global(.pet-more__toggle::marker) { content: ''; }
+  :global(.pet-more__toggle::after) { content: ' ▾'; font-size: 10px; }
+  :global(.pet-more[open] > .pet-more__toggle) { background: #1565c0; color: #fff; border-color: #1565c0; }
+  :global(.pet-more[open] > .pet-more__toggle::after) { content: ' ▴'; }
+  :global(.pet-more__body) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    flex-basis: 100%;
+    width: 100%;
+    margin-top: 4px;
+  }
+  :global(.empty-pets) { color: var(--db-text-2); }
+
+  @media (max-width: 700px) {
+    :global(.skill-header-bar) { align-items: flex-start; flex-direction: column; }
+    :global(.level-subtable) { min-width: 620px; }
+  }
+</style>

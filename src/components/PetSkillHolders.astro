@@ -1,0 +1,40 @@
+---
+import type { PetSkillHolder } from '../lib/pets';
+
+interface Props {
+  holders: PetSkillHolder[];
+  base: string;
+}
+
+const { holders, base } = Astro.props;
+const petImage = (image: string) => (image.startsWith('/') ? `${base}${image}` : image);
+const petHref = (name: string) => `${base}/寵物資料/${encodeURIComponent(name)}`;
+const previewHolders = holders.slice(0, 5);
+const hiddenHolders = holders.slice(5);
+---
+
+{holders.length > 0 ? (
+  <div class:list={['pet-mini-wrapper', { 'pet-mini-wrapper--collapsible': hiddenHolders.length > 0 }]}>
+    {previewHolders.map((holder) => (
+      <a class="pet-mini-chip" href={petHref(holder.name)} title={holder.skillLabel}>
+        <img src={petImage(holder.image)} alt={holder.name} loading="lazy" />
+        <span>{holder.name}</span>
+      </a>
+    ))}
+    {hiddenHolders.length > 0 && (
+      <details class="pet-more">
+        <summary class="pet-more__toggle"><span class="pet-more__label">還有 {hiddenHolders.length} 隻</span></summary>
+        <div class="pet-more__body">
+          {hiddenHolders.map((holder) => (
+            <a class="pet-mini-chip" href={petHref(holder.name)} title={holder.skillLabel}>
+              <img src={petImage(holder.image)} alt={holder.name} loading="lazy" />
+              <span>{holder.name}</span>
+            </a>
+          ))}
+        </div>
+      </details>
+    )}
+  </div>
+) : (
+  <span class="empty-pets">—</span>
+)}

@@ -1,28 +1,38 @@
+# Dependencies & build (Astro)
 node_modules/
 dist/
 .astro/
 
-# 從原站搬移用的一次性工具。搬完就不會再改，留在 repo 只會讓人以為
-# 網站需要 Python 才能跑。官方公告相關同步器例外，因為公告會持續更新。
+# 一次性搬站腳本：預設不進版控，避免讓人以為網站依賴 Python。
+# 持續維護的同步器與資料抽取腳本明確 allowlist。
 scripts/*
 !scripts/sync_official_news.py
 !scripts/sync_pet_synthesis.py
+!scripts/extract_skill_level_data.py
 
-# 抓取用的中繼檔：原始 HTML 快取很大且可重新產生
+# 抓取中繼檔（可再產生）
 .cache/
 _root.html
 _sample.html
 _pets.html
 
-# Python
+# Python local
 __pycache__/
 *.pyc
 .venv/
 
-# 憑證絕不進版控
+# Secrets / local env — never commit
 *.json.key
 oauth2service.json
 cookies.json
+.env
+.env.*
+!.env.example
 
+# Logs & OS
+*.log
 .DS_Store
 Thumbs.db
+
+# Local browser automation cache
+.playwright-cli/

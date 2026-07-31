@@ -4,42 +4,34 @@ import Base from '../layouts/Base.astro';
 import DataTable from '../components/DataTable.astro';
 import PetSynthesisTables from '../components/PetSynthesisTables.astro';
 import SourceNote from '../components/SourceNote.astro';
-import DbEmbed from '../components/DbEmbed.astro';
 import { HOME_ID } from '../lib/nav';
 
 export async function getStaticPaths() {
   const entries = await getCollection('pages');
   return entries
-    .filter((entry) => entry.id !== HOME_ID && entry.data.title !== HOME_ID)
+    .filter((entry) => entry.id !== HOME_ID && entry.data.title !== HOME_ID && entry.data.title !== '技能總覽')
     .map((entry) => ({ params: { slug: entry.id }, props: { entry } }));
 }
 
 const { entry } = Astro.props;
 const { Content } = await render(entry);
 const hasProse = entry.body != null && entry.body.trim().length > 0;
-const embed = entry.data.embed;
 ---
 
-{embed ? (
-  <Base title={entry.data.title} breadcrumb={entry.data.breadcrumb} dbEmbed>
-    <DbEmbed src={embed} />
-  </Base>
-) : (
-  <Base title={entry.data.title} breadcrumb={entry.data.breadcrumb}>
-    <h1 class="page-title">{entry.data.title}</h1>
+<Base title={entry.data.title} breadcrumb={entry.data.breadcrumb}>
+  <h1 class="page-title">{entry.data.title}</h1>
 
-    {hasProse && (
-      <div class="prose">
-        <Content />
-      </div>
-    )}
+  {hasProse && (
+    <div class="prose">
+      <Content />
+    </div>
+  )}
 
-    {entry.data.title === '寵物合成活動' ? (
-      <PetSynthesisTables />
-    ) : (
-      entry.data.datasets.map((name) => <DataTable name={name} />)
-    )}
+  {entry.data.title === '寵物合成活動' ? (
+    <PetSynthesisTables />
+  ) : (
+    entry.data.datasets.map((name) => <DataTable name={name} />)
+  )}
 
-    <SourceNote sourceUrl={entry.data.sourceUrl} />
-  </Base>
-)}
+  <SourceNote sourceUrl={entry.data.sourceUrl} />
+</Base>

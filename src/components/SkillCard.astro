@@ -1,0 +1,76 @@
+---
+import type { SkillVariant } from '../lib/skillData';
+import PetSkillHolders from './PetSkillHolders.astro';
+
+interface Props {
+  variant: SkillVariant;
+  base: string;
+}
+
+const { variant, base } = Astro.props;
+const { skill, scope, category, categoryKey } = variant;
+const skillHref = `${base}/技能總覽/${encodeURIComponent(skill.技能名稱)}`;
+const htmlScope = scope === 'character' ? 'char' : 'pet';
+---
+
+<div class="skill-card-block" data-scope={htmlScope} data-category={categoryKey}>
+  <div class="skill-header-bar">
+    <div class="skill-header-title">
+      <span class="skill-main-name">{skill.技能名稱}</span>
+      <span class:list={['skill-cat-badge', { 'pet-badge': scope === 'pet' }]}>{category}</span>
+    </div>
+    {scope === 'character' && (
+      <a class="skill-detail-link" href={skillHref}>專屬詳情</a>
+    )}
+  </div>
+
+  <div class="skill-table-wrapper">
+    <table class="level-subtable">
+      {scope === 'character' ? (
+        <>
+          <thead>
+            <tr>
+              <th width="70">技能等級</th>
+              <th width="110">魔力消耗</th>
+              <th>技能效果詳細說明</th>
+              <th width="220">持有寵物列表</th>
+            </tr>
+          </thead>
+          <tbody>
+            {variant.levels.map((levelRow) => (
+              <tr class:list={{ 'lv-high': (levelRow.level ?? 0) >= 11 }}>
+                <td class="level-text">{levelRow.label}</td>
+                <td class="mp-text">{levelRow.mp}</td>
+                <td class="skill-summary">{levelRow.description}</td>
+                <td><PetSkillHolders holders={levelRow.holders} base={base} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </>
+      ) : (
+        <>
+          <thead>
+            <tr>
+              <th width="100">技能</th>
+              <th width="100">魔力消耗</th>
+              <th>技能效果詳細說明</th>
+              <th width="240">學習資訊</th>
+              <th width="220">持有寵物</th>
+            </tr>
+          </thead>
+          <tbody>
+            {variant.levels.map((levelRow) => (
+              <tr class:list={{ 'lv-high': (levelRow.level ?? 0) >= 11 }}>
+                <td class="level-text">{levelRow.level ? levelRow.label : skill.技能名稱}</td>
+                <td class="mp-text">{levelRow.mp}</td>
+                <td class="skill-summary">{levelRow.description}</td>
+                <td class="learning-info">{levelRow.learningInfo}</td>
+                <td><PetSkillHolders holders={levelRow.holders} base={base} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </>
+      )}
+    </table>
+  </div>
+</div>

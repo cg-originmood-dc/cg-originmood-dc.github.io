@@ -1,0 +1,231 @@
+---
+import { listPetsWithSkill, type PetSkillHolder } from '../lib/pets';
+import { skillLevelRows, type SkillRecord } from '../lib/skillData';
+
+interface Props {
+  skill: SkillRecord;
+}
+
+const { skill } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const holders = listPetsWithSkill(skill.技能名稱);
+const levels = skillLevelRows(skill, holders);
+const petImage = (image: string) => (image.startsWith('/') ? `${base}${image}` : image);
+const petHref = (name: string) => `${base}/寵物資料/${encodeURIComponent(name)}`;
+const backHref = `${base}/技能總覽`;
+const skillLevel = skill.最高等級 || '依資料';
+
+const groupedHolders = new Map<string, PetSkillHolder[]>();
+for (const holder of holders) {
+  const key = holder.level ? `LV${holder.level}` : '未標示等級';
+  const group = groupedHolders.get(key) ?? [];
+  group.push(holder);
+  groupedHolders.set(key, group);
+}
+---
+
+<div id="wrapper" class="skill-detail">
+  <a href={backHref} class="back-btn">⬅️ 返回技能總表</a>
+
+  <table class="info-table">
+    <tbody>
+      <tr>
+        <td>
+          <div class="skill-title-cell">
+            <div class="skill-icon" aria-hidden="true">⚔️</div>
+            <div class="skill-title-text">
+              <h2>{skill.技能名稱}</h2>
+              <span>{skillLevel} 技能資料</span>
+            </div>
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <table class="info-table">
+    <tbody>
+      <tr class="head"><td colspan="4">技能概覽與類別資訊</td></tr>
+      <tr>
+        <td class="label-cell">技能分類</td>
+        <td><span class="badge">{skill.分類 || '未分類'}</span></td>
+        <td class="label-cell">最高等級</td>
+        <td><span class="total-grade-text">{skillLevel}</span></td>
+      </tr>
+      <tr>
+        <td class="label-cell">技能來源</td>
+        <td colspan="3">{skill.技能來源 || '—'}</td>
+      </tr>
+      <tr>
+        <td class="label-cell">技能簡介</td>
+        <td colspan="3">{skill.簡介 || '—'}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <table class="info-table">
+    <tbody>
+      <tr class="head"><td>⚡ 技能效果明細</td></tr>
+      <tr>
+        <td style="padding: 0;">
+          <table class="level-table">
+            <thead>
+              <tr>
+                <th>等級範圍</th>
+                <th>魔力消耗</th>
+                <th>等級效果說明</th>
+              </tr>
+            </thead>
+            <tbody>
+              {levels.map((level) => (
+                <tr>
+                  <td class="level-text">{level.label}</td>
+                  <td class="not-provided">{level.mp}</td>
+                  <td class="description-cell">{level.description}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <table class="info-table">
+    <tbody>
+      <tr class="head"><td>🐾 持有此技能的寵物</td></tr>
+      <tr>
+        <td>
+          {holders.length > 0 ? (
+            <>
+              {[...groupedHolders].map(([level, levelHolders]) => (
+                <section class="holder-group" aria-labelledby={`holder-${level}`}>
+                  <h3 id={`holder-${level}`}>{level}</h3>
+                  <div class="pet-chip-wrapper">
+                    {levelHolders.map((holder) => (
+                      <a class="pet-skill-chip" href={petHref(holder.name)} title={holder.skillLabel}>
+                        <img src={petImage(holder.image)} alt="" loading="lazy" />
+                        <span>{holder.name}</span>
+                      </a>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </>
+          ) : (
+            <span class="empty-holders">目前沒有可由專屬寵物資料對應的持有者。</span>
+          )}
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<style>
+  .skill-detail {
+    --db-bg: #fff;
+    --db-surface: #f8f9fa;
+    --db-border: #e0e0e0;
+    --db-text: #212121;
+    --db-text-2: #5f6368;
+    --db-accent: #1155cc;
+    --db-gold: #e65100;
+    --db-header: #f1f3f4;
+    color: var(--db-text);
+    font-family: "Open Sans", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  .back-btn {
+    display: inline-block;
+    margin-bottom: 14px;
+    color: var(--db-accent);
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .back-btn:hover { text-decoration: underline; }
+  .info-table {
+    width: 100%;
+    background-color: var(--db-border);
+    border-collapse: separate;
+    border-spacing: 1px;
+    margin-bottom: 16px;
+  }
+  .info-table td, .info-table th {
+    background-color: #fff;
+    padding: 10px 12px;
+    vertical-align: middle;
+    color: var(--db-text);
+  }
+  .info-table .head {
+    background-color: var(--db-header);
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--db-text);
+    border-left: 5px solid var(--db-accent);
+    text-align: left;
+  }
+  .skill-title-cell { display: flex; align-items: center; }
+  .skill-icon {
+    width: 50px;
+    height: 50px;
+    background-color: var(--db-surface);
+    border: 1px solid var(--db-accent);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    margin-right: 15px;
+  }
+  .skill-title-text h2 { font-size: 22px; color: var(--db-text); margin: 0 0 4px; }
+  .skill-title-text span { font-size: 13px; color: var(--db-text-2); }
+  .label-cell { width: 120px; font-weight: 700; white-space: nowrap; }
+  .badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    background-color: var(--db-accent);
+  }
+  .level-table { width: 100%; border-collapse: collapse; text-align: center; }
+  .level-table th {
+    background-color: var(--db-header);
+    color: var(--db-accent);
+    font-size: 12px;
+    padding: 8px;
+    border-bottom: 2px solid var(--db-accent);
+    font-weight: 700;
+  }
+  .level-table td { padding: 9px 6px; border-bottom: 1px solid #eee; font-size: 13px; }
+  .level-text { color: #008be3; font-weight: 700; white-space: nowrap; }
+  .not-provided { color: var(--db-gold); font-weight: 700; }
+  .description-cell { text-align: left; }
+  .total-grade-text { font-size: 18px; color: var(--db-gold); font-weight: 700; }
+  .pet-chip-wrapper { display: flex; flex-wrap: wrap; gap: 8px; padding: 5px 0; }
+  .pet-skill-chip {
+    display: inline-flex;
+    align-items: center;
+    background-color: #fff8e1;
+    border: 1px solid #ffe082;
+    padding: 4px 10px;
+    border-radius: 4px;
+    text-decoration: none;
+    color: var(--db-gold);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .pet-skill-chip:hover { background: var(--db-accent); color: #fff; border-color: var(--db-accent); }
+  .pet-skill-chip img { width: 24px; height: 24px; object-fit: contain; margin-right: 6px; }
+  .holder-group h3 { margin: 8px 0 4px; color: var(--db-text-2); font-size: 13px; }
+  .empty-holders { color: var(--db-text-2); }
+
+  @media (max-width: 700px) {
+    .level-table { min-width: 560px; }
+    .info-table { display: block; overflow-x: auto; }
+  }
+</style>

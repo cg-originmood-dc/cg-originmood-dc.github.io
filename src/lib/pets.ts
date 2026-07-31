@@ -161,56 +161,25 @@ export function petStatKeys(): readonly string[] {
   return STAT_KEYS;
 }
 
-/** 將技能字串拆成個別技能（用頓號／逗號分隔） */
+/** 將標準技能字串拆成個別技能。 */
 export function splitSkills(raw: string): string[] {
-  if (!raw?.trim()) return [];
   return raw
-    .split(/[、,，]/)
+    .split('、')
     .map((s) => s.trim())
-    .filter(Boolean)
-    .map((s) => s.replace(/\s+.*$/, ''))
-    // 過濾明顯非技能的註解碎片
-    .filter((s) => !/^(並|傷害|最大|沒有|第三|轉換|隨機|捕捉|Lv1點)/.test(s));
+    .filter(Boolean);
 }
 
 /** 從「連擊LV11」取出技能名「連擊」供連結 */
 export function skillBaseName(skill: string): string {
-  return (
-    skill
-      .replace(/[（(][^）)]*[）)]/g, '') // 去掉括註
-      .replace(/LV\s*\d+.*$/i, '')
-      .replace(/Lv\s*\d+.*$/i, '')
-      .replace(/；.*$/, '') // 複合技能取前半
-      .trim() || skill
-  );
-}
-
-/** 去掉尾端羅馬數字／純數字後綴（氣功彈I → 氣功彈） */
-function stripSkillSuffix(name: string): string {
-  return name.replace(/[IVX]+$/i, '').replace(/\d+$/, '').trim() || name;
+  return skill.replace(/LV\d+$/, '').trim();
 }
 
 /**
  * 判斷寵物技能字串是否對應某個技能頁名稱
- * 例：頁「諸刃」↔「諸刃LV13」；頁「氣功彈」↔「氣功彈I」「氣功彈LV4」
+ * 例：頁「諸刃」↔「諸刃LV13」；頁「氣功彈」↔「氣功彈LV1」
  */
 export function skillMatchesPage(skillToken: string, pageName: string): boolean {
-  const token = skillToken.trim();
-  const page = pageName.trim();
-  if (!token || !page) return false;
-  if (token === page) return true;
-
-  const base = skillBaseName(token);
-  if (base === page) return true;
-
-  const pageBase = skillBaseName(page);
-  if (base === pageBase) return true;
-
-  const core = stripSkillSuffix(base);
-  const pageCore = stripSkillSuffix(pageBase);
-  if (core.length >= 2 && core === pageCore) return true;
-
-  return false;
+  return skillBaseName(skillToken) === pageName;
 }
 
 export interface PetSkillHolder {
@@ -222,12 +191,10 @@ export interface PetSkillHolder {
   level: number | null;
 }
 
-/** 從「連擊LV11」「昏睡攻擊Lv12」取出等級數字 */
+/** 從「連擊LV11」「昏睡攻擊LV12」取出等級數字。 */
 export function parseSkillLevel(skillLabel: string): number | null {
-  const m = skillLabel.match(/(?:LV|Lv)\s*(\d+)/i);
-  if (!m) return null;
-  const n = Number(m[1]);
-  return Number.isFinite(n) ? n : null;
+  const level = skillLabel.match(/LV(\d+)$/)?.[1];
+  return level ? Number(level) : null;
 }
 
 /** 從專屬寵物 CSV 反查持有某技能的寵物（供技能詳情頁） */

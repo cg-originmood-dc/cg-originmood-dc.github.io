@@ -1,23 +1,16 @@
 ---
 import Base from '../../layouts/Base.astro';
-import DbEmbed from '../../components/DbEmbed.astro';
-import { readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import SkillDetail from '../../components/SkillDetail.astro';
+import { listSkillPages, type SkillRecord } from '../../lib/skillData';
 
 export function getStaticPaths() {
-  const dir = join(process.cwd(), 'public', '資料庫', 'skills');
-  try {
-    return readdirSync(dir)
-      .filter((f) => f.endsWith('.html'))
-      .map((f) => ({ params: { name: f.replace(/\.html$/, '') } }));
-  } catch {
-    return [];
-  }
+  return listSkillPages().map((skill) => ({ params: { name: skill.技能名稱 }, props: { skill } }));
 }
 
 const { name } = Astro.params;
+const { skill } = Astro.props as { skill: SkillRecord };
 ---
 
-<Base title={`${name} - 技能詳情`} dbEmbed>
-  <DbEmbed src={`skills/${name}.html`} />
+<Base title={`${name} - 技能詳情`} breadcrumb={['技能總覽']}>
+  <SkillDetail skill={skill} />
 </Base>
