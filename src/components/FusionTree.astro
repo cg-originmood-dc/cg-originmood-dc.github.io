@@ -3,6 +3,7 @@
  * 合成樹（由頂點向下解構）
  * - 單產物：一個頭 → 材料
  * - 多產物：多個頭並列 → 共用材料（多拉線）
+ * - 互轉循環：cycleModule 局部配方群組（reaction 各一次）
  * currentName：目前瀏覽的寵物，加上 node-current 邊框
  */
 import type { FusionNode } from '../lib/pets';
@@ -18,20 +19,25 @@ interface Props {
 }
 const { node, base = '', depth = 0, currentName = '' } = Astro.props;
 
-const isMultiHead = Boolean(node.heads && node.heads.length > 1);
+const cycle = node.cycleModule;
+const isCycleModule = Boolean(cycle);
+const isMultiHead = !isCycleModule && Boolean(node.heads && node.heads.length > 1);
 /** 多根森林：無名 material 只當容器，不畫卡片 */
 const isForestRoot =
+  !isCycleModule &&
   !isMultiHead &&
   !node.name &&
   node.type === 'material' &&
   Boolean(node.children?.length);
 const isCurrent =
+  !isCycleModule &&
   !isMultiHead &&
   !isForestRoot &&
   node.type === 'pet' &&
   currentName !== '' &&
   node.name === currentName;
 const isRoot = depth === 0 || !!node.target;
+const focused = cycle?.focusedPet || currentName;
 
 // 樹上會出現沒有資料列的底寵（風精、大地翼龍那些野生原寵），
 // 有名字不代表有頁面，跟道具一樣要先確認查得到才給連結。
@@ -63,7 +69,165 @@ const displayName = node.name;
 ---
 
 {
-  isMultiHead ? (
+  isCycleModule && cycle ? (
+    <li class="tree-cycle-module" data-cycle-id={cycle.id}>
+      <div class="cycle-module">
+        <div class="cycle-module__header">
+          <span class="cycle-module__title">{cycle.label}</span>
+          <span class="cycle-module__focus">
+            目前焦點：
+            <strong>{focused}</strong>
+          </span>
+        </div>
+        <div class="cycle-module__members">
+          {
+            cycle.members.map((m) => {
+              const mHref = hasPet(m) ? `${base}/寵物資料/${encodeURIComponent(m)}` : null;
+              const mCur = m === focused;
+              return (
+                <span class:list={['cycle-module__member', { 'is-focus': mCur }]}>
+                  {
+                    mCur ? (
+                      <span>
+                        {m}
+                        <span class="node-current-tag">目前</span>
+                      </span>
+                    ) : mHref ? (
+                      <a href={mHref}>{m}</a>
+                    ) : (
+                      m
+                    )
+                  }
+                </span>
+              );
+            })
+          }
+        </div>
+        {
+          cycle.sections.map((sec) => (
+            <section class="cycle-module__section">
+              <h4 class="cycle-module__section-title">{sec.title}</h4>
+              <ul class="cycle-module__reactions">
+                {
+                  sec.reactions.map((rx) => (
+                    <li class="cycle-reaction">
+                      <div class="cycle-reaction__row">
+                        <div class="cycle-reaction__side cycle-reaction__side--mats">
+                          {
+                            rx.materials.map((mat) => {
+                              const h = hrefFor(mat);
+                              const cur =
+                                mat.type === 'pet' && focused !== '' && mat.name === focused;
+                              return (
+                                <div
+                                  class:list={[
+                                    'node-card',
+                                    'node-card--compact',
+                                    { 'node-current': cur },
+                                  ]}
+                                  data-pet-name={mat.type === 'pet' ? mat.name : undefined}
+                                >
+                                  {
+                                    mat.image ? (
+                                      <img
+                                        src={imgSrc(mat.image)}
+                                        alt={mat.name}
+                                        loading="lazy"
+                                        decoding="async"
+                                      />
+                                    ) : (
+                                      <span class="node-card__icon node-card__icon--text">
+                                        {typeFallback(mat)}
+                                      </span>
+                                    )
+                                  }
+                                  {
+                                    cur ? (
+                                      <span class="node-card__name node-card__name--current">
+                                        {mat.name}
+                                        <span class="node-current-tag">目前</span>
+                                      </span>
+                                    ) : h ? (
+                                      <a href={h}>{mat.name}</a>
+                                    ) : (
+                                      <span class="node-card__name">{mat.name}</span>
+                                    )
+                                  }
+                                  {mat.qty != null && <span class="count">× {mat.qty}</span>}
+                                </div>
+                              );
+                            })
+                          }
+                        </div>
+                        <div class="cycle-reaction__arrow" aria-hidden="true">
+                          →
+                        </div>
+                        <div class="cycle-reaction__side cycle-reaction__side--prods">
+                          {
+                            rx.products.map((prod) => {
+                              const h = hrefFor(prod);
+                              const cur =
+                                prod.type === 'pet' &&
+                                focused !== '' &&
+                                prod.name === focused;
+                              return (
+                                <div
+                                  class:list={[
+                                    'node-card',
+                                    'node-card--compact',
+                                    { 'node-current': cur },
+                                  ]}
+                                  data-pet-name={prod.type === 'pet' ? prod.name : undefined}
+                                >
+                                  {
+                                    prod.image ? (
+                                      <img
+                                        src={imgSrc(prod.image)}
+                                        alt={prod.name}
+                                        loading="lazy"
+                                        decoding="async"
+                                      />
+                                    ) : (
+                                      <span class="node-card__icon node-card__icon--text">
+                                        {typeFallback(prod)}
+                                      </span>
+                                    )
+                                  }
+                                  {
+                                    cur ? (
+                                      <span class="node-card__name node-card__name--current">
+                                        {prod.name}
+                                        <span class="node-current-tag">目前</span>
+                                      </span>
+                                    ) : h ? (
+                                      <a href={h}>{prod.name}</a>
+                                    ) : (
+                                      <span class="node-card__name">{prod.name}</span>
+                                    )
+                                  }
+                                  {prod.qty != null && (
+                                    <span class="count">× {prod.qty}</span>
+                                  )}
+                                  {prod.countLabel && (
+                                    <span class="count">{prod.countLabel}</span>
+                                  )}
+                                </div>
+                              );
+                            })
+                          }
+                        </div>
+                      </div>
+                      {rx.npc && <div class="npc-info">{rx.npc}</div>}
+                    </li>
+                  ))
+                }
+              </ul>
+            </section>
+          ))
+        }
+      </div>
+    </li>
+  ) : isMultiHead ? (
     <li class:list={['tree-multi-head', { 'tree-multi-head--root': isRoot }]}>
       <div class="tree-multi-head__tops">
         <ul class="tree-multi-head__heads">

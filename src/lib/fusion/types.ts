@@ -20,6 +20,14 @@ export interface FusionSlot {
 }
 
 /**
+ * 反應語意（可選；未填時由 compile／query 依形狀推斷）
+ * - acquire：一般取得（材料寵不在產物循環內）
+ * - reroll：多產物重抽／分流
+ * - convert：洗回或群組內單向轉換
+ */
+export type ReactionKind = 'acquire' | 'reroll' | 'convert';
+
+/**
  * 一條合成反應（固定格式）
  * 所有來源 lower 後必須是這個形狀。
  */
@@ -30,11 +38,27 @@ export interface FusionReaction {
   materials: FusionSlot[];
   products: FusionSlot[];
   npc: string;
+  /** 可選；未填則展示時推斷 */
+  kind?: ReactionKind;
   meta?: {
     activityId?: string;
     grades?: string;
     quest?: string;
   };
+}
+
+/**
+ * 寵物互轉強連通群組（SCC）。
+ * 由 compile 自動計算；一般單向合成不會進此結構。
+ */
+export interface FusionCycleGroup {
+  id: string;
+  /** 群組內寵物（已排序） */
+  members: string[];
+  /** 方便顯示：如「熊霸歐茲那克系轉換」 */
+  label: string;
+  /** 與此群組內部互轉相關的 reaction id */
+  reactionIds: string[];
 }
 
 /** 材料寵 → 產物寵（上級方向）；自環不建 */
@@ -57,6 +81,10 @@ export interface CompiledFusionGraph {
   edgeReactions: Map<string, FusionReaction[]>;
   /** 圖上出現過的寵物名 */
   petNodes: Set<string>;
+  /** 互轉循環群組（SCC size≥2） */
+  cycleGroups: FusionCycleGroup[];
+  /** 寵物名 → 所屬循環群組 */
+  petToCycleGroup: Map<string, FusionCycleGroup>;
 }
 
 export interface FusionRootPath {

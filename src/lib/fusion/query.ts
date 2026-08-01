@@ -1,15 +1,21 @@
 /**
  * 查詢／展樹：只讀 CompiledFusionGraph
  */
-import type { FusionNode } from '../pets';
+import type {
+  FusionCycleModuleView,
+  FusionCycleReactionView,
+  FusionNode,
+} from '../pets';
 import { itemImagePath } from '../items';
 import { compileFusionGraph } from './compile';
 import { normalizePetName } from './names';
 import type {
   CompiledFusionGraph,
+  FusionCycleGroup,
   FusionReaction,
   FusionRootPath,
   FusionSlot,
+  ReactionKind,
 } from './types';
 import { petSymbols } from './types';
 
@@ -222,6 +228,15 @@ function expandOneReaction(
     if (next.has(mat.symbol) || depth + 1 > maxDepth) {
       return slotToMaterialNode(mat);
     }
+    // 材料若屬互轉循環群組：不遞迴複製整圈，只留引用標籤
+    const matGroup = g.petToCycleGroup.get(mat.symbol);
+    if (matGroup) {
+      const leaf = slotToMaterialNode(mat);
+      return {
+        ...leaf,
+        countLabel: leaf.countLabel ?? `→ ${matGroup.label}`,
+      };
+    }
     if (g.byProduct.has(mat.symbol)) {
       return expandFusionDown(mat.symbol, {
         stack: next,
@@ -310,7 +325,9 @@ export function expandFusionDown(
 }
 
 function treeHasBody(node: FusionNode): boolean {
-  return Boolean(node.children?.length || node.heads?.length);
+  return Boolean(
+    node.children?.length || node.heads?.length || node.cycleModule,
+  );
 }
 
 /**
@@ -322,10 +339,167 @@ function inGraph(name: string): boolean {
   return graph().petNodes.has(name);
 }
 
+function productSlotNode(s: FusionSlot): FusionNode {
+  if (s.kind === 'pet') {
+    return {
+      type: 'pet',
+      name: s.symbol,
+      image: petImg(s.symbol),
+      ...(s.prob ? { countLabel: `機率 ${s.prob}` } : {}),
+      ...(s.qty != null ? { qty: s.qty } : {}),
+    };
+  }
+  return slotToMaterialNode(s);
+}
+
+/** 形狀推斷 reaction_kind（資料未填 kind 時） */
+function inferReactionKind(
+  r: FusionReaction,
+  memberSet: Set<string>,
+): ReactionKind {
+  if (r.kind) return r.kind;
+  if (r.products.length > 1) return 'reroll';
+  const mats = petSymbols(r.materials);
+  const prods = petSymbols(r.products);
+  const selfFeed =
+    mats.some((m) => prods.includes(m)) ||
+    (mats.length === 1 && prods.length === 1 && mats[0] === prods[0]);
+  if (selfFeed) return 'reroll';
+  if (mats.length && mats.every((m) => memberSet.has(m))) return 'convert';
+  return 'acquire';
+}
+
+const KIND_TITLE: Record<ReactionKind, string> = {
+  acquire: '取得',
+  reroll: '重抽',
+  convert: '洗回／轉換',
+};
+
+const KIND_ORDER: ReactionKind[] = ['acquire', 'reroll', 'convert'];
+
+function reactionToCycleView(
+  r: FusionReaction,
+  kind: ReactionKind,
+): FusionCycleReactionView {
+  // 多產物永遠完整列出（含機率），不因進入點拆成單一 2%
+  const products = r.products.map(productSlotNode);
+  products.sort((a, b) => {
+    const pa = a.countLabel?.match(/([\d.]+)%/)?.[1];
+    const pb = b.countLabel?.match(/([\d.]+)%/)?.[1];
+    const na = pa ? Number(pa) : -1;
+    const nb = pb ? Number(pb) : -1;
+    if (nb !== na) return nb - na;
+    return a.name.localeCompare(b.name, 'zh-Hant');
+  });
+  const npc = (r.npc || '').trim();
+  return {
+    id: r.id,
+    kind,
+    materials: r.materials.map(slotToMaterialNode),
+    products,
+    ...(npc ? { npc } : {}),
+  };
+}
+
+/**
+ * 循環群組成員頁：外層樹（群組外取得）+ 一個轉換模組（內部 reaction 各一次）。
+ * viewKey = group.id；focusedPet 僅影響高亮，不重算不同樹。
+ */
+function buildCycleGroupView(
+  focusedPet: string,
+  group: FusionCycleGroup,
+  opts: { maxDepth: number },
+): FusionNode {
+  const g = graph();
+  const memberSet = new Set(group.members);
+  const byId = new Map(g.reactions.map((r) => [r.id, r]));
+
+  // 內部：群組 reactionIds（材料寵皆在群組內）
+  const internal: FusionReaction[] = [];
+  for (const id of group.reactionIds) {
+    const r = byId.get(id);
+    if (r) internal.push(r);
+  }
+
+  // 外部取得：產物在群組、但有寵物材料在群組外
+  const external: FusionReaction[] = [];
+  const seenExt = new Set<string>();
+  for (const m of group.members) {
+    for (const r of g.byProduct.get(m) ?? []) {
+      if (seenExt.has(r.id) || group.reactionIds.includes(r.id)) continue;
+      const mats = petSymbols(r.materials);
+      if (!mats.length) continue;
+      if (mats.every((x) => memberSet.has(x))) continue;
+      if (!petSymbols(r.products).some((p) => memberSet.has(p))) continue;
+      seenExt.add(r.id);
+      external.push(r);
+    }
+  }
+
+  // 外層：取得線用舊 expand，但 stack 預填群組成員，避免嵌回循環
+  const stackSeed = new Set(group.members);
+  const acquireTrees: FusionNode[] = [];
+  for (const r of external) {
+    const prod =
+      r.products.find((p) => p.kind === 'pet' && memberSet.has(p.symbol))
+        ?.symbol ?? focusedPet;
+    acquireTrees.push(
+      expandOneReaction(prod, r, {
+        stack: stackSeed,
+        depth: 0,
+        maxDepth: opts.maxDepth,
+        isRoot: true,
+      }),
+    );
+  }
+
+  // 模組內依 kind 分節；每條 reaction_id 一次
+  const byKind = new Map<ReactionKind, FusionCycleReactionView[]>();
+  for (const r of internal) {
+    const kind = inferReactionKind(r, memberSet);
+    const list = byKind.get(kind) ?? [];
+    list.push(reactionToCycleView(r, kind));
+    byKind.set(kind, list);
+  }
+  const sections: FusionCycleModuleView['sections'] = [];
+  for (const kind of KIND_ORDER) {
+    const reactions = byKind.get(kind);
+    if (!reactions?.length) continue;
+    reactions.sort((a, b) => a.id.localeCompare(b.id));
+    sections.push({
+      kind,
+      title: KIND_TITLE[kind],
+      reactions,
+    });
+  }
+
+  const moduleNode: FusionNode = {
+    type: 'material',
+    name: group.label,
+    target: true,
+    cycleModule: {
+      id: group.id,
+      label: group.label,
+      focusedPet,
+      members: group.members.slice(),
+      sections,
+    },
+  };
+
+  const children = [...acquireTrees, moduleNode];
+  if (children.length === 1) return children[0]!;
+  return {
+    type: 'material',
+    name: '',
+    target: true,
+    children,
+  };
+}
+
 /**
  * 顯示用合成樹（SSOT 算法）：
- * 1. 從目前寵沿上級上溯 → 找**全部根**
- * 2. 從每個根向下 DFS **完整樹**（該根全部配方，不裁一條）
+ * 1. 若寵物屬互轉循環群組 → 外層取得樹 + 局部轉換模組（reaction 各一次）
+ * 2. 否則：從目前寵沿上級上溯 → 找全部根 → 各根向下完整展開
  * 3. 多根／多配方 → 森林
  */
 export function buildFusionTreeFromGraph(
@@ -335,9 +509,16 @@ export function buildFusionTreeFromGraph(
   const name = normalizePetName(petName) || petName;
   if (!name || !inGraph(name)) return null;
 
+  const maxDepth = opts.maxDepth ?? 10;
+  const g = graph();
+  const cycle = g.petToCycleGroup.get(name);
+  if (cycle) {
+    const tree = buildCycleGroupView(name, cycle, { maxDepth });
+    return treeHasBody(tree) ? tree : null;
+  }
+
   // 只取根名；via 不參與展開裁剪
   const roots = [...new Set(findFusionRootPaths(name).map((r) => r.root))];
-  const maxDepth = opts.maxDepth ?? 10;
 
   if (roots.length === 1) {
     const tree = expandFusionDown(roots[0]!, {
@@ -364,4 +545,13 @@ export function buildFusionTreeFromGraph(
     target: true,
     children,
   };
+}
+
+/** 查寵物所屬循環群組（無則 null） */
+export function getCycleGroupForPet(
+  petName: string,
+): FusionCycleGroup | null {
+  const name = normalizePetName(petName) || petName;
+  if (!name) return null;
+  return graph().petToCycleGroup.get(name) ?? null;
 }
