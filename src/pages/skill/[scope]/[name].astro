@@ -1,0 +1,269 @@
+---
+/**
+ * 技能詳情：資料來自 content/data/技能總覽.csv + 技能等級效果.csv（SSOT）。
+ * 網址三分：/skill/char/（人專屬）、/skill/pet/（寵專屬）、/skill/shared/（共用）；
+ * scope 由資料決定（skillScope），每個技能只產一頁。
+ * 同名技能人寵是兩回事，共用頁兩側各自一張表；持有寵物由 專屬寵物.csv 技能欄推導。
+ */
+import Base from '../../../layouts/Base.astro';
+import { listSkills, getSkill, skillScope, skillIcon, mpLabel, type SkillSide } from '../../../lib/skills';
+import { listPetsWithSkill } from '../../../lib/pets';
+import { craftSkillHref } from '../../../lib/craftSkills';
+
+export function getStaticPaths() {
+  return listSkills().map((s) => ({
+    params: { scope: skillScope(s.name)!, name: s.name },
+    props: { name: s.name },
+  }));
+}
+
+const { name } = Astro.props as { name: string };
+const skill = getSkill(name);
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const src = (v: string) => (v.startsWith('/') ? base + v : v);
+
+const holders = skill ? listPetsWithSkill(name) : [];
+const holdersByLevel = new Map<number, typeof holders>();
+for (const h of holders) {
+  const lv = h.level ?? 0;
+  const list = holdersByLevel.get(lv) ?? [];
+  list.push(h);
+  holdersByLevel.set(lv, list);
+}
+
+const craftHref = craftSkillHref(name);
+
+/** 持有寵物欄掛哪一側：有人物側掛人物側，純寵技才掛寵物側（共用技能不重複兩欄） */
+const holderKey: 'char' | 'pet' = skill?.char ? 'char' : 'pet';
+/** 寵物實際持有、但等級表沒有的高等級（舊站 lv-high 列）——從寵物資料推導，不進 CSV */
+const holderLevels = [...holdersByLevel.keys()].filter((lv) => lv > 0);
+
+/**
+ * 有等級的側：列出 LV1～最高等；沒資料的等級照樣佔一列（顯示待確認）。
+ * extraLevels 超過最高等的部分只列寵物真的持有的等級（derived 列）。
+ */
+function levelRows(side: SkillSide, extraLevels: number[] = []) {
+  const byLv = new Map(side.levels.map((l) => [l.等級, l]));
+  const max = Number(side.最高等級);
+  if (!Number.isFinite(max) || max <= 0)
+    return side.levels.map((l) => ({ lv: '', row: l as typeof l | null, derived: false }));
+  const top = Math.max(max, ...extraLevels);
+  const rows: Array<{ lv: string; row: (typeof side.levels)[number] | null; derived: boolean }> = [];
+  for (let i = 1; i <= top; i++) {
+    const derived = i > max;
+    if (derived && !extraLevels.includes(i)) continue;
+    rows.push({ lv: String(i), row: byLv.get(String(i)) ?? null, derived });
+  }
+  return rows;
+}
+
+const hasRate = (side: SkillSide) => side.levels.some((l) => l.成功率倍率 || l.作用範圍);
+const hasLearn = (side: SkillSide) => side.levels.some((l) => l.學習資訊);
+
+const sides: Array<{ key: 'char' | 'pet'; label: string; side: SkillSide }> = [];
+if (skill?.char) sides.push({ key: 'char', label: '人物技能', side: skill.char });
+if (skill?.pet) sides.push({ key: 'pet', label: '寵物技能', side: skill.pet });
+---
+
+{
+  !skill ? (
+    <Base title="找不到技能">
+      <h1 class="page-title">找不到技能</h1>
+      <p>
+        技能資料中沒有「{name}」。請回<a href={`${base}/技能總覽`}>技能總覽</a>。
+      </p>
+    </Base>
+  ) : (
+    <Base title={`${skill.name} — 技能詳情`}>
+      <h1 class="page-title">{skill.name}</h1>
+      <p class="crumbs">
+        <a href={`${base}/`}>首頁</a>
+        <span aria-hidden="true"> / </span>
+        <a href={`${base}/技能總覽`}>技能總覽</a>
+        <span aria-hidden="true"> / </span>
+        <span>{skill.name}</span>
+      </p>
+
+      {craftHref && (
+        <p class="craft-banner">
+          此技能的站內配方表：
+          <a href={`${base}${craftHref}`}>{craftHref.replace(/^\//, '')}</a>
+        </p>
+      )}
+
+      {sides.map(({ key, label, side }) => (
+        <section class="skill-side">
+          <table class="info-table">
+            <tr class="head">
+              <td colspan="4">
+                {skillIcon(side.分類)} {label}
+                {sides.length > 1 && key === 'pet' && '（與人物側為不同技能資料）'}
+              </td>
+            </tr>
+            <tr>
+              <td width="120"><b>技能分類</b></td>
+              <td width="230">{side.分類 || '—'}</td>
+              <td width="120"><b>最高等級</b></td>
+              <td width="230">
+                {side.最高等級 ? `LV ${side.最高等級}` : '無等級'}
+                {side.備註 && <span class="note">（{side.備註}）</span>}
+              </td>
+            </tr>
+          </table>
+
+          <table class="level-table">
+            <thead>
+              <tr>
+                {side.最高等級 && <th>等級</th>}
+                <th>魔力消耗</th>
+                {hasRate(side) && <th>成功率 / 倍率</th>}
+                {hasRate(side) && <th>作用範圍</th>}
+                <th>效果</th>
+                {hasLearn(side) && <th>學習資訊</th>}
+                {key === holderKey && <th>持有寵物</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {levelRows(side, key === holderKey ? holderLevels : []).map(({ lv, row, derived }) => (
+                <tr class:list={[derived && 'lv-high']}>
+                  {side.最高等級 && <td class="lv">LV {lv}</td>}
+                  <td class="mp">{mpLabel(row?.魔力消耗 ?? '')}</td>
+                  {hasRate(side) && <td>{row?.成功率倍率 || '—'}</td>}
+                  {hasRate(side) && <td>{row?.作用範圍 || '—'}</td>}
+                  <td class="eff">
+                    {row?.效果 || (
+                      <span class="pending">
+                        {derived ? '（技能表無此等級；由右列寵物持有）' : '—（改版後待確認）'}
+                      </span>
+                    )}
+                  </td>
+                  {hasLearn(side) && (
+                    <td class="learn">
+                      {(row?.學習資訊 ?? '')
+                        .split('；')
+                        .filter(Boolean)
+                        .map((seg) => <span>{seg}</span>)}
+                    </td>
+                  )}
+                  {key === holderKey && (
+                    <td class="level-pets">
+                      {(holdersByLevel.get(Number(lv)) ?? []).map((h) => (
+                        <a href={`${base}/寵物資料/${encodeURIComponent(h.name)}`}>{h.name}</a>
+                      ))}
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      ))}
+
+      <section>
+        <table class="info-table">
+          <tr class="head"><td>已知持有此技能的寵物</td></tr>
+        </table>
+        {holders.length ? (
+          <div class="holder-grid">
+            {holders.map((h) => (
+              <a class="holder" href={`${base}/寵物資料/${encodeURIComponent(h.name)}`}>
+                {h.image && (
+                  <img src={src(h.image)} alt={h.name} loading="lazy" decoding="async" />
+                )}
+                <span class="holder__name">{h.name}</span>
+                <span class="holder__skill">{h.skillLabel}</span>
+              </a>
+            ))}
+          </div>
+        ) : (
+          <p class="holder-empty">專屬寵物資料中尚無登錄持有此技能的寵物。</p>
+        )}
+      </section>
+    </Base>
+  )
+}
+
+<style>
+  .crumbs {
+    font-size: 0.85rem;
+    color: #5f6368;
+    margin: -6px 0 14px;
+  }
+  .craft-banner {
+    margin: 0 0 12px;
+    padding: 10px 14px;
+    background: #e8f5e9;
+    border: 1px solid #a5d6a7;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+  .craft-banner a { font-weight: 700; color: #2e7d32; }
+
+  .skill-side { margin-bottom: 20px; }
+  .info-table {
+    width: 100%;
+    background-color: #e0e0e0;
+    border-collapse: separate;
+    border-spacing: 1px;
+    margin-bottom: 12px;
+  }
+  .info-table td {
+    background-color: #fff;
+    padding: 10px 12px;
+    vertical-align: middle;
+  }
+  .info-table .head td {
+    background-color: #f1f3f4;
+    font-weight: 700;
+    border-left: 5px solid #1155cc;
+  }
+  .info-table .note { color: #e65100; font-size: 0.85em; margin-left: 4px; }
+
+  .level-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  .level-table th {
+    background-color: #f1f3f4;
+    color: #1155cc;
+    font-size: 12px;
+    padding: 8px;
+    border-bottom: 2px solid #1155cc;
+  }
+  .level-table td {
+    padding: 8px 6px;
+    border-bottom: 1px solid #eee;
+    font-size: 13px;
+  }
+  .level-table tr.lv-high td { background-color: #fff8e1; }
+  .level-table .lv { font-weight: 700; color: #008be3; white-space: nowrap; }
+  .level-table .mp { color: #e65100; font-weight: 700; white-space: nowrap; }
+  .level-table .eff { text-align: left; }
+  .level-table .pending { color: #9e9e9e; }
+  .level-table .learn { text-align: left; font-size: 12px; }
+  .level-table .learn span { display: block; }
+  .level-pets { text-align: left; max-width: 240px; }
+  .level-pets a { margin-right: 8px; white-space: nowrap; }
+
+  .holder-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+  }
+  .holder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 6px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    text-decoration: none;
+    background: #fff;
+  }
+  .holder img { width: 64px; height: 64px; object-fit: contain; }
+  .holder__name { font-weight: 700; margin-top: 6px; }
+  .holder__skill { font-size: 12px; color: #5f6368; }
+  .holder-empty { color: #5f6368; }
+</style>

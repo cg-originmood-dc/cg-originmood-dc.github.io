@@ -386,6 +386,26 @@ main {
   margin: 1.5rem 0;
 }
 
+/* 專屬寵物：名稱可點、整列可點 */
+.dataset__name-link {
+  color: var(--link);
+  font-weight: 600;
+  text-decoration: none;
+}
+.dataset__name-link:hover {
+  text-decoration: underline;
+}
+.dataset__img-link {
+  display: inline-block;
+  text-decoration: none;
+}
+.dataset__row--link {
+  cursor: pointer;
+}
+.dataset__row--link:hover td {
+  background: #f5f8ff;
+}
+
 .dataset__bar {
   display: flex;
   flex-wrap: wrap;

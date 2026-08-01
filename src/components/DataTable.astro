@@ -2,6 +2,7 @@
 import { loadDataset, LIST_SEP } from '../lib/datasets';
 import { thumbOf } from '../lib/thumbs';
 import { renderCell } from '../lib/richtext';
+import { hasPet } from '../lib/pets';
 
 /**
  * 把 content/data/<name>.csv 渲染成可搜尋、可篩選、可排序的表格。
@@ -34,6 +35,17 @@ const dataset = loadDataset(name);
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const src = (v: string) => (v.startsWith('/') ? base + v : v);
 const cols = dataset?.columns.filter((c) => c !== dataset.imageColumn) ?? [];
+
+/**
+ * 名稱欄可點進寵物詳情頁的資料集。
+ *
+ * 這裡列的是「這張表的名稱欄裝的是寵物」，不是「這些名字有頁面」——
+ * 後者交給 hasPet 逐列判斷，免得表裡混進沒收錄的寵物時發出死連結。
+ */
+const PET_NAME_DATASETS = new Set(['專屬寵物', '魔力原始寵物']);
+const linkNameCol = PET_NAME_DATASETS.has(name) && cols.includes('名稱') ? '名稱' : null;
+const petDetailHref = (petName: string) =>
+  hasPet(petName) ? `${base}/寵物資料/${encodeURIComponent(petName)}` : null;
 ---
 
 {
@@ -93,66 +105,86 @@ const cols = dataset?.columns.filter((c) => c !== dataset.imageColumn) ?? [];
             </tr>
           </thead>
           <tbody>
-            {dataset.rows.map((row) => (
-              <tr>
-                {dataset.imageColumn && (
-                  <td class="col-img">
-                    {row[dataset.imageColumn] ? (
-                      <span class="hoverpic">
-                        <img src={src(thumbOf(row[dataset.imageColumn]))} alt="" loading="lazy" decoding="async" />
-                        <img class="hoverpic__big" src={src(row[dataset.imageColumn])} alt="" loading="lazy" decoding="async" />
-                      </span>
-                    ) : null}
-                  </td>
-                )}
-                {dataset.action && (
-                  <td class="col-act">
-                    {row[dataset.action.column] ? (
-                      <a
-                        class="dataset__act"
-                        href={dataset.action.url(row[dataset.action.column])}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        {dataset.action.label}
-                      </a>
-                    ) : null}
-                  </td>
-                )}
-                {cols.map((c) => {
-                  const value = row[c] ?? '';
-                  const linked = /\[[^\]]+\]\([^)]+\)/.test(value);
-                  // 一格好幾條的欄位（採集地點最多九個點）拆成一行一條。
-                  // 串成一行的話括號座標一路接下去，要數到第幾個斜線才知道在看哪一個點。
-                  const items = value.includes(LIST_SEP) ? value.split(LIST_SEP) : null;
-                  const parts = !items && QUANTITY_LIST.test(value) ? value.split('、') : null;
-                  const classes = [
-                    dataset.wrapColumns.includes(c) ? 'is-wrap' : '',
-                    c === dataset.noteColumn ? 'is-note' : '',
-                    items ? 'is-list' : '',
-                    parts ? 'is-items' : '',
-                  ].filter(Boolean).join(' ');
-                  return linked ? (
-                    <td class={classes || undefined} set:html={renderCell(value, base)} />
-                  ) : items ? (
-                    <td class={classes}>
-                      {items.map((item) => (
-                        <span>{item}</span>
-                      ))}
+            {dataset.rows.map((row) => {
+              const petName = linkNameCol ? (row[linkNameCol] ?? '').trim() : '';
+              const detail = petName ? petDetailHref(petName) : null;
+              return (
+                <tr class={detail ? 'dataset__row--link' : undefined} data-href={detail ?? undefined}>
+                  {dataset.imageColumn && (
+                    <td class="col-img">
+                      {row[dataset.imageColumn] ? (
+                        detail ? (
+                          <a class="dataset__img-link" href={detail}>
+                            <span class="hoverpic">
+                              <img src={src(thumbOf(row[dataset.imageColumn]))} alt={petName} loading="lazy" decoding="async" />
+                              <img class="hoverpic__big" src={src(row[dataset.imageColumn])} alt="" loading="lazy" decoding="async" />
+                            </span>
+                          </a>
+                        ) : (
+                          <span class="hoverpic">
+                            <img src={src(thumbOf(row[dataset.imageColumn]))} alt="" loading="lazy" decoding="async" />
+                            <img class="hoverpic__big" src={src(row[dataset.imageColumn])} alt="" loading="lazy" decoding="async" />
+                          </span>
+                        )
+                      ) : null}
                     </td>
-                  ) : parts ? (
-                    // 頓號留在前一項的尾巴，折行才會折在頓號後面而不是前面
-                    <td class={classes}>
-                      {parts.map((part, i) => (
-                        <span>{i < parts.length - 1 ? `${part}、` : part}</span>
-                      ))}
+                  )}
+                  {dataset.action && (
+                    <td class="col-act">
+                      {row[dataset.action.column] ? (
+                        <a
+                          class="dataset__act"
+                          href={dataset.action.url(row[dataset.action.column])}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {dataset.action.label}
+                        </a>
+                      ) : null}
                     </td>
-                  ) : (
-                    <td class={classes || undefined}>{value}</td>
-                  );
-                })}
-              </tr>
-            ))}
+                  )}
+                  {cols.map((c) => {
+                    const value = row[c] ?? '';
+                    if (c === linkNameCol && detail) {
+                      return (
+                        <td class={dataset.wrapColumns.includes(c) ? 'is-wrap' : undefined}>
+                          <a class="dataset__name-link" href={detail}>{value}</a>
+                        </td>
+                      );
+                    }
+                    const linked = /\[[^\]]+\]\([^)]+\)/.test(value);
+                    // 一格好幾條的欄位（採集地點最多九個點）拆成一行一條。
+                    // 串成一行的話括號座標一路接下去，要數到第幾個斜線才知道在看哪一個點。
+                    const items = value.includes(LIST_SEP) ? value.split(LIST_SEP) : null;
+                    const parts = !items && QUANTITY_LIST.test(value) ? value.split('、') : null;
+                    const classes = [
+                      dataset.wrapColumns.includes(c) ? 'is-wrap' : '',
+                      c === dataset.noteColumn ? 'is-note' : '',
+                      items ? 'is-list' : '',
+                      parts ? 'is-items' : '',
+                    ].filter(Boolean).join(' ');
+                    return linked ? (
+                      <td class={classes || undefined} set:html={renderCell(value, base)} />
+                    ) : items ? (
+                      <td class={classes}>
+                        {items.map((item) => (
+                          <span>{item}</span>
+                        ))}
+                      </td>
+                    ) : parts ? (
+                      // 頓號留在前一項的尾巴，折行才會折在頓號後面而不是前面
+                      <td class={classes}>
+                        {parts.map((part, i) => (
+                          <span>{i < parts.length - 1 ? `${part}、` : part}</span>
+                        ))}
+                      </td>
+                    ) : (
+                      <td class={classes || undefined}>{value}</td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -253,6 +285,19 @@ const cols = dataset?.columns.filter((c) => c !== dataset.imageColumn) ?? [];
           sort();
         }
       });
+    });
+
+    // 點整列（非連結區）也可進入寵物詳情。
+    // 帶修飾鍵（Ctrl/Cmd＝新分頁、Shift＝新視窗）的點擊不接手——
+    // 接了會變成在同一分頁跳走，把使用者要開新分頁的意圖吃掉；
+    // 要開新分頁請點名稱那個真連結，瀏覽器原生行為才是對的。
+    tbody.addEventListener('click', (e) => {
+      if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button !== 0) return;
+      const t = e.target as HTMLElement;
+      if (t.closest('a')) return;
+      const tr = t.closest('tr[data-href]') as HTMLTableRowElement | null;
+      if (!tr?.dataset.href) return;
+      location.href = tr.dataset.href;
     });
   });
 </script>

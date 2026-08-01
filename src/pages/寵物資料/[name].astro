@@ -1,0 +1,1324 @@
+---
+/**
+ * 寵物詳情頁 — 版面結構對齊 pet_page_template.html
+ * 素質：套用 petStats 公式（永恆初心算檔器）
+ * 合成樹：顯示完整樹，並框出目前瀏覽的寵物
+ */
+import Base from '../../layouts/Base.astro';
+import FusionTree from '../../components/FusionTree.astro';
+import {
+  listPets,
+  getPet,
+  getPetExtra,
+  splitSkills,
+  skillBaseName,
+  gradePct,
+  petImagePath,
+  resolveFusionTree,
+  obtainTypeLabel,
+} from '../../lib/pets';
+import {
+  listActivitiesForPet,
+  synthesisActivityHref,
+} from '../../lib/synthesis';
+import {
+  militaryLabObtainMethods,
+  MILITARY_LAB_PAGE,
+} from '../../lib/militaryLab';
+import {
+  remodelVendorObtainMethods,
+  REMODEL_VENDOR_PAGE,
+} from '../../lib/remodelVendor';
+import {
+  parseGrowFromPet,
+  calculatePetStats,
+  roundStat,
+  clientFormulaPayload,
+} from '../../lib/petStats';
+import { skillPath } from '../../lib/skills';
+import { renderCell } from '../../lib/richtext';
+
+export function getStaticPaths() {
+  return listPets().map((p) => ({ params: { name: p.名稱 } }));
+}
+
+const { name } = Astro.params;
+const pet = name ? getPet(name) : null;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const src = (v: string) => (v.startsWith('/') ? base + v : v);
+
+const extra = pet ? getPetExtra(pet.名稱) : {};
+const img = pet ? petImagePath(pet.名稱, pet.image) : '';
+const skills = pet ? splitSkills(pet.技能) : [];
+
+/**
+ * 這隻是哪張表來的，決定標籤與「返回」要回哪一頁。
+ * 找不到寵物時（?name= 亂打）沒有來源可用，就回專屬寵物。
+ */
+const 來源 = pet?.來源 || '專屬寵物';
+const listTitle = 來源 === '魔力原始' ? '魔力原始寵物' : '專屬寵物';
+
+const grow = pet ? parseGrowFromPet(pet) : null;
+const statsAt = (lv: number) => {
+  if (!grow) return null;
+  const s = calculatePetStats(grow, lv);
+  return {
+    hp: roundStat(s.hp),
+    mp: roundStat(s.mp),
+    atk: roundStat(s.atk),
+    def: roundStat(s.def),
+    agi: roundStat(s.agi),
+    spt: roundStat(s.spt),
+    rec: roundStat(s.rec),
+  };
+};
+const s1 = statsAt(1);
+const s100 = statsAt(100);
+const s140 = statsAt(140);
+const formulaJson = JSON.stringify(clientFormulaPayload());
+const growJson = grow ? JSON.stringify(grow) : 'null';
+
+const { tree: fusionRoot, hasFullData: hasFusionData } = pet
+  ? resolveFusionTree(pet.名稱, img)
+  : { tree: null as any, hasFullData: false };
+
+/** 相關合成活動（活動表錨點／常態改造／購買 NPC 等，不區分資料來源標籤） */
+const synthesisActivities = pet ? listActivitiesForPet(pet.名稱) : [];
+const militaryObtain = pet ? militaryLabObtainMethods(pet.名稱, base) : [];
+const remodelObtain = pet ? remodelVendorObtainMethods(pet.名稱, base) : [];
+const relatedActivityRows: Array<{
+  href: string;
+  title: string;
+  period?: string;
+  url?: string;
+}> = [
+  ...synthesisActivities.map((a) => ({
+    href: synthesisActivityHref(a.id, base),
+    title: a.title,
+    period: a.period || undefined,
+    url: a.url || undefined,
+  })),
+  ...militaryObtain.map((m) => ({
+    href: m.link || `${base}${MILITARY_LAB_PAGE}`,
+    title: m.map || '軍方研究所',
+    period: m.note,
+  })),
+  ...remodelObtain.map((m) => ({
+    href: m.link || `${base}${REMODEL_VENDOR_PAGE}`,
+    title: m.map || '改造寵購買',
+    period: m.note,
+  })),
+];
+
+const grades = pet
+  ? [
+      { label: '體 (體力)', key: '體力', val: pet.體力 },
+      { label: '力 (力量)', key: '力量', val: pet.力量 },
+      { label: '強 (強度)', key: '防禦', val: pet.防禦 },
+      { label: '速 (速度)', key: '速度', val: pet.速度 },
+      { label: '魔 (魔法)', key: '魔法', val: pet.魔法 },
+    ]
+  : [];
+
+function fmtGrade(v: string): string {
+  if (!v?.trim()) return '—';
+  return /D$/i.test(v) ? v : `${v}D`;
+}
+
+// CSV 的技能欄偶爾放的不是技能（有幾隻寫的是出沒地點、有一隻寫整段技能說明），
+// 那些名字沒有對應的技能頁。查得到才給連結，查不到就只印字。
+function skillHref(sk: string): string | null {
+  const path = skillPath(skillBaseName(sk));
+  return path ? `${base}${path}` : null;
+}
+
+function skillNote(sk: string): string {
+  return extra.skillNotes?.[sk] ?? extra.skillNotes?.[skillBaseName(sk)] ?? '';
+}
+
+const cardLabel = extra.cardLevel?.trim() || '未知';
+const isCardUnknown = !extra.cardLevel || extra.cardLevel === '未知';
+
+const obtainText = (pet?.入手方法 ?? '').trim();
+const obtainType = (pet?.入手類型 ?? '').trim();
+/** JSON 細項 + 改造購買 NPC（魔力豆知識）等程式注入來源 */
+const obtainExtra = [...(extra.obtainMethods ?? []), ...remodelObtain];
+const hasObtain = Boolean(obtainText || obtainType || obtainExtra.length);
+
+// 可選等級 1~160（第三列預設 140）
+const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
+---
+
+{
+  !pet ? (
+    <Base title={`${name ?? '未知'} - 寵物資料`}>
+      <h1 class="page-title">找不到寵物</h1>
+      <p>資料庫中沒有「{name}」的紀錄。</p>
+      <p>
+        <a href={`${base}/專屬寵物`}>← 返回專屬寵物</a>
+      </p>
+    </Base>
+  ) : (
+    <Base title={`${pet.名稱} - 寵物資料`} dbEmbed>
+      <div class="pet-page">
+        <a class="pet-page__back" href={`${base}/${listTitle}`}>
+          ← 返回{listTitle}
+        </a>
+
+        {/* 1. 大圖 */}
+        <div class="pet-large-pic">
+          {img ? (
+            <img src={src(img)} alt={`${pet.名稱} 大圖`} />
+          ) : (
+            <div class="pet-large-pic__empty">暫無圖示</div>
+          )}
+        </div>
+
+        {/* 2. 寵物名稱與頭像 */}
+        <table class="info-table">
+          <tr>
+            <td>
+              <div class="title-cell">
+                {img && (
+                  <img src={src(img)} alt={`${pet.名稱} 頭像`} width="60" height="60" />
+                )}
+                <div class="title-text">
+                  <h2>{pet.名稱}</h2>
+                  <span>{listTitle}</span>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        {/* 3. 基本資訊 + 檔次 */}
+        <table class="info-table">
+          <tr class="head">
+            <td colspan="4">基本資訊</td>
+          </tr>
+          <tr>
+            <td width="120"><b>種族</b></td>
+            <td width="230">{pet.種族 || '—'}</td>
+            <td width="120"><b>可否封印</b></td>
+            <td width="230">
+              {
+                extra.sealable === true ? (
+                  <span class="badge badge-yes">可封印</span>
+                ) : extra.sealable === false ? (
+                  <span class="badge badge-no">不可封印</span>
+                ) : (
+                  <span class="badge badge-unknown">未知</span>
+                )
+              }
+            </td>
+          </tr>
+          <tr>
+            <td><b>屬性</b></td>
+            <td>{pet.屬性 || '—'}</td>
+            <td><b>卡片等級</b></td>
+            <td>
+              <span class:list={['badge', isCardUnknown ? 'badge-unknown' : 'badge-card']}>
+                {cardLabel}
+              </span>
+            </td>
+          </tr>
+          <tr>
+            <td><b>技能欄位</b></td>
+            <td colspan="3">{pet.技格 ? `${pet.技格} 格` : '—'}</td>
+          </tr>
+          <tr>
+            <td valign="top"><b>檔次分佈</b></td>
+            <td colspan="3" style="padding: 0;">
+              <table class="grade-table">
+                <thead>
+                  <tr>
+                    {grades.map((g) => (
+                      <th>{g.label}</th>
+                    ))}
+                    <th>總檔次</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    {grades.map((g) => (
+                      <td>
+                        {fmtGrade(g.val)}
+                        {g.val && (
+                          <div class="grade-bar">
+                            <div
+                              class="grade-fill"
+                              style={`width: ${gradePct(g.val)}%;`}
+                            />
+                          </div>
+                        )}
+                      </td>
+                    ))}
+                    <td>
+                      <span class="total-grade-text">{fmtGrade(pet.總檔)}</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        {/* 4. 初始技能 */}
+        <table class="info-table">
+          <tr class="head">
+            <td>初始技能 (點擊可查看技能詳情)</td>
+          </tr>
+          <tr>
+            <td>
+              {
+                skills.length === 0 ? (
+                  <span class="muted">尚無技能資料</span>
+                ) : (
+                  <div class="skill-list">
+                    {skills.map((sk) => (
+                      <div class="skill-chip">
+                        {skillHref(sk) ? (
+                          <a class="skill-link" href={skillHref(sk)}>
+                            {sk}
+                          </a>
+                        ) : (
+                          <span class="skill-link skill-link--plain">{sk}</span>
+                        )}
+                        {skillNote(sk) && (
+                          <span class="skill-note">{skillNote(sk)}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )
+              }
+            </td>
+          </tr>
+        </table>
+
+        {/* 5. 入手方法（CSV 短述 + JSON 細項；與「相關任務」分開） */}
+        <table class="info-table">
+          <tr class="head">
+            <td>入手方法</td>
+          </tr>
+          <tr>
+            <td class="quest-cell obtain-cell">
+              {
+                !hasObtain ? (
+                  <div class="muted">尚無入手資料</div>
+                ) : (
+                  <>
+                    {
+                      (obtainType || obtainText) && (
+                        <div class="obtain-main">
+                          {
+                            obtainType && (
+                              <span class="badge badge-card obtain-type">
+                                {obtainTypeLabel(obtainType)}
+                              </span>
+                            )
+                          }
+                          {
+                            obtainText ? (
+                              <div class="obtain-text" set:html={renderCell(obtainText, base)} />
+                            ) : null
+                          }
+                        </div>
+                      )
+                    }
+                    {
+                      obtainExtra.length > 0 && (
+                        <ul class="obtain-list">
+                          {
+                            obtainExtra.map((m) => {
+                              const label = obtainTypeLabel(m.type);
+                              const head = [m.map, m.coords].filter(Boolean).join(' ');
+                              const body = m.note?.trim() || '';
+                              const link = m.link?.trim() || '';
+                              return (
+                                <li class="obtain-item">
+                                  {
+                                    label && (
+                                      <span class="badge badge-card obtain-type">{label}</span>
+                                    )
+                                  }
+                                  {
+                                    head && <span class="obtain-head">{head}</span>
+                                  }
+                                  {
+                                    body && <span class="obtain-note">{body}</span>
+                                  }
+                                  {
+                                    link && (
+                                      <a
+                                        class="obtain-link"
+                                        href={
+                                          link.startsWith('http') || link.startsWith('//')
+                                            ? link
+                                            : `${base}${link.startsWith('/') ? link : `/${link}`}`
+                                        }
+                                      >
+                                        詳見
+                                      </a>
+                                    )
+                                  }
+                                </li>
+                              );
+                            })
+                          }
+                        </ul>
+                      )
+                    }
+                  </>
+                )
+              }
+            </td>
+          </tr>
+        </table>
+
+        {/* 6. 成長素質（公式計算；第三列可選等級） */}
+        <table class="info-table">
+          <tr class="head">
+            <td>
+              各階段素質預估
+              <span class="head-note">（依檔次公式 · 無隨機檔 · 無手動配點 · 成長率 20%）</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 0;">
+              {
+                grow && s1 && s100 && s140 ? (
+                  <div
+                    class="growth-wrap"
+                    data-grow={growJson}
+                    data-formula={formulaJson}
+                  >
+                    <table class="stats-table">
+                      <thead>
+                        <tr>
+                          <th>等級</th>
+                          <th>生命 (HP)</th>
+                          <th>魔力 (MP)</th>
+                          <th>攻擊</th>
+                          <th>防禦</th>
+                          <th>敏捷</th>
+                          <th>精神</th>
+                          <th>回復</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td><b>1 等</b></td>
+                          <td>{s1.hp}</td>
+                          <td>{s1.mp}</td>
+                          <td>{s1.atk}</td>
+                          <td>{s1.def}</td>
+                          <td>{s1.agi}</td>
+                          <td>{s1.spt}</td>
+                          <td>{s1.rec}</td>
+                        </tr>
+                        <tr>
+                          <td><b>100 等</b></td>
+                          <td>{s100.hp}</td>
+                          <td>{s100.mp}</td>
+                          <td>{s100.atk}</td>
+                          <td>{s100.def}</td>
+                          <td>{s100.agi}</td>
+                          <td>{s100.spt}</td>
+                          <td>{s100.rec}</td>
+                        </tr>
+                        <tr class="growth-row-custom">
+                          <td>
+                            <label class="level-pick">
+                              <select id="pet-level-select" aria-label="選擇等級">
+                                {levelOptions.map((lv) => (
+                                  <option value={lv} selected={lv === 140}>
+                                    {lv} 等
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          </td>
+                          <td data-stat="hp">{s140.hp}</td>
+                          <td data-stat="mp">{s140.mp}</td>
+                          <td data-stat="atk">{s140.atk}</td>
+                          <td data-stat="def">{s140.def}</td>
+                          <td data-stat="agi">{s140.agi}</td>
+                          <td data-stat="spt">{s140.spt}</td>
+                          <td data-stat="rec">{s140.rec}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div class="section-placeholder">缺少檔次資料，無法計算素質</div>
+                )
+              }
+            </td>
+          </tr>
+        </table>
+
+        {/* 7. 相關任務（攜帶效益；非入手方式） */}
+        <table class="info-table">
+          <tr class="head">
+            <td>相關任務</td>
+          </tr>
+          <tr>
+            <td class="quest-cell">
+              {
+                pet.任務用途?.trim() ? (
+                  <div set:html={renderCell(pet.任務用途, base)} />
+                ) : (
+                  <div class="muted">尚無任務關聯</div>
+                )
+              }
+              {
+                extra.questNote && (
+                  <div class="quest-tip">{extra.questNote}</div>
+                )
+              }
+            </td>
+          </tr>
+        </table>
+
+        {/* 8. 合成樹（完整樹 + 目前寵物邊框） */}
+        <table class="info-table">
+          <tr class="head">
+            <td>合成樹 (由頂點向下解構)</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0;">
+              <div class="tree-container" data-fusion-tree>
+                <ul class="tree-diagram">
+                  <FusionTree node={fusionRoot} base={base} currentName={pet.名稱} />
+                </ul>
+                {
+                  !hasFusionData && (
+                    <p class="tree-placeholder">
+                      完整合成樹待補（目前僅顯示本寵物；藍框 = 目前瀏覽）
+                    </p>
+                  )
+                }
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        {/* 9. 相關合成活動 */}
+        {
+          relatedActivityRows.length > 0 && (
+            <table class="info-table">
+              <tr class="head">
+                <td>相關合成活動</td>
+              </tr>
+              <tr>
+                <td>
+                  <ul class="synth-act-list">
+                    {
+                      relatedActivityRows.map((a) => (
+                        <li>
+                          <a href={a.href}>{a.title}</a>
+                          {
+                            a.period && (
+                              <span class="synth-act-period">{a.period}</span>
+                            )
+                          }
+                          {
+                            a.url && (
+                              <a
+                                class="synth-act-official"
+                                href={a.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                官方公告
+                              </a>
+                            )
+                          }
+                        </li>
+                      ))
+                    }
+                  </ul>
+                </td>
+              </tr>
+            </table>
+          )
+        }
+      </div>
+
+      <script is:inline define:vars={{ growJson, formulaJson }}>
+        (function () {
+          const wrap = document.querySelector('.growth-wrap');
+          const sel = document.getElementById('pet-level-select');
+          if (!wrap || !sel) return;
+
+          let grow, formula;
+          try {
+            grow = JSON.parse(wrap.getAttribute('data-grow') || growJson);
+            formula = JSON.parse(wrap.getAttribute('data-formula') || formulaJson);
+          } catch (e) {
+            return;
+          }
+          if (!grow || !formula) return;
+
+          const matrix = formula.matrix;
+          const BASE = formula.base;
+          const rates = formula.rates;
+          const bpRate = formula.bpRate || 0.2;
+
+          function getRate(g) {
+            const k = Math.max(0, Math.min(52, Math.floor(g)));
+            return rates[k] != null ? rates[k] : rates[String(k)] || 0;
+          }
+
+          function calc(level) {
+            const lvldiff = Math.max(0, level - 1);
+            const bp = grow.map(function (g) {
+              return (g + 0) * bpRate + getRate(g) * lvldiff;
+            });
+            function row(r) {
+              var sum = 0;
+              for (var i = 0; i < 5; i++) sum += matrix[r][i] * bp[i];
+              return sum;
+            }
+            return {
+              hp: Math.floor(row(0) + BASE),
+              mp: Math.floor(row(1) + BASE),
+              atk: Math.floor(row(2) + BASE),
+              def: Math.floor(row(3) + BASE),
+              agi: Math.floor(row(4) + BASE),
+              spt: Math.floor(row(5) + 100),
+              rec: Math.floor(row(6) + 100),
+            };
+          }
+
+          function apply() {
+            const lv = parseInt(sel.value, 10) || 140;
+            const s = calc(lv);
+            wrap.querySelectorAll('.growth-row-custom [data-stat]').forEach(function (td) {
+              const key = td.getAttribute('data-stat');
+              if (key && s[key] != null) td.textContent = String(s[key]);
+            });
+          }
+
+          sel.addEventListener('change', apply);
+          sel.addEventListener('input', apply);
+        })();
+      </script>
+
+      {/* 合成樹連線：依卡片實際座標畫 SVG，避免深子樹把 li 撐寬後半線偏移 */}
+      <script is:inline>
+        (function () {
+          var COLOR = '#e65100';
+          var STROKE = 2;
+          var GAP = 18;
+
+          function rectOf(el, root) {
+            var r = el.getBoundingClientRect();
+            var b = root.getBoundingClientRect();
+            return {
+              left: r.left - b.left + root.scrollLeft,
+              top: r.top - b.top + root.scrollTop,
+              right: r.right - b.left + root.scrollLeft,
+              bottom: r.bottom - b.top + root.scrollTop,
+              midX: (r.left + r.right) / 2 - b.left + root.scrollLeft,
+              midY: (r.top + r.bottom) / 2 - b.top + root.scrollTop,
+              width: r.width,
+              height: r.height,
+            };
+          }
+
+          function childAnchor(li) {
+            if (li.classList.contains('tree-forest-root')) return null;
+            if (li.classList.contains('tree-multi-head')) {
+              var heads = li.querySelectorAll(
+                ':scope > .tree-multi-head__tops .tree-multi-head__head > .node-card'
+              );
+              if (!heads.length) return null;
+              return { type: 'multi', cards: Array.prototype.slice.call(heads), li: li };
+            }
+            var card = li.querySelector(':scope > .node-card');
+            return card ? { type: 'card', card: card, li: li } : null;
+          }
+
+          function line(svg, x1, y1, x2, y2) {
+            var el = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            el.setAttribute('x1', String(x1));
+            el.setAttribute('y1', String(y1));
+            el.setAttribute('x2', String(x2));
+            el.setAttribute('y2', String(y2));
+            el.setAttribute('stroke', COLOR);
+            el.setAttribute('stroke-width', String(STROKE));
+            el.setAttribute('stroke-linecap', 'square');
+            svg.appendChild(el);
+          }
+
+          /** 父點 → 多個子錨點：先垂直到橫梁，再水平，再各垂直下去 */
+          function connectParentToChildren(svg, root, parentBottomMid, childTops) {
+            if (!childTops.length) return;
+            if (childTops.length === 1) {
+              var only = childTops[0];
+              line(svg, parentBottomMid.x, parentBottomMid.y, only.x, only.y);
+              return;
+            }
+            var xs = childTops.map(function (c) {
+              return c.x;
+            });
+            var minX = Math.min.apply(null, xs);
+            var maxX = Math.max.apply(null, xs);
+            var barY = childTops[0].y - GAP;
+            if (barY < parentBottomMid.y + 4) barY = (parentBottomMid.y + childTops[0].y) / 2;
+            line(svg, parentBottomMid.x, parentBottomMid.y, parentBottomMid.x, barY);
+            line(svg, minX, barY, maxX, barY);
+            childTops.forEach(function (c) {
+              line(svg, c.x, barY, c.x, c.y);
+            });
+          }
+
+          function drawContainer(container) {
+            var diagram = container.querySelector('.tree-diagram');
+            if (!diagram) return;
+
+            var old = container.querySelector('svg.tree-lines');
+            if (old) old.remove();
+
+            var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.classList.add('tree-lines');
+            svg.setAttribute('aria-hidden', 'true');
+            container.insertBefore(svg, container.firstChild);
+
+            var w = Math.max(container.scrollWidth, container.clientWidth);
+            var h = Math.max(container.scrollHeight, container.clientHeight);
+            svg.setAttribute('width', String(w));
+            svg.setAttribute('height', String(h));
+            svg.style.width = w + 'px';
+            svg.style.height = h + 'px';
+
+            // 多產物：各頭往下匯到一點，再接到材料列
+            diagram.querySelectorAll('.tree-multi-head').forEach(function (mh) {
+              var headCards = mh.querySelectorAll(
+                ':scope > .tree-multi-head__tops .tree-multi-head__head > .node-card'
+              );
+              var kidsUl = mh.querySelector(':scope > ul.tree-children, :scope > ul');
+              if (!headCards.length) return;
+
+              var headBottoms = Array.prototype.map.call(headCards, function (c) {
+                var r = rectOf(c, container);
+                return { x: r.midX, y: r.bottom };
+              });
+
+              var childTops = [];
+              if (kidsUl) {
+                Array.prototype.forEach.call(kidsUl.children, function (li) {
+                  if (!(li instanceof HTMLElement)) return;
+                  var a = childAnchor(li);
+                  if (!a) return;
+                  if (a.type === 'card') {
+                    var r = rectOf(a.card, container);
+                    childTops.push({ x: r.midX, y: r.top });
+                  } else if (a.type === 'multi') {
+                    a.cards.forEach(function (c) {
+                      var rr = rectOf(c, container);
+                      childTops.push({ x: rr.midX, y: rr.top });
+                    });
+                  }
+                });
+              }
+
+              if (headBottoms.length === 1 && childTops.length) {
+                connectParentToChildren(svg, container, headBottoms[0], childTops);
+                return;
+              }
+
+              if (headBottoms.length > 1) {
+                var hxs = headBottoms.map(function (p) {
+                  return p.x;
+                });
+                var minHX = Math.min.apply(null, hxs);
+                var maxHX = Math.max.apply(null, hxs);
+                var mergeY = Math.max.apply(
+                  null,
+                  headBottoms.map(function (p) {
+                    return p.y;
+                  })
+                ) + GAP;
+                headBottoms.forEach(function (p) {
+                  line(svg, p.x, p.y, p.x, mergeY);
+                });
+                line(svg, minHX, mergeY, maxHX, mergeY);
+                var mergeX = (minHX + maxHX) / 2;
+                if (childTops.length) {
+                  connectParentToChildren(svg, container, { x: mergeX, y: mergeY }, childTops);
+                }
+              }
+            });
+
+            // 一般節點：父卡片 → 子列（略過多頭本體，已在上面處理）
+            diagram.querySelectorAll('ul').forEach(function (ul) {
+              if (ul.classList.contains('tree-multi-head__heads')) return;
+              if (ul.classList.contains('tree-children--forest')) return;
+
+              var parentLi = ul.parentElement;
+              if (!parentLi || parentLi === diagram) {
+                // 根層：若只有一個子樹，不畫「來自虛空」的線
+                if (ul === diagram || parentLi === diagram) {
+                  // 根 ul.tree-diagram 的直接子節點之間不需父線
+                  return;
+                }
+              }
+
+              // 多頭的材料 ul 已在 multi-head 區塊畫過
+              if (parentLi && parentLi.classList.contains('tree-multi-head')) return;
+              // 森林容器不連線
+              if (parentLi && parentLi.classList.contains('tree-forest-root')) return;
+
+              var parentCard =
+                parentLi && parentLi.querySelector
+                  ? parentLi.querySelector(':scope > .node-card')
+                  : null;
+              if (!parentCard) return;
+
+              var pr = rectOf(parentCard, container);
+              var parentPt = { x: pr.midX, y: pr.bottom };
+
+              var childTops = [];
+              Array.prototype.forEach.call(ul.children, function (li) {
+                if (!(li instanceof HTMLElement)) return;
+                var a = childAnchor(li);
+                if (!a) return;
+                if (a.type === 'card') {
+                  var r = rectOf(a.card, container);
+                  childTops.push({ x: r.midX, y: r.top });
+                } else if (a.type === 'multi') {
+                  // 子層是多頭：連到多頭頂部中心
+                  var tops = a.cards.map(function (c) {
+                    return rectOf(c, container);
+                  });
+                  var minT = Math.min.apply(
+                    null,
+                    tops.map(function (t) {
+                      return t.top;
+                    })
+                  );
+                  var mid =
+                    tops.reduce(function (s, t) {
+                      return s + t.midX;
+                    }, 0) / tops.length;
+                  childTops.push({ x: mid, y: minT });
+                }
+              });
+
+              connectParentToChildren(svg, container, parentPt, childTops);
+            });
+          }
+
+          function drawAll() {
+            document.querySelectorAll('[data-fusion-tree]').forEach(drawContainer);
+          }
+
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', drawAll);
+          } else {
+            drawAll();
+          }
+          window.addEventListener('resize', drawAll);
+          if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(drawAll).catch(function () {});
+          }
+          // 圖片載入後重算（節點高度會變）
+          document.querySelectorAll('[data-fusion-tree] img').forEach(function (img) {
+            if (!img.complete) img.addEventListener('load', drawAll, { once: true });
+          });
+        })();
+      </script>
+    </Base>
+  )
+}
+
+<style is:global>
+  .page.is-db-embed:has(.pet-page) {
+    max-width: none;
+    width: 100%;
+    padding: 0;
+    background: #fff;
+    border: 1px solid var(--border, #e0e0e0);
+  }
+
+  .pet-page {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 16px clamp(12px, 2vw, 28px) 40px;
+    box-sizing: border-box;
+    color: #212121;
+    font-family: 'Open Sans', 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  .pet-page__back {
+    display: inline-block;
+    margin-bottom: 14px;
+    color: #1155cc;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .pet-page__back:hover {
+    text-decoration: underline;
+  }
+
+  .pet-large-pic {
+    text-align: center;
+    background: #f5f5f5;
+    padding: 16px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    margin-bottom: 16px;
+  }
+  .pet-large-pic img {
+    max-width: 100%;
+    max-height: 360px;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+    image-rendering: pixelated;
+  }
+  .pet-large-pic__empty {
+    color: #9e9e9e;
+    padding: 2rem;
+  }
+
+  .info-table {
+    width: 100%;
+    background: #e0e0e0;
+    border-collapse: separate;
+    border-spacing: 1px;
+    margin-bottom: 16px;
+  }
+  .info-table td,
+  .info-table th {
+    background: #fff;
+    padding: 10px 12px;
+    vertical-align: middle;
+    color: #212121;
+  }
+  .info-table .head td,
+  .info-table tr.head td {
+    background: #f1f3f4;
+    font-weight: 700;
+    font-size: 15px;
+    color: #212121;
+    border-left: 5px solid #e65100;
+    text-align: left;
+  }
+  .head-note {
+    font-weight: 400;
+    font-size: 12px;
+    color: #5f6368;
+    margin-left: 8px;
+  }
+
+  .title-cell {
+    display: flex;
+    align-items: center;
+  }
+  .title-cell img {
+    margin-right: 15px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+    image-rendering: pixelated;
+    background: #fafafa;
+  }
+  .title-text h2 {
+    font-size: 22px;
+    color: #212121;
+    margin: 0 0 5px 0;
+  }
+  .title-text span {
+    font-size: 13px;
+    color: #5f6368;
+  }
+
+  .grade-table,
+  .stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: center;
+    margin: 0;
+  }
+  .grade-table th,
+  .stats-table th {
+    background: #f8f9fa;
+    color: #5f6368;
+    font-size: 12px;
+    padding: 8px;
+    font-weight: 600;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  .grade-table td,
+  .stats-table td {
+    padding: 10px 6px;
+    border-bottom: 1px solid #eee;
+    background: #fff;
+  }
+  .grade-bar {
+    display: block;
+    background: #eee;
+    width: 60px;
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 6px auto 0;
+  }
+  .grade-fill {
+    background: #e65100;
+    height: 100%;
+  }
+  .total-grade-text {
+    font-size: 18px;
+    color: #e65100;
+    font-weight: 700;
+  }
+
+  .level-pick select {
+    font: inherit;
+    font-weight: 700;
+    padding: 4px 8px;
+    border: 1px solid #b0b0b0;
+    border-radius: 4px;
+    background: #fff;
+    color: #1155cc;
+    cursor: pointer;
+  }
+  .growth-row-custom td {
+    background: #f5f8ff !important;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .badge-yes {
+    background: #2e7d32;
+  }
+  .badge-no {
+    background: #c62828;
+  }
+  .badge-card {
+    background: #1565c0;
+  }
+  .badge-unknown {
+    background: #9e9e9e;
+  }
+
+  .skill-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .skill-chip {
+    background: #fff8e1;
+    border: 1px solid #ffe082;
+    padding: 6px 12px;
+    border-radius: 4px;
+  }
+  .skill-link {
+    color: #1155cc;
+    text-decoration: none;
+    font-weight: 700;
+  }
+  .skill-link:hover {
+    text-decoration: underline;
+  }
+  /* 沒有對應技能頁的（CSV 技能欄放了地點那幾筆），不裝成連結 */
+  .skill-link--plain {
+    color: inherit;
+  }
+  .skill-note {
+    font-size: 12px;
+    color: #5f6368;
+    margin-left: 5px;
+  }
+
+  .quest-cell {
+    line-height: 1.8;
+  }
+  .quest-cell a {
+    color: #1155cc;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .quest-cell a:hover {
+    text-decoration: underline;
+  }
+  .quest-tip {
+    font-size: 13px;
+    color: #5f6368;
+    margin-top: 8px;
+  }
+
+  .obtain-main {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 8px 12px;
+  }
+  .obtain-type {
+    flex-shrink: 0;
+  }
+  .obtain-text {
+    flex: 1;
+    min-width: 12em;
+  }
+  .obtain-list {
+    margin: 10px 0 0;
+    padding-left: 1.2em;
+  }
+  .obtain-item {
+    margin: 4px 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 10px;
+  }
+  .obtain-head {
+    font-weight: 700;
+  }
+  .obtain-note {
+    color: #5f6368;
+    font-size: 14px;
+  }
+  .obtain-link {
+    font-size: 13px;
+  }
+
+  .muted {
+    color: #9e9e9e;
+  }
+  .section-placeholder,
+  .tree-placeholder {
+    padding: 14px 16px;
+    color: #9e9e9e;
+    font-size: 14px;
+    text-align: center;
+  }
+  .tree-source-hint {
+    margin: 8px 0 0;
+    padding: 0 12px;
+    font-size: 13px;
+    color: #5f6368;
+    text-align: center;
+  }
+  .tree-source-hint a {
+    color: #1155cc;
+    font-weight: 700;
+  }
+  .synth-act-list {
+    margin: 0;
+    padding: 8px 16px 12px 1.6em;
+    line-height: 1.7;
+  }
+  .synth-act-list li {
+    margin: 4px 0;
+  }
+  .synth-act-list a {
+    color: #1155cc;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .synth-act-list a:hover {
+    text-decoration: underline;
+  }
+  .synth-act-period {
+    margin-left: 0.6em;
+    font-size: 13px;
+    color: #5f6368;
+    font-variant-numeric: tabular-nums;
+  }
+  .synth-act-official {
+    margin-left: 0.75em;
+    font-size: 12px;
+    font-weight: 600 !important;
+  }
+
+  /* ---- 合成樹（版面 flex；連線由 SVG 依卡片座標繪製） ---- */
+  .tree-container {
+    position: relative;
+    width: 100%;
+    overflow-x: auto;
+    padding: 15px 8px;
+  }
+  .tree-container > svg.tree-lines {
+    position: absolute;
+    left: 0;
+    top: 0;
+    pointer-events: none;
+    z-index: 1;
+    overflow: visible;
+  }
+  .tree-diagram,
+  .tree-diagram ul {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    position: relative;
+  }
+  .tree-diagram ul,
+  .tree-diagram .tree-children {
+    padding-top: 28px;
+    gap: 0 8px;
+  }
+  .tree-diagram .tree-children--forest {
+    padding-top: 0;
+    gap: 24px;
+  }
+  .tree-diagram > li,
+  .tree-diagram li.tree-node,
+  .tree-diagram li.tree-multi-head,
+  .tree-diagram li.tree-forest-root {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    padding: 0 4px;
+  }
+  /* 多產物：多頭並列 → 共用材料 */
+  .tree-multi-head {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .tree-multi-head__tops {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+  }
+  .tree-diagram .tree-multi-head__heads {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 10px 14px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    position: relative;
+  }
+  .tree-diagram .tree-multi-head__head {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    padding: 0;
+  }
+  .tree-diagram .tree-forest-root {
+    padding: 0;
+  }
+
+  .node-card {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+    padding: 6px 8px;
+    text-align: center;
+    min-width: 70px;
+    position: relative;
+    z-index: 2;
+    box-sizing: border-box;
+  }
+  .node-card img {
+    width: 38px;
+    height: 38px;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto 3px auto;
+    image-rendering: pixelated;
+  }
+  .node-card__icon {
+    font-size: 20px;
+    display: block;
+    line-height: 1.2;
+    margin-bottom: 2px;
+  }
+  .node-card__icon--text {
+    display: inline-block;
+    min-width: 38px;
+    padding: 4px 6px;
+    margin: 0 auto 3px auto;
+    font-size: 10px;
+    font-weight: 700;
+    color: #5f6368;
+    background: #f5f5f5;
+    border: 1px solid #e8e8e8;
+    border-radius: 3px;
+    box-sizing: border-box;
+  }
+  .node-card a,
+  .node-card__name {
+    color: #e65100;
+    font-size: 11px;
+    text-decoration: none;
+    font-weight: 700;
+    display: block;
+    white-space: nowrap;
+  }
+  .node-card a:hover {
+    color: #1155cc;
+  }
+  .node-card .count {
+    font-size: 10px;
+    color: #5f6368;
+    display: block;
+  }
+  .node-card .npc-info {
+    font-size: 9px;
+    color: #5f6368;
+    background: #f5f5f5;
+    border-radius: 3px;
+    padding: 2px 4px;
+    margin-top: 3px;
+    white-space: nowrap;
+  }
+  .node-target {
+    border: 2px solid #e65100;
+    background: #fff8e1;
+    box-shadow: 0 0 8px rgba(230, 81, 0, 0.2);
+  }
+  .node-target a {
+    font-size: 13px;
+  }
+
+  /* 目前瀏覽的寵物：藍框高亮 */
+  .node-current {
+    border: 3px solid #1565c0 !important;
+    background: #e3f2fd !important;
+    box-shadow: 0 0 10px rgba(21, 101, 192, 0.35);
+  }
+  .node-card__name--current {
+    color: #1565c0 !important;
+    font-size: 13px;
+  }
+  .node-current-tag {
+    display: inline-block;
+    margin-left: 4px;
+    padding: 0 4px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #fff;
+    background: #1565c0;
+    border-radius: 3px;
+    vertical-align: middle;
+  }
+</style>

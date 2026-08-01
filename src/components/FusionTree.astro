@@ -1,0 +1,209 @@
+---
+/**
+ * 合成樹（由頂點向下解構）
+ * - 單產物：一個頭 → 材料
+ * - 多產物：多個頭並列 → 共用材料（多拉線）
+ * currentName：目前瀏覽的寵物，加上 node-current 邊框
+ */
+import type { FusionNode } from '../lib/pets';
+import { hasPet } from '../lib/pets';
+import { hasItem } from '../lib/items';
+
+interface Props {
+  node: FusionNode;
+  base?: string;
+  depth?: number;
+  /** 目前頁面的寵物名稱，用於高亮 */
+  currentName?: string;
+}
+const { node, base = '', depth = 0, currentName = '' } = Astro.props;
+
+const isMultiHead = Boolean(node.heads && node.heads.length > 1);
+/** 多根森林：無名 material 只當容器，不畫卡片 */
+const isForestRoot =
+  !isMultiHead &&
+  !node.name &&
+  node.type === 'material' &&
+  Boolean(node.children?.length);
+const isCurrent =
+  !isMultiHead &&
+  !isForestRoot &&
+  node.type === 'pet' &&
+  currentName !== '' &&
+  node.name === currentName;
+const isRoot = depth === 0 || !!node.target;
+
+// 樹上會出現沒有資料列的底寵（風精、大地翼龍那些野生原寵），
+// 有名字不代表有頁面，跟道具一樣要先確認查得到才給連結。
+function hrefFor(n: FusionNode): string | null {
+  if (n.type === 'pet') {
+    return hasPet(n.name) ? `${base}/寵物資料/${encodeURIComponent(n.name)}` : null;
+  }
+  if (n.type === 'item' || n.type === 'material') {
+    return hasItem(n.name) ? `${base}/道具總覽/${encodeURIComponent(n.name)}` : null;
+  }
+  return null;
+}
+
+function imgSrc(path?: string): string {
+  if (!path) return '';
+  return path.startsWith('/') ? base + path : path;
+}
+
+/** 無圖時以文字分類標示，不使用 emoji */
+function typeFallback(n: FusionNode): string {
+  if (n.type === 'gold') return '金幣';
+  if (n.type === 'pet') return '寵物';
+  if (n.type === 'material') return '材料';
+  return '道具';
+}
+
+const nodeHref = hrefFor(node);
+const displayName = node.name;
+---
+
+{
+  isMultiHead ? (
+    <li class:list={['tree-multi-head', { 'tree-multi-head--root': isRoot }]}>
+      <div class="tree-multi-head__tops">
+        <ul class="tree-multi-head__heads">
+          {
+            node.heads!.map((h) => {
+              const hCur = h.type === 'pet' && currentName !== '' && h.name === currentName;
+              const hHref = hrefFor(h);
+              return (
+                <li class="tree-multi-head__head">
+                  <div
+                    class:list={[
+                      'node-card',
+                      { 'node-target': isRoot && !hCur },
+                      { 'node-current': hCur },
+                    ]}
+                    data-pet-name={h.type === 'pet' ? h.name : undefined}
+                  >
+                    {
+                      h.image ? (
+                        <img
+                          src={imgSrc(h.image)}
+                          alt={h.name}
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      ) : (
+                        <span class="node-card__icon node-card__icon--text">
+                          {typeFallback(h)}
+                        </span>
+                      )
+                    }
+                    {
+                      hCur ? (
+                        <span class="node-card__name node-card__name--current">
+                          {h.name}
+                          <span class="node-current-tag">目前</span>
+                        </span>
+                      ) : hHref ? (
+                        <a href={hHref}>{h.name}</a>
+                      ) : (
+                        <span class="node-card__name">{h.name}</span>
+                      )
+                    }
+                    {h.qty != null && <span class="count">× {h.qty}</span>}
+                    {h.countLabel && <span class="count">{h.countLabel}</span>}
+                    {/* 製造 NPC：產物名稱／機率底下，不放材料列後 */}
+                    {h.npc && <div class="npc-info">{h.npc}</div>}
+                  </div>
+                </li>
+              );
+            })
+          }
+        </ul>
+      </div>
+
+      {
+        node.children && node.children.length > 0 && (
+          <ul class="tree-children">
+            {node.children.map((child) => (
+              <Astro.self
+                node={child}
+                base={base}
+                depth={depth + 1}
+                currentName={currentName}
+              />
+            ))}
+          </ul>
+        )
+      }
+    </li>
+  ) : isForestRoot ? (
+    <li class="tree-forest-root">
+      <ul class="tree-children tree-children--forest">
+        {
+          node.children!.map((child) => (
+            <Astro.self
+              node={child}
+              base={base}
+              depth={depth}
+              currentName={currentName}
+            />
+          ))
+        }
+      </ul>
+    </li>
+  ) : (
+    <li class="tree-node">
+      <div
+        class:list={[
+          'node-card',
+          { 'node-target': isRoot && !isCurrent },
+          { 'node-current': isCurrent },
+        ]}
+        data-pet-name={node.type === 'pet' ? node.name : undefined}
+      >
+        {
+          node.image ? (
+            <img
+              src={imgSrc(node.image)}
+              alt={node.name}
+              loading="lazy"
+              decoding="async"
+            />
+          ) : (
+            <span class="node-card__icon node-card__icon--text">{typeFallback(node)}</span>
+          )
+        }
+        {
+          node.type === 'gold' ? (
+            <span class="node-card__name">{displayName}</span>
+          ) : node.type === 'pet' && isCurrent ? (
+            <span class="node-card__name node-card__name--current">
+              {displayName}
+              <span class="node-current-tag">目前</span>
+            </span>
+          ) : nodeHref ? (
+            <a href={nodeHref}>{displayName}</a>
+          ) : (
+            <span class="node-card__name">{displayName}</span>
+          )
+        }
+        {node.qty != null && <span class="count">× {node.qty}</span>}
+        {node.countLabel && <span class="count">{node.countLabel}</span>}
+        {node.npc && <div class="npc-info">{node.npc}</div>}
+      </div>
+
+      {
+        node.children && node.children.length > 0 && (
+          <ul class="tree-children">
+            {node.children.map((child) => (
+              <Astro.self
+                node={child}
+                base={base}
+                depth={depth + 1}
+                currentName={currentName}
+              />
+            ))}
+          </ul>
+        )
+      }
+    </li>
+  )
+}

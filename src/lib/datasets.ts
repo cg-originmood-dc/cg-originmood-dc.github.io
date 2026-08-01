@@ -1,4 +1,4 @@
-import { readFileSync, existsSync, readdirSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse } from 'csv-parse/sync';
 import { hasLink } from './richtext';
@@ -134,22 +134,28 @@ function pickFilterColumn(
 }
 
 const cache = new Map<string, Dataset | null>();
+const cacheMtime = new Map<string, number>();
 
 /**
  * 讀 content/data/<name>.csv。
  * 資料是編輯者的地盤，所以這裡刻意寬鬆：欄位隨他們增減，介面照著欄位長。
+ * CSV 修改後依 mtime 自動重讀（dev 改表不必重啟）。
  */
 export function loadDataset(name: string): Dataset | null {
-  if (cache.has(name)) return cache.get(name)!;
-
   const file = join(DATA_DIR, `${name}.csv`);
   if (!existsSync(file)) {
     cache.set(name, null);
+    cacheMtime.set(name, 0);
     return null;
   }
 
+  const mtime = statSync(file).mtimeMs;
+  if (cache.has(name) && cacheMtime.get(name) === mtime) {
+    return cache.get(name)!;
+  }
+
   // 檔案以 utf-8-sig 寫出（方便 Excel 開），這裡要吃掉 BOM
-  const text = readFileSync(file, 'utf8').replace(/^﻿/, '');
+  const text = readFileSync(file, 'utf8').replace(/^\uFEFF/, '');
   const records = parse(text, {
     columns: true,
     skip_empty_lines: true,
@@ -184,6 +190,7 @@ export function loadDataset(name: string): Dataset | null {
     }),
   };
   cache.set(name, dataset);
+  cacheMtime.set(name, mtime);
   return dataset;
 }
 

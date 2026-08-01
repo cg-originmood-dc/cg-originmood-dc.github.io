@@ -1,5 +1,6 @@
 ---
 import { LIST_SEP, loadDataset } from '../lib/datasets';
+import { synthesisActivityId } from '../lib/synthesis';
 
 type Row = Record<string, string>;
 
@@ -9,6 +10,9 @@ interface NpcGroup {
 }
 
 interface ActivityGroup {
+  /** 頁內錨點 id，供 /寵物資料 以 # 跳轉 */
+  id: string;
+  year: string;
   title: string;
   period: string;
   announcementDate: string;
@@ -34,6 +38,8 @@ for (const row of rows) {
   let activity = activityMap.get(key);
   if (!activity) {
     activity = {
+      id: synthesisActivityId(announcementDate, title, period),
+      year: announcementDate.slice(0, 4) || '其他',
       title,
       period,
       announcementDate,
@@ -66,6 +72,13 @@ for (const activity of activities) {
     .toLowerCase();
 }
 
+const yearMap = new Map<string, ActivityGroup[]>();
+for (const activity of activities) {
+  const list = yearMap.get(activity.year) ?? [];
+  list.push(activity);
+  yearMap.set(activity.year, list);
+}
+const years = [...yearMap.entries()].sort(([a], [b]) => b.localeCompare(a, 'zh-Hant'));
 const splitLines = (value: string) => value.split(LIST_SEP).filter(Boolean);
 ---
 
@@ -79,66 +92,74 @@ const splitLines = (value: string) => value.split(LIST_SEP).filter(Boolean);
     <span class="synthesis__count" data-synthesis-count>{activities.length} 個活動／{rows.length} 條配方</span>
   </div>
 
-  <div class="synthesis__scroll">
-    <table>
-      <thead>
-        <tr>
-          <th>活動</th>
-          <th>NPC</th>
-          <th>合成公式</th>
-          <th>入手方法</th>
-        </tr>
-      </thead>
-      {activities.map((activity) => (
-        <tbody
-          data-synthesis-group
-          data-search={activity.search}
-          data-rows={activity.rows.length}
-        >
-          {activity.npcGroups.map((npcGroup, npcIndex) =>
-            npcGroup.rows.map((row, rowIndex) => (
-              <tr>
-                {npcIndex === 0 && rowIndex === 0 && (
-                  <th
-                    class="synthesis__activity"
-                    scope="rowgroup"
-                    rowspan={activity.rows.length}
-                  >
-                    <strong>{activity.title}</strong>
-                    <span>{activity.period}</span>
-                    <small>公告日：{activity.announcementDate}</small>
-                    {activity.url && (
-                      <a href={activity.url} target="_blank" rel="noopener noreferrer">
-                        官方公告
-                      </a>
+  {years.map(([year, yearActivities]) => (
+    <section class="synthesis-year" data-year-section>
+      <h2>{year} 年</h2>
+      <div class="synthesis__scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>活動</th>
+              <th>NPC</th>
+              <th>合成公式</th>
+              <th>入手方法</th>
+            </tr>
+          </thead>
+          {yearActivities.map((activity) => (
+            <tbody
+              id={activity.id}
+              data-synthesis-group
+              data-search={activity.search}
+              data-rows={activity.rows.length}
+            >
+              {activity.npcGroups.map((npcGroup, npcIndex) =>
+                npcGroup.rows.map((row, rowIndex) => (
+                  <tr>
+                    {npcIndex === 0 && rowIndex === 0 && (
+                      <th
+                        class="synthesis__activity"
+                        scope="rowgroup"
+                        rowspan={activity.rows.length}
+                      >
+                        <strong>
+                          <a class="synthesis__anchor" href={`#${activity.id}`}>{activity.title}</a>
+                        </strong>
+                        <span>{activity.period}</span>
+                        <small>公告日：{activity.announcementDate}</small>
+                        {activity.url && (
+                          <a href={activity.url} target="_blank" rel="noopener noreferrer">
+                            官方公告
+                          </a>
+                        )}
+                      </th>
                     )}
-                  </th>
-                )}
-                {rowIndex === 0 && (
-                  <td class="synthesis__npc" rowspan={npcGroup.rows.length}>
-                    {npcGroup.npc}
-                  </td>
-                )}
-                <td class="synthesis__formula">
-                  {splitLines(row['合成樹'] ?? '').map((line) => (
-                    <span>{line}</span>
-                  ))}
-                </td>
-                <td class="synthesis__source">
-                  <details>
-                    <summary>查看入手方法</summary>
-                    {(row['入手方法'] ?? '').split('；').map((line) => (
-                      <span>{line}</span>
-                    ))}
-                  </details>
-                </td>
-              </tr>
-            )),
-          )}
-        </tbody>
-      ))}
-    </table>
-  </div>
+                    {rowIndex === 0 && (
+                      <td class="synthesis__npc" rowspan={npcGroup.rows.length}>
+                        {npcGroup.npc}
+                      </td>
+                    )}
+                    <td class="synthesis__formula">
+                      {splitLines(row['合成樹'] ?? '').map((line) => (
+                        <span>{line}</span>
+                      ))}
+                    </td>
+                    <td class="synthesis__source">
+                      <details>
+                        <summary>查看入手方法</summary>
+                        {(row['入手方法'] ?? '').split('；').map((line) => (
+                          <span>{line}</span>
+                        ))}
+                      </details>
+                    </td>
+                  </tr>
+                )),
+              )}
+            </tbody>
+          ))}
+        </table>
+      </div>
+    </section>
+  ))}
 </div>
 
 <script>
@@ -147,6 +168,7 @@ const splitLines = (value: string) => value.split(LIST_SEP).filter(Boolean);
     const clear = root.querySelector<HTMLButtonElement>('[data-synthesis-clear]');
     const count = root.querySelector<HTMLElement>('[data-synthesis-count]');
     const groups = [...root.querySelectorAll<HTMLElement>('[data-synthesis-group]')];
+    const years = [...root.querySelectorAll<HTMLElement>('[data-year-section]')];
     const totalActivities = groups.length;
     const totalRows = groups.reduce((sum, group) => sum + Number(group.dataset.rows ?? 0), 0);
 
@@ -162,6 +184,9 @@ const splitLines = (value: string) => value.split(LIST_SEP).filter(Boolean);
           shownRows += Number(group.dataset.rows ?? 0);
         }
       }
+      for (const year of years) {
+        year.hidden = !year.querySelector('[data-synthesis-group]:not([hidden])');
+      }
       if (count) {
         count.textContent =
           shownActivities === totalActivities
@@ -170,11 +195,28 @@ const splitLines = (value: string) => value.split(LIST_SEP).filter(Boolean);
       }
     };
 
+    /** 表格在 overflow 容器內，原生 # 跳轉常停在表外；改成捲動到目標 tbody */
+    const scrollToHash = () => {
+      const id = decodeURIComponent(location.hash.replace(/^#/, ''));
+      if (!id) return;
+      const el = root.querySelector<HTMLElement>(`#${CSS.escape(id)}`);
+      if (!el) return;
+      el.hidden = false;
+      const year = el.closest<HTMLElement>('[data-year-section]');
+      if (year) year.hidden = false;
+      el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    };
+
     input?.addEventListener('input', apply);
     clear?.addEventListener('click', () => {
       if (input) input.value = '';
       apply();
     });
+
+    apply();
+    // 等 layout 後再捲（Astro 水合／字體）
+    requestAnimationFrame(() => scrollToHash());
+    window.addEventListener('hashchange', scrollToHash);
   });
 </script>
 
@@ -215,6 +257,14 @@ const splitLines = (value: string) => value.split(LIST_SEP).filter(Boolean);
   .synthesis__count {
     color: var(--text-3);
     font-size: 0.85rem;
+  }
+
+  .synthesis-year {
+    margin-top: 1.75rem;
+  }
+
+  .synthesis-year > h2 {
+    margin: 0 0 0.65rem;
   }
 
   .synthesis__scroll {
@@ -277,6 +327,33 @@ const splitLines = (value: string) => value.split(LIST_SEP).filter(Boolean);
 
   .synthesis__activity a {
     margin-top: 0.55rem;
+  }
+
+  .synthesis__activity a.synthesis__anchor {
+    margin-top: 0;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .synthesis__activity a.synthesis__anchor:hover {
+    color: var(--link, #1565c0);
+    text-decoration: underline;
+  }
+
+  /* 從寵物頁 # 跳轉時高亮該活動 */
+  .synthesis tbody[id]:target {
+    outline: 2px solid #1565c0;
+    outline-offset: -2px;
+    background: #e3f2fd;
+  }
+
+  .synthesis tbody[id]:target .synthesis__activity {
+    background: #e3f2fd;
+  }
+
+  /* 錨點被 sticky 表頭擋到時預留空間 */
+  .synthesis tbody[id] {
+    scroll-margin-top: 3.5rem;
   }
 
   .synthesis__npc {

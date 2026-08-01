@@ -1,0 +1,61 @@
+{
+  "風之使徒": {
+    "sealable": false,
+    "cardLevel": "未知",
+    "skillNotes": {
+      "超強昏睡魔法LV10": "使敵方全體陷入昏睡狀態",
+      "潔淨魔法LV3": "解除隊友的異常狀態",
+      "超強補血魔法LV7": "為我方全體回復大量生命值"
+    },
+    "questNote": "攜帶風之使徒將在迷宮時空長廊中可獲得任意 NPC 的協助抵達終點。",
+    "fusionTree": {
+      "type": "pet",
+      "name": "風之使徒",
+      "target": true,
+      "npc": "大法師安蕾雅 @ 艾爾瑪城元素師家 (216.188) (5%)",
+      "children": [
+        {
+          "type": "pet",
+          "name": "天空元素使",
+          "npc": "NPC: 愛卡勒恩 @ 寵物研究所 (15，8)",
+          "children": [
+            {
+              "type": "pet",
+              "name": "光精靈"
+            },
+            {
+              "type": "item",
+              "name": "風元素之卵",
+              "qty": 3
+            },
+            {
+              "type": "item",
+              "name": "閃耀變異之源",
+              "qty": 10
+            },
+            {
+              "type": "item",
+              "name": "精靈王契約",
+              "qty": 100
+            }
+          ]
+        },
+        {
+          "type": "item",
+          "name": "風元素之卵",
+          "qty": 1
+        },
+        {
+          "type": "item",
+          "name": "閃耀變異之源",
+          "qty": 10
+        },
+        {
+          "type": "gold",
+          "name": "50,000G",
+          "countLabel": "金幣"
+        }
+      ]
+    }
+  }
+}

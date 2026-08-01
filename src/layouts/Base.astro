@@ -6,8 +6,10 @@ import '../styles/global.css';
 interface Props {
   title: string;
   breadcrumb?: string[];
+  /** 資料庫內嵌模式：右側主區改為全寬白底，容納技能/道具總表 */
+  dbEmbed?: boolean;
 }
-const { title, breadcrumb = [] } = Astro.props;
+const { title, breadcrumb = [], dbEmbed = false } = Astro.props;
 const nav = await buildNav();
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 // 網址是 percent-encoded，導覽的 href 是中文原字，不解碼的話兩邊永遠對不起來，
@@ -47,9 +49,9 @@ const here = decodeURIComponent(Astro.url.pathname).replace(/\/$/, '');
       </nav>
 
       <main id="main">
-        <article class="page">
+        <article class:list={['page', { 'is-db-embed': dbEmbed }]}>
           {
-            breadcrumb.length > 0 && (
+            !dbEmbed && breadcrumb.length > 0 && (
               <nav class="crumbs" aria-label="階層">
                 <a href={`${base}/`}>首頁</a>
                 {breadcrumb.map((c) => (

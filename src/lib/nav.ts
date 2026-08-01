@@ -5,6 +5,8 @@ import { getCollection, type CollectionEntry } from 'astro:content';
 export interface NavNode {
   label: string;
   href: string | null;
+  /** frontmatter 的手動排序權重；只跟同一層的兄弟比 */
+  order?: number;
   children: NavNode[];
 }
 
@@ -46,6 +48,7 @@ export async function buildNav(): Promise<NavNode[]> {
   };
 
   for (const entry of entries) {
+    // 首頁另外 prepend 到最上方，不走 breadcrumb 樹
     if (entry.id === HOME_ID) continue;
     let level = roots;
     for (const crumb of entry.data.breadcrumb) {
@@ -53,16 +56,17 @@ export async function buildNav(): Promise<NavNode[]> {
     }
     const leaf = find(level, entry.data.title);
     leaf.href = hrefFor(entry.id);
+    // order 掛在節點上而不是開一張「標題 → order」的全域表：
+    // 標題不保證全站唯一，全域表會讓不同層的同名頁互搶排序
+    if (entry.data.order != null) leaf.order = entry.data.order;
   }
 
   // frontmatter 的 order 優先，其次是原站導覽順序，都沒有的才照筆劃排
-  const rank = new Map<string, number>();
-  for (const e of entries) rank.set(e.data.title, e.data.order ?? Infinity);
   const collator = new Intl.Collator('zh-Hant');
   const sortTree = (list: NavNode[]) => {
     list.sort((a, b) => {
-      const ea = rank.get(a.label) ?? Infinity;
-      const eb = rank.get(b.label) ?? Infinity;
+      const ea = a.order ?? Infinity;
+      const eb = b.order ?? Infinity;
       if (ea !== eb) return ea - eb;
       const na = order.get(a.label) ?? Infinity;
       const nb = order.get(b.label) ?? Infinity;
@@ -72,6 +76,17 @@ export async function buildNav(): Promise<NavNode[]> {
     list.forEach((n) => sortTree(n.children));
   };
   sortTree(roots);
+
+  // 首頁固定放在導覽最上方
+  const homeEntry = entries.find((e) => e.id === HOME_ID);
+  if (homeEntry) {
+    roots.unshift({
+      label: homeEntry.data.title,
+      href: hrefFor(HOME_ID),
+      children: [],
+    });
+  }
+
   return roots;
 }
 
