@@ -9,11 +9,13 @@
  */
 export type {
   CompiledFusionGraph,
+  FusionCycleGroup,
   FusionReaction,
   FusionRootPath,
   FusionSlot,
   FusionSource,
   ParentEdge,
+  ReactionKind,
   SymbolKind,
 } from './types';
 export { reactionSignature, edgeKey } from './types';
@@ -30,6 +32,7 @@ export {
   expandFusionDown,
   findFusionRoots,
   findFusionRootPaths,
+  getCycleGroupForPet,
   getReactionsForProduct,
   listFusionParents,
 } from './query';

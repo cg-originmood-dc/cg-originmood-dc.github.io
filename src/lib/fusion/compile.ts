@@ -4,6 +4,7 @@
  */
 import type {
   CompiledFusionGraph,
+  FusionCycleGroup,
   FusionReaction,
   ParentEdge,
 } from './types';
@@ -111,6 +112,147 @@ function deriveParentEdges(reactions: FusionReaction[]): ParentEdge[] {
   return edges;
 }
 
+/**
+ * 寵物材料 → 寵物產物 有向邊（含自環），供 SCC 偵測互轉循環。
+ * 與 parent 邊不同：此處不拆互環、保留自環。
+ */
+function buildPetAdj(reactions: FusionReaction[]): {
+  nodes: string[];
+  adj: Map<string, Set<string>>;
+} {
+  const adj = new Map<string, Set<string>>();
+  const nodeSet = new Set<string>();
+  const add = (a: string, b: string) => {
+    nodeSet.add(a);
+    nodeSet.add(b);
+    let s = adj.get(a);
+    if (!s) {
+      s = new Set();
+      adj.set(a, s);
+    }
+    s.add(b);
+  };
+  for (const r of reactions) {
+    const mats = petSymbols(r.materials);
+    const prods = petSymbols(r.products);
+    for (const m of mats) {
+      for (const p of prods) {
+        if (m && p) add(m, p);
+      }
+    }
+  }
+  return {
+    nodes: [...nodeSet].sort((a, b) => a.localeCompare(b, 'zh-Hant')),
+    adj,
+  };
+}
+
+/** Tarjan SCC */
+function tarjanScc(
+  nodes: string[],
+  adj: Map<string, Set<string>>,
+): string[][] {
+  let index = 0;
+  const stack: string[] = [];
+  const onStack = new Set<string>();
+  const indices = new Map<string, number>();
+  const lowlink = new Map<string, number>();
+  const comps: string[][] = [];
+
+  function strongconnect(v: string): void {
+    indices.set(v, index);
+    lowlink.set(v, index);
+    index += 1;
+    stack.push(v);
+    onStack.add(v);
+
+    for (const w of adj.get(v) ?? []) {
+      if (!indices.has(w)) {
+        strongconnect(w);
+        lowlink.set(v, Math.min(lowlink.get(v)!, lowlink.get(w)!));
+      } else if (onStack.has(w)) {
+        lowlink.set(v, Math.min(lowlink.get(v)!, indices.get(w)!));
+      }
+    }
+
+    if (lowlink.get(v) === indices.get(v)) {
+      const comp: string[] = [];
+      for (;;) {
+        const w = stack.pop()!;
+        onStack.delete(w);
+        comp.push(w);
+        if (w === v) break;
+      }
+      comps.push(comp);
+    }
+  }
+
+  for (const v of nodes) {
+    if (!indices.has(v)) strongconnect(v);
+  }
+  return comps;
+}
+
+function pickGroupLabel(
+  members: string[],
+  memberSet: Set<string>,
+  reactions: FusionReaction[],
+): string {
+  // 優先：多產物重抽的材料寵（如熊霸）
+  for (const r of reactions) {
+    if (r.products.length < 2) continue;
+    for (const m of petSymbols(r.materials)) {
+      if (memberSet.has(m)) return `${m}系轉換`;
+    }
+  }
+  const sorted = [...members].sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+  return `${sorted[0]}系轉換`;
+}
+
+/**
+ * 由寵→寵有向圖算 SCC；僅 size≥2 視為互轉循環群組。
+ * 單寵自環重抽仍走一般多頭樹，避免全站大量誤入模組 UI。
+ */
+function deriveCycleGroups(reactions: FusionReaction[]): FusionCycleGroup[] {
+  const { nodes, adj } = buildPetAdj(reactions);
+  const comps = tarjanScc(nodes, adj);
+  const byId = new Map(reactions.map((r) => [r.id, r]));
+
+  const groups: FusionCycleGroup[] = [];
+  for (const raw of comps) {
+    if (raw.length < 2) continue;
+    const members = [...raw].sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+    const memberSet = new Set(members);
+
+    // 內部 reaction：寵物材料皆在群組內（或無寵物材料）且產物碰群組
+    const reactionIds: string[] = [];
+    for (const r of reactions) {
+      const mats = petSymbols(r.materials);
+      const prods = petSymbols(r.products);
+      if (!prods.some((p) => memberSet.has(p))) continue;
+      if (mats.length && !mats.every((m) => memberSet.has(m))) continue;
+      reactionIds.push(r.id);
+    }
+    if (!reactionIds.length) continue;
+
+    const label = pickGroupLabel(
+      members,
+      memberSet,
+      reactionIds.map((id) => byId.get(id)!).filter(Boolean),
+    );
+    const id = `cycle:${members.join('+')}`;
+    groups.push({
+      id,
+      members,
+      label,
+      reactionIds: reactionIds.sort(),
+    });
+  }
+
+  groups.sort((a, b) => a.id.localeCompare(b.id, 'zh-Hant'));
+  return groups;
+}
+
 export function compileFusionGraph(): CompiledFusionGraph {
   if (cached) return cached;
 
@@ -164,6 +306,14 @@ export function compileFusionGraph(): CompiledFusionGraph {
     parents.set(k, list);
   }
 
+  const cycleGroups = deriveCycleGroups(reactions);
+  const petToCycleGroup = new Map<string, FusionCycleGroup>();
+  for (const g of cycleGroups) {
+    for (const m of g.members) {
+      petToCycleGroup.set(m, g);
+    }
+  }
+
   cached = {
     reactions,
     byProduct,
@@ -171,6 +321,8 @@ export function compileFusionGraph(): CompiledFusionGraph {
     parents,
     edgeReactions,
     petNodes,
+    cycleGroups,
+    petToCycleGroup,
   };
   return cached;
 }
