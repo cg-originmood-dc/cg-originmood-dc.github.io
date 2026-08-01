@@ -478,13 +478,13 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
           </tr>
         </table>
 
-        {/* 8. 合成樹（完整樹 + 目前寵物邊框） */}
-        <table class="info-table">
+        {/* 8. 合成樹（完整樹 + 目前寵物邊框；過寬可橫向捲動） */}
+        <table class="info-table info-table--fusion-tree">
           <tr class="head">
             <td>合成樹 (由頂點向下解構)</td>
           </tr>
           <tr>
-            <td style="padding: 10px 0;">
+            <td class="fusion-tree-cell">
               <div class="tree-container" data-fusion-tree>
                 <ul class="tree-diagram">
                   <FusionTree node={fusionRoot} base={base} currentName={pet.名稱} />
@@ -1145,12 +1145,28 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
     font-weight: 600 !important;
   }
 
-  /* ---- 合成樹（版面 flex；連線由 SVG 依卡片座標繪製） ---- */
+  /* ---- 合成樹（版面 flex；過寬橫向捲動；連線 SVG 依卡片座標） ---- */
+  .info-table--fusion-tree {
+    table-layout: fixed;
+    width: 100%;
+  }
+  .info-table--fusion-tree .fusion-tree-cell {
+    padding: 10px 0;
+    /* 讓內部 scroll 生效，避免整頁被撐開 */
+    overflow: hidden;
+    max-width: 100%;
+  }
   .tree-container {
     position: relative;
     width: 100%;
+    max-width: 100%;
     overflow-x: auto;
+    overflow-y: hidden;
     padding: 15px 8px;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    /* 明顯的橫向捲軸 */
+    scrollbar-gutter: stable;
   }
   .tree-container > svg.tree-lines {
     position: absolute;
@@ -1163,6 +1179,7 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
   .tree-diagram,
   .tree-diagram ul {
     display: flex;
+    flex-wrap: nowrap;
     justify-content: center;
     align-items: flex-start;
     margin: 0;
@@ -1170,14 +1187,22 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
     list-style: none;
     position: relative;
   }
+  /* 內容比容器寬時撐開，啟用橫向捲動 */
+  .tree-diagram {
+    width: max-content;
+    min-width: 100%;
+    box-sizing: border-box;
+  }
   .tree-diagram ul,
   .tree-diagram .tree-children {
     padding-top: 28px;
     gap: 0 8px;
+    flex-wrap: nowrap;
   }
   .tree-diagram .tree-children--forest {
     padding-top: 0;
     gap: 24px;
+    flex-wrap: nowrap;
   }
   .tree-diagram > li,
   .tree-diagram li.tree-node,
@@ -1188,12 +1213,14 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
     align-items: center;
     position: relative;
     padding: 0 4px;
+    flex: 0 0 auto;
   }
   /* 多產物：多頭並列 → 共用材料 */
   .tree-multi-head {
     display: flex;
     flex-direction: column;
     align-items: center;
+    flex: 0 0 auto;
   }
   .tree-multi-head__tops {
     display: flex;
@@ -1204,7 +1231,7 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
   }
   .tree-diagram .tree-multi-head__heads {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: center;
     align-items: flex-start;
     gap: 10px 14px;
@@ -1212,6 +1239,7 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
     margin: 0;
     padding: 0;
     position: relative;
+    width: max-content;
   }
   .tree-diagram .tree-multi-head__head {
     display: flex;
@@ -1219,6 +1247,7 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
     align-items: center;
     position: relative;
     padding: 0;
+    flex: 0 0 auto;
   }
   .tree-diagram .tree-forest-root {
     padding: 0;
