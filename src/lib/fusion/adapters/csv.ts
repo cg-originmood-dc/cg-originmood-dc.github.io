@@ -21,6 +21,8 @@ export function adaptCsvReactions(): FusionReaction[] {
           symbol: normalizePetName(ing.name),
           kind: 'pet',
           ...(ing.qty != null ? { qty: Number(ing.qty) } : {}),
+          ...(ing.minLevel != null ? { minLevel: Number(ing.minLevel) } : {}),
+          ...(ing.anyLevel ? { anyLevel: true } : {}),
         });
       } else if (ing.type === 'gold') {
         materials.push({
