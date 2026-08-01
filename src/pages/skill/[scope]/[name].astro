@@ -131,10 +131,10 @@ if (skill?.pet) sides.push({ key: 'pet', label: '寵物技能', side: skill.pet 
               </td>
             </tr>
             <tr>
-              <td width="120"><b>技能分類</b></td>
-              <td width="230">{side.分類 || '—'}</td>
-              <td width="120"><b>最高等級</b></td>
-              <td width="230">
+              <td style="width: 120px"><b>技能分類</b></td>
+              <td style="width: 230px">{side.分類 || '—'}</td>
+              <td style="width: 120px"><b>最高等級</b></td>
+              <td style="width: 230px">
                 {side.最高等級 ? `LV ${side.最高等級}` : '無等級'}
                 {side.備註 && <span class="note">（{side.備註}）</span>}
               </td>

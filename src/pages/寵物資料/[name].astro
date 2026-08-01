@@ -194,10 +194,10 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
             <td colspan="4">基本資訊</td>
           </tr>
           <tr>
-            <td width="120"><b>種族</b></td>
-            <td width="230">{pet.種族 || '—'}</td>
-            <td width="120"><b>可否封印</b></td>
-            <td width="230">
+            <td style="width: 120px"><b>種族</b></td>
+            <td style="width: 230px">{pet.種族 || '—'}</td>
+            <td style="width: 120px"><b>可否封印</b></td>
+            <td style="width: 230px">
               {
                 extra.sealable === true ? (
                   <span class="badge badge-yes">可封印</span>
@@ -651,7 +651,7 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
           }
 
           /** 父點 → 多個子錨點：先垂直到橫梁，再水平，再各垂直下去 */
-          function connectParentToChildren(svg, root, parentBottomMid, childTops) {
+          function connectParentToChildren(svg, parentBottomMid, childTops) {
             if (!childTops.length) return;
             if (childTops.length === 1) {
               var only = childTops[0];
@@ -723,7 +723,7 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
               }
 
               if (headBottoms.length === 1 && childTops.length) {
-                connectParentToChildren(svg, container, headBottoms[0], childTops);
+                connectParentToChildren(svg, headBottoms[0], childTops);
                 return;
               }
 
@@ -745,7 +745,7 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
                 line(svg, minHX, mergeY, maxHX, mergeY);
                 var mergeX = (minHX + maxHX) / 2;
                 if (childTops.length) {
-                  connectParentToChildren(svg, container, { x: mergeX, y: mergeY }, childTops);
+                  connectParentToChildren(svg, { x: mergeX, y: mergeY }, childTops);
                 }
               }
             });
@@ -805,7 +805,7 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
                 }
               });
 
-              connectParentToChildren(svg, container, parentPt, childTops);
+              connectParentToChildren(svg, parentPt, childTops);
             });
           }
 

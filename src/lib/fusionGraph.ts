@@ -34,8 +34,8 @@ import type { FusionNode } from './pets';
 import type { ProductOutcome } from './synthesis';
 import { itemImagePath } from './items';
 
-/** @deprecated 舊 UI 形狀；新碼請用 FusionReaction（IR） */
-export interface FusionRecipe {
+/** 舊 UI 相容層使用的 FusionRecipe 資料形狀。 */
+export interface LegacyFusionRecipe {
   products: string[];
   productProb: Record<string, string>;
   multi: boolean;
@@ -44,6 +44,9 @@ export interface FusionRecipe {
   npc: string;
   source: 'handwritten' | 'csv' | 'military' | 'remodel';
 }
+
+/** @deprecated 舊 UI 形狀；新碼請用 FusionReaction（IR） */
+export type FusionRecipe = LegacyFusionRecipe;
 
 function petImg(name: string): string {
   return `/img/專屬寵物/${name}.gif`;
@@ -70,7 +73,7 @@ function slotToNode(s: FusionSlot): FusionNode {
   };
 }
 
-function irToLegacy(r: IRReaction): FusionRecipe {
+function irToLegacy(r: IRReaction): LegacyFusionRecipe {
   const products = r.products.filter((p) => p.kind === 'pet').map((p) => p.symbol);
   const productProb: Record<string, string> = {};
   for (const p of r.products) {
@@ -96,11 +99,11 @@ function irToLegacy(r: IRReaction): FusionRecipe {
 }
 
 /** 產物的全部配方（舊 FusionRecipe 形狀） */
-export function getFusionRecipes(productPet: string): FusionRecipe[] {
+export function getFusionRecipes(productPet: string): LegacyFusionRecipe[] {
   return getReactionsForProduct(productPet).map(irToLegacy);
 }
 
 /** @deprecated 請用 getFusionRecipes */
-export function getFusionRecipe(productPet: string): FusionRecipe | undefined {
+export function getFusionRecipe(productPet: string): LegacyFusionRecipe | undefined {
   return getFusionRecipes(productPet)[0];
 }
