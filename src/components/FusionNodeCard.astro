@@ -1,0 +1,85 @@
+---
+import type { FusionNode } from '../lib/pets';
+import { hasPet } from '../lib/pets';
+import { hasItem } from '../lib/items';
+
+interface Props {
+  node: FusionNode;
+  base?: string;
+  currentName?: string;
+  isCurrent?: boolean;
+  isTarget?: boolean;
+  className?: string;
+}
+
+const {
+  node,
+  base = '',
+  currentName = '',
+  isCurrent: currentProp,
+  isTarget = false,
+  className = '',
+} = Astro.props;
+
+const isCurrent =
+  currentProp ?? (node.type === 'pet' && currentName !== '' && node.name === currentName);
+
+function hrefFor(n: FusionNode): string | null {
+  if (n.type === 'pet') {
+    return hasPet(n.name) ? `${base}/寵物資料/${encodeURIComponent(n.name)}` : null;
+  }
+  if (n.type === 'item' || n.type === 'material') {
+    return hasItem(n.name) ? `${base}/道具總覽/${encodeURIComponent(n.name)}` : null;
+  }
+  return null;
+}
+
+function imgSrc(path?: string): string {
+  if (!path) return '';
+  return path.startsWith('/') ? base + path : path;
+}
+
+function typeFallback(n: FusionNode): string {
+  if (n.type === 'gold') return '金幣';
+  if (n.type === 'pet') return '寵物';
+  if (n.type === 'material') return '材料';
+  return '道具';
+}
+
+const href = hrefFor(node);
+---
+
+<div
+  class:list={[
+    'node-card',
+    className,
+    { 'node-target': isTarget && !isCurrent },
+    { 'node-current': isCurrent },
+  ]}
+  data-pet-name={node.type === 'pet' ? node.name : undefined}
+>
+  {
+    node.image ? (
+      <img src={imgSrc(node.image)} alt={node.name} loading="lazy" decoding="async" />
+    ) : (
+      <span class="node-card__icon node-card__icon--text">{typeFallback(node)}</span>
+    )
+  }
+  {
+    node.type === 'gold' ? (
+      <span class="node-card__name">{node.name}</span>
+    ) : isCurrent ? (
+      <span class="node-card__name node-card__name--current">
+        {node.name}
+        <span class="node-current-tag">目前</span>
+      </span>
+    ) : href ? (
+      <a href={href}>{node.name}</a>
+    ) : (
+      <span class="node-card__name">{node.name}</span>
+    )
+  }
+  {node.qty != null && <span class="count">× {node.qty}</span>}
+  {node.countLabel && <span class="count">{node.countLabel}</span>}
+  {node.npc && <div class="npc-info">{node.npc}</div>}
+</div>

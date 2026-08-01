@@ -3,228 +3,224 @@
  * 合成樹（由頂點向下解構）
  * - 單產物：一個頭 → 材料
  * - 多產物：多個頭並列 → 共用材料（多拉線）
- * - 互轉循環：cycleModule 局部配方群組（reaction 各一次）
- * currentName：目前瀏覽的寵物，加上 node-current 邊框
+ * - 互轉循環：以寵物／道具實體節點和不可見的反應匯合位置組成有向圖。
  */
-import type { FusionNode } from '../lib/pets';
-import { hasPet } from '../lib/pets';
-import { hasItem } from '../lib/items';
+import type {
+  FusionCycleGraphNode,
+  FusionCycleGraphReaction,
+  FusionNode,
+} from '../lib/pets';
+import FusionNodeCard from './FusionNodeCard.astro';
 
 interface Props {
   node: FusionNode;
   base?: string;
   depth?: number;
-  /** 目前頁面的寵物名稱，用於高亮 */
+  /** 目前瀏覽的寵物名稱，用於高亮 */
   currentName?: string;
 }
-const { node, base = '', depth = 0, currentName = '' } = Astro.props;
 
+interface GraphPoint {
+  x: number;
+  y: number;
+}
+
+const { node, base = '', depth = 0, currentName = '' } = Astro.props;
 const cycle = node.cycleModule;
 const isCycleModule = Boolean(cycle);
 const isMultiHead = !isCycleModule && Boolean(node.heads && node.heads.length > 1);
-/** 多根森林：無名 material 只當容器，不畫卡片 */
 const isForestRoot =
   !isCycleModule &&
   !isMultiHead &&
   !node.name &&
   node.type === 'material' &&
   Boolean(node.children?.length);
-const isCurrent =
-  !isCycleModule &&
-  !isMultiHead &&
-  !isForestRoot &&
-  node.type === 'pet' &&
-  currentName !== '' &&
-  node.name === currentName;
 const isRoot = depth === 0 || !!node.target;
+
+function spread(count: number, start: number, end: number): number[] {
+  if (count <= 0) return [];
+  if (count === 1) return [(start + end) / 2];
+  return Array.from({ length: count }, (_, index) => {
+    return start + ((end - start) * index) / (count - 1);
+  });
+}
+
+function graphLayout(graph: {
+  nodes: FusionCycleGraphNode[];
+  reactions: FusionCycleGraphReaction[];
+}): { positions: Map<string, GraphPoint>; junctions: Map<string, GraphPoint> } {
+  const positions = new Map<string, GraphPoint>();
+  const junctions = new Map<string, GraphPoint>();
+  const nodeById = new Map(graph.nodes.map((graphNode) => [graphNode.id, graphNode]));
+  const hub = graph.reactions.find((reaction) => reaction.outputs.length > 1) ?? graph.reactions[0];
+  const rest = hub ? graph.reactions.filter((reaction) => reaction.id !== hub.id) : [];
+
+  const put = (id: string, x: number, y: number) => positions.set(id, { x, y });
+  const nodeName = (id: string) => nodeById.get(id)?.node.name ?? '';
+
+  if (hub) {
+    const sourceIds = hub.inputs.map((input) => input.nodeId);
+    const sourceYs = spread(sourceIds.length, 23, 39);
+    sourceIds.forEach((id, index) => put(id, 13, sourceYs[index]!));
+
+    const hubOutputIds = hub.outputs.map((output) => output.nodeId);
+    const hubInputPetNames = new Set(
+      sourceIds
+        .map((id) => nodeById.get(id))
+        .filter((graphNode) => graphNode?.node.type === 'pet')
+        .map((graphNode) => graphNode!.node.name),
+    );
+    const selfOutputIds = hubOutputIds.filter((id) => hubInputPetNames.has(nodeName(id)));
+    const otherOutputIds = hubOutputIds.filter((id) => !selfOutputIds.includes(id));
+    const outputOrder = [...otherOutputIds.slice(0, 1), ...selfOutputIds, ...otherOutputIds.slice(1)];
+    const outputYs = spread(outputOrder.length, 12, 50);
+    outputOrder.forEach((id, index) => put(id, 54, outputYs[index]!));
+
+    const restInputIds = rest.flatMap((reaction) => reaction.inputs.map((input) => input.nodeId));
+    const sharedIds = [...new Set(restInputIds)].filter((id) => !hubOutputIds.includes(id));
+    const sharedYs = spread(sharedIds.length, 72, 86);
+    sharedIds.forEach((id, index) => put(id, 34, sharedYs[index]!));
+
+    // 讓後續反應依其上游產物的垂直位置排列，避免兩條回流線彼此交叉。
+    const averageInputY = (reaction: FusionCycleGraphReaction): number => {
+      const ys = reaction.inputs
+        .map((input) => positions.get(input.nodeId)?.y)
+        .filter((y): y is number => y != null);
+      return ys.length ? ys.reduce((sum, value) => sum + value, 0) / ys.length : 50;
+    };
+    const orderedRest = [...rest].sort((a, b) => averageInputY(a) - averageInputY(b));
+    const restOutputIds = orderedRest.flatMap((reaction) =>
+      reaction.outputs.map((output) => output.nodeId),
+    );
+    const returnYs = spread(restOutputIds.length, 66, 90);
+    restOutputIds.forEach((id, index) => put(id, 86, returnYs[index]!));
+
+    junctions.set(hub.id, { x: 36, y: 29 });
+    orderedRest.forEach((reaction) => {
+      const outputY = reaction.outputs
+        .map((output) => positions.get(output.nodeId)?.y)
+        .filter((y): y is number => y != null);
+      const inputY = reaction.inputs
+        .map((input) => positions.get(input.nodeId)?.y)
+        .filter((y): y is number => y != null);
+      const ys = outputY.length ? outputY : inputY;
+      const y = ys.length ? ys.reduce((sum, value) => sum + value, 0) / ys.length : 50;
+      junctions.set(reaction.id, { x: 68, y });
+    });
+  }
+
+  // 非典型循環仍保留所有節點與匯合位置，不讓任何節點變成孤立項目。
+  const unplaced = graph.nodes.filter((graphNode) => !positions.has(graphNode.id));
+  const unplacedYs = spread(unplaced.length, 18, 82);
+  unplaced.forEach((graphNode, index) => put(graphNode.id, 50, unplacedYs[index]!));
+  const unplacedReactions = graph.reactions.filter((reaction) => !junctions.has(reaction.id));
+  const reactionYs = spread(unplacedReactions.length, 18, 82);
+  unplacedReactions.forEach((reaction, index) => {
+    junctions.set(reaction.id, { x: 68, y: reactionYs[index]! });
+  });
+
+  return { positions, junctions };
+}
+
+const layout = cycle ? graphLayout(cycle.graph) : null;
 const focused = cycle?.focusedPet || currentName;
+const focusedNodeId = cycle
+  ? cycle.graph.nodes.find(
+      (graphNode) => graphNode.node.type === 'pet' && graphNode.node.name === focused,
+    )?.id
+  : undefined;
 
-// 樹上會出現沒有資料列的底寵（風精、大地翼龍那些野生原寵），
-// 有名字不代表有頁面，跟道具一樣要先確認查得到才給連結。
-function hrefFor(n: FusionNode): string | null {
-  if (n.type === 'pet') {
-    return hasPet(n.name) ? `${base}/寵物資料/${encodeURIComponent(n.name)}` : null;
+const outputMetaByNode = new Map<string, string[]>();
+if (cycle) {
+  for (const reaction of cycle.graph.reactions) {
+    for (const output of reaction.outputs) {
+      const labels = outputMetaByNode.get(output.nodeId) ?? [];
+      if (output.prob) labels.push(`機率 ${output.prob}`);
+      if (reaction.npc) labels.push(`NPC：${reaction.npc}`);
+      outputMetaByNode.set(output.nodeId, [...new Set(labels)]);
+    }
   }
-  if (n.type === 'item' || n.type === 'material') {
-    return hasItem(n.name) ? `${base}/道具總覽/${encodeURIComponent(n.name)}` : null;
-  }
-  return null;
 }
 
-function imgSrc(path?: string): string {
-  if (!path) return '';
-  return path.startsWith('/') ? base + path : path;
-}
-
-/** 無圖時以文字分類標示，不使用 emoji */
-function typeFallback(n: FusionNode): string {
-  if (n.type === 'gold') return '金幣';
-  if (n.type === 'pet') return '寵物';
-  if (n.type === 'material') return '材料';
-  return '道具';
-}
-
-const nodeHref = hrefFor(node);
-const displayName = node.name;
 ---
 
 {
-  isCycleModule && cycle ? (
+  isCycleModule && cycle && layout ? (
     <li class="tree-cycle-module" data-cycle-id={cycle.id}>
-      <div class="cycle-module">
-        <div class="cycle-module__header">
-          <span class="cycle-module__title">{cycle.label}</span>
-          <span class="cycle-module__focus">
-            目前焦點：
-            <strong>{focused}</strong>
-          </span>
-        </div>
-        <div class="cycle-module__members">
-          {
-            cycle.members.map((m) => {
-              const mHref = hasPet(m) ? `${base}/寵物資料/${encodeURIComponent(m)}` : null;
-              const mCur = m === focused;
+      <div class="cycle-graph-scroll">
+        <div class="cycle-graph" data-cycle-graph data-cycle-id={cycle.id}>
+          <svg class="cycle-graph__edges" data-cycle-edges aria-hidden="true" focusable="false">
+            {
+              cycle.graph.reactions.map((reaction, reactionIndex) => {
+                const junction = layout.junctions.get(reaction.id)!;
+                // 後續反應的輸入來自右側產物卡，匯合線要留在卡片右側，不能穿過卡片。
+                const inputLane =
+                  reactionIndex === 0
+                    ? Math.max(4, junction.x - 5)
+                    : Math.max(4, junction.x - 3 - (reactionIndex - 1) * 1.5);
+                const outputLane = Math.min(
+                  96,
+                  junction.x + (reactionIndex === 0 ? 5 : 5 + reactionIndex * 4),
+                );
+                return (
+                  <>
+                    {reaction.inputs.map((input, index) => (
+                      <path
+                        class="cycle-graph__edge cycle-graph__edge--input"
+                        data-cycle-path={`${reaction.id}:input:${index}`}
+                        data-cycle-from={input.nodeId}
+                        data-cycle-role="input"
+                        data-cycle-junction-x={junction.x}
+                        data-cycle-junction-y={junction.y}
+                        data-cycle-route-x={inputLane}
+                      />
+                    ))}
+                    {reaction.outputs.map((output, index) => (
+                      <path
+                        class="cycle-graph__edge cycle-graph__edge--output"
+                        data-cycle-path={`${reaction.id}:output:${index}`}
+                        data-cycle-to={output.nodeId}
+                        data-cycle-role="output"
+                        data-cycle-junction-x={junction.x}
+                        data-cycle-junction-y={junction.y}
+                        data-cycle-route-x={outputLane}
+                      />
+                    ))}
+                  </>
+                );
+              })
+            }
+          </svg>
+
+          <div class="cycle-graph__nodes">
+            {cycle.graph.nodes.map((graphNode) => {
+              const point = layout.positions.get(graphNode.id)!;
+              const meta = outputMetaByNode.get(graphNode.id) ?? [];
               return (
-                <span class:list={['cycle-module__member', { 'is-focus': mCur }]}>
+                <div
+                  class="cycle-graph__node"
+                  data-cycle-node={graphNode.id}
+                  style={`left: ${point.x}%; top: ${point.y}%;`}
+                >
                   {
-                    mCur ? (
-                      <span>
-                        {m}
-                        <span class="node-current-tag">目前</span>
-                      </span>
-                    ) : mHref ? (
-                      <a href={mHref}>{m}</a>
-                    ) : (
-                      m
+                    meta.length > 0 && (
+                      <div class="cycle-graph__node-meta">
+                        {meta.map((label) => <span>{label}</span>)}
+                      </div>
                     )
                   }
-                </span>
+                  <FusionNodeCard
+                    node={graphNode.node}
+                    base={base}
+                    currentName=""
+                    isCurrent={graphNode.id === focusedNodeId}
+                    className="cycle-graph__entity-card"
+                  />
+                </div>
               );
-            })
-          }
+            })}
+          </div>
         </div>
-        {
-          cycle.sections.map((sec) => (
-            <section class="cycle-module__section">
-              <h4 class="cycle-module__section-title">{sec.title}</h4>
-              <ul class="cycle-module__reactions">
-                {
-                  sec.reactions.map((rx) => (
-                    <li class="cycle-reaction">
-                      <div class="cycle-reaction__row">
-                        <div class="cycle-reaction__side cycle-reaction__side--mats">
-                          {
-                            rx.materials.map((mat) => {
-                              const h = hrefFor(mat);
-                              const cur =
-                                mat.type === 'pet' && focused !== '' && mat.name === focused;
-                              return (
-                                <div
-                                  class:list={[
-                                    'node-card',
-                                    'node-card--compact',
-                                    { 'node-current': cur },
-                                  ]}
-                                  data-pet-name={mat.type === 'pet' ? mat.name : undefined}
-                                >
-                                  {
-                                    mat.image ? (
-                                      <img
-                                        src={imgSrc(mat.image)}
-                                        alt={mat.name}
-                                        loading="lazy"
-                                        decoding="async"
-                                      />
-                                    ) : (
-                                      <span class="node-card__icon node-card__icon--text">
-                                        {typeFallback(mat)}
-                                      </span>
-                                    )
-                                  }
-                                  {
-                                    cur ? (
-                                      <span class="node-card__name node-card__name--current">
-                                        {mat.name}
-                                        <span class="node-current-tag">目前</span>
-                                      </span>
-                                    ) : h ? (
-                                      <a href={h}>{mat.name}</a>
-                                    ) : (
-                                      <span class="node-card__name">{mat.name}</span>
-                                    )
-                                  }
-                                  {mat.qty != null && <span class="count">× {mat.qty}</span>}
-                                </div>
-                              );
-                            })
-                          }
-                        </div>
-                        <div class="cycle-reaction__arrow" aria-hidden="true">
-                          →
-                        </div>
-                        <div class="cycle-reaction__side cycle-reaction__side--prods">
-                          {
-                            rx.products.map((prod) => {
-                              const h = hrefFor(prod);
-                              const cur =
-                                prod.type === 'pet' &&
-                                focused !== '' &&
-                                prod.name === focused;
-                              return (
-                                <div
-                                  class:list={[
-                                    'node-card',
-                                    'node-card--compact',
-                                    { 'node-current': cur },
-                                  ]}
-                                  data-pet-name={prod.type === 'pet' ? prod.name : undefined}
-                                >
-                                  {
-                                    prod.image ? (
-                                      <img
-                                        src={imgSrc(prod.image)}
-                                        alt={prod.name}
-                                        loading="lazy"
-                                        decoding="async"
-                                      />
-                                    ) : (
-                                      <span class="node-card__icon node-card__icon--text">
-                                        {typeFallback(prod)}
-                                      </span>
-                                    )
-                                  }
-                                  {
-                                    cur ? (
-                                      <span class="node-card__name node-card__name--current">
-                                        {prod.name}
-                                        <span class="node-current-tag">目前</span>
-                                      </span>
-                                    ) : h ? (
-                                      <a href={h}>{prod.name}</a>
-                                    ) : (
-                                      <span class="node-card__name">{prod.name}</span>
-                                    )
-                                  }
-                                  {prod.qty != null && (
-                                    <span class="count">× {prod.qty}</span>
-                                  )}
-                                  {prod.countLabel && (
-                                    <span class="count">{prod.countLabel}</span>
-                                  )}
-                                </div>
-                              );
-                            })
-                          }
-                        </div>
-                      </div>
-                      {rx.npc && <div class="npc-info">{rx.npc}</div>}
-                    </li>
-                  ))
-                }
-              </ul>
-            </section>
-          ))
-        }
       </div>
     </li>
   ) : isMultiHead ? (
@@ -232,57 +228,19 @@ const displayName = node.name;
       <div class="tree-multi-head__tops">
         <ul class="tree-multi-head__heads">
           {
-            node.heads!.map((h) => {
-              const hCur = h.type === 'pet' && currentName !== '' && h.name === currentName;
-              const hHref = hrefFor(h);
-              return (
-                <li class="tree-multi-head__head">
-                  <div
-                    class:list={[
-                      'node-card',
-                      { 'node-target': isRoot && !hCur },
-                      { 'node-current': hCur },
-                    ]}
-                    data-pet-name={h.type === 'pet' ? h.name : undefined}
-                  >
-                    {
-                      h.image ? (
-                        <img
-                          src={imgSrc(h.image)}
-                          alt={h.name}
-                          loading="lazy"
-                          decoding="async"
-                        />
-                      ) : (
-                        <span class="node-card__icon node-card__icon--text">
-                          {typeFallback(h)}
-                        </span>
-                      )
-                    }
-                    {
-                      hCur ? (
-                        <span class="node-card__name node-card__name--current">
-                          {h.name}
-                          <span class="node-current-tag">目前</span>
-                        </span>
-                      ) : hHref ? (
-                        <a href={hHref}>{h.name}</a>
-                      ) : (
-                        <span class="node-card__name">{h.name}</span>
-                      )
-                    }
-                    {h.qty != null && <span class="count">× {h.qty}</span>}
-                    {h.countLabel && <span class="count">{h.countLabel}</span>}
-                    {/* 製造 NPC：產物名稱／機率底下，不放材料列後 */}
-                    {h.npc && <div class="npc-info">{h.npc}</div>}
-                  </div>
-                </li>
-              );
-            })
+            node.heads!.map((head) => (
+              <li class="tree-multi-head__head">
+                <FusionNodeCard
+                  node={head}
+                  base={base}
+                  currentName={currentName}
+                  isTarget={isRoot}
+                />
+              </li>
+            ))
           }
         </ul>
       </div>
-
       {
         node.children && node.children.length > 0 && (
           <ul class="tree-children">
@@ -315,45 +273,12 @@ const displayName = node.name;
     </li>
   ) : (
     <li class="tree-node">
-      <div
-        class:list={[
-          'node-card',
-          { 'node-target': isRoot && !isCurrent },
-          { 'node-current': isCurrent },
-        ]}
-        data-pet-name={node.type === 'pet' ? node.name : undefined}
-      >
-        {
-          node.image ? (
-            <img
-              src={imgSrc(node.image)}
-              alt={node.name}
-              loading="lazy"
-              decoding="async"
-            />
-          ) : (
-            <span class="node-card__icon node-card__icon--text">{typeFallback(node)}</span>
-          )
-        }
-        {
-          node.type === 'gold' ? (
-            <span class="node-card__name">{displayName}</span>
-          ) : node.type === 'pet' && isCurrent ? (
-            <span class="node-card__name node-card__name--current">
-              {displayName}
-              <span class="node-current-tag">目前</span>
-            </span>
-          ) : nodeHref ? (
-            <a href={nodeHref}>{displayName}</a>
-          ) : (
-            <span class="node-card__name">{displayName}</span>
-          )
-        }
-        {node.qty != null && <span class="count">× {node.qty}</span>}
-        {node.countLabel && <span class="count">{node.countLabel}</span>}
-        {node.npc && <div class="npc-info">{node.npc}</div>}
-      </div>
-
+      <FusionNodeCard
+        node={node}
+        base={base}
+        currentName={currentName}
+        isTarget={isRoot}
+      />
       {
         node.children && node.children.length > 0 && (
           <ul class="tree-children">
@@ -371,3 +296,112 @@ const displayName = node.name;
     </li>
   )
 }
+
+<style is:global>
+  .cycle-graph-scroll {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid #dfd6ce;
+    border-radius: 10px;
+    background:
+      linear-gradient(rgba(245, 239, 233, 0.46) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(245, 239, 233, 0.46) 1px, transparent 1px),
+      #fffdfa;
+    background-size: 28px 28px;
+    scrollbar-gutter: stable;
+  }
+  .cycle-graph {
+    position: relative;
+    width: 100%;
+    min-width: 900px;
+    min-height: 760px;
+    overflow: hidden;
+  }
+  .cycle-graph__edges,
+  .cycle-graph__nodes {
+    position: absolute;
+    inset: 0;
+  }
+  .cycle-graph__edges {
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+  .cycle-graph__edge {
+    fill: none;
+    stroke-width: 2.2;
+    stroke: #e65100;
+    stroke-linecap: square;
+    stroke-linejoin: miter;
+  }
+  .cycle-graph__edge--input {
+    stroke: #e65100;
+  }
+  .cycle-graph__nodes {
+    z-index: 2;
+  }
+  .cycle-graph__node {
+    position: absolute;
+    z-index: 3;
+    width: 154px;
+    transform: translate(-50%, -50%);
+  }
+  .cycle-graph__entity-card {
+    width: 100%;
+    min-width: 0;
+    padding: 8px 7px;
+    border-color: #c9b8aa;
+    background: #fff;
+  }
+  .cycle-graph__entity-card img {
+    width: 42px;
+    height: 42px;
+    margin-bottom: 4px;
+  }
+  .cycle-graph__entity-card a,
+  .cycle-graph__entity-card .node-card__name {
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+  .cycle-graph__node-meta {
+    position: absolute;
+    right: 50%;
+    bottom: calc(100% + 5px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: max-content;
+    max-width: 230px;
+    padding: 3px 6px;
+    color: #9b4319;
+    background: rgba(255, 253, 250, 0.97);
+    border: 1px solid #e5c8b4;
+    border-radius: 5px;
+    font-size: 10px;
+    line-height: 1.35;
+    text-align: center;
+    transform: translateX(50%);
+    pointer-events: none;
+  }
+  .cycle-graph__node-meta span:last-child {
+    color: #75685f;
+    font-size: 9px;
+  }
+  @media (max-width: 700px) {
+    .cycle-graph {
+      min-height: 700px;
+    }
+    .cycle-graph__node {
+      width: 136px;
+    }
+    .cycle-graph__entity-card img {
+      width: 36px;
+      height: 36px;
+    }
+    .cycle-graph__node-meta {
+      max-width: 190px;
+      font-size: 9px;
+    }
+  }
+</style>
