@@ -4,6 +4,7 @@ import Base from '../layouts/Base.astro';
 import DataTable from '../components/DataTable.astro';
 import ExclusiveSkills from '../components/ExclusiveSkills.astro';
 import PetList from '../components/PetList.astro';
+import PetIslandTabs from '../components/PetIslandTabs.astro';
 import PetSynthesisTables from '../components/PetSynthesisTables.astro';
 import SkillIndex from '../components/SkillIndex.astro';
 import SourceNote from '../components/SourceNote.astro';
@@ -30,7 +31,9 @@ const hasProse = entry.body != null && entry.body.trim().length > 0;
     </div>
   )}
 
-  {entry.data.title === '寵物合成活動' ? (
+  {entry.data.title === '週年慶寵物島' ? (
+    <PetIslandTabs />
+  ) : entry.data.title === '寵物合成活動' ? (
     <PetSynthesisTables />
   ) : entry.data.title === '技能總覽' ? (
     <SkillIndex />
