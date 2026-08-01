@@ -1,0 +1,133 @@
+---
+interface Props {
+  value?: string;
+}
+
+const { value = '' } = Astro.props;
+
+const elementDefinitions = {
+  地: { className: 'earth' },
+  水: { className: 'water' },
+  火: { className: 'fire' },
+  風: { className: 'wind' },
+} as const;
+
+type ElementName = keyof typeof elementDefinitions;
+
+const parts: Array<{ name: ElementName; count: number; className: string }> = [];
+const pattern = /(地|水|火|風)\s*(\d+)/g;
+let match: RegExpExecArray | null;
+
+while ((match = pattern.exec(value.trim()))) {
+  const name = match[1] as ElementName;
+  const count = Number(match[2]);
+  if (!Number.isFinite(count) || count <= 0) continue;
+  parts.push({ name, count, className: elementDefinitions[name].className });
+}
+
+const cells = parts.flatMap((part) =>
+  Array.from({ length: part.count }, () => ({
+    className: part.className,
+    name: part.name,
+  })),
+);
+const label = value.trim();
+---
+
+{
+  parts.length > 0 ? (
+    <div class="pet-element" aria-label={`屬性 ${label}`}>
+      <div class="pet-element__cells" aria-hidden="true">
+        {cells.map((cell) => (
+          <span
+            class:list={['pet-element__cell', `pet-element__cell--${cell.className}`]}
+            title={`${cell.name}屬性`}
+          />
+        ))}
+      </div>
+      <div class="pet-element__text">
+        {parts.map((part) => (
+          <span class:list={['pet-element__part', `pet-element__part--${part.className}`]}>
+            <span class="pet-element__name">{part.name}</span>{part.count}
+          </span>
+        ))}
+      </div>
+    </div>
+  ) : (
+    <span class="muted">{label || '—'}</span>
+  )
+}
+
+<style>
+  .pet-element {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    max-width: 100%;
+  }
+
+  .pet-element__cells {
+    display: inline-flex;
+    flex: 0 0 auto;
+    gap: 2px;
+  }
+
+  .pet-element__cell {
+    display: block;
+    width: 13px;
+    height: 13px;
+    border: 1px solid transparent;
+    border-radius: 2px;
+    box-sizing: border-box;
+  }
+
+  .pet-element__cell--earth {
+    background: #66bb6a;
+    border-color: #388e3c;
+  }
+
+  .pet-element__cell--water {
+    background: #42a5f5;
+    border-color: #1976d2;
+  }
+
+  .pet-element__cell--fire {
+    background: #ef5350;
+    border-color: #c62828;
+  }
+
+  .pet-element__cell--wind {
+    background: #fdd835;
+    border-color: #f9a825;
+  }
+
+  .pet-element__text {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .pet-element__part + .pet-element__part {
+    margin-left: 2px;
+  }
+
+  .pet-element__name {
+    font-weight: 700;
+  }
+
+  .pet-element__part--earth .pet-element__name {
+    color: #388e3c;
+  }
+
+  .pet-element__part--water .pet-element__name {
+    color: #1976d2;
+  }
+
+  .pet-element__part--fire .pet-element__name {
+    color: #c62828;
+  }
+
+  .pet-element__part--wind .pet-element__name {
+    color: #f9a825;
+  }
+</style>
