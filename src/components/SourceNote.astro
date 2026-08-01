@@ -8,15 +8,16 @@
  */
 interface Props {
   sourceUrl?: string;
+  label?: string;
 }
-const { sourceUrl } = Astro.props;
+const { sourceUrl, label: customLabel } = Astro.props;
 const ORIGIN = 'https://sites.google.com/view/goodluck2cg/';
 const fromOrigin = sourceUrl?.startsWith(ORIGIN) ?? false;
-const label = !sourceUrl
+const label = customLabel || (!sourceUrl
   ? ''
   : fromOrigin
     ? decodeURIComponent(sourceUrl.slice(ORIGIN.length)) || '原站首頁'
-    : new URL(sourceUrl).host;
+    : new URL(sourceUrl).host);
 ---
 
 {

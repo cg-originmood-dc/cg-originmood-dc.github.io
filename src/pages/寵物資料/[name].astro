@@ -7,6 +7,7 @@
 import Base from '../../layouts/Base.astro';
 import FusionTree from '../../components/FusionTree.astro';
 import PetElementDisplay from '../../components/PetElementDisplay.astro';
+import SourceNote from '../../components/SourceNote.astro';
 import {
   listPets,
   getPet,
@@ -138,6 +139,7 @@ const isCardUnknown = !extra.cardLevel || extra.cardLevel === '未知';
 
 const obtainText = (pet?.入手方法 ?? '').trim();
 const obtainType = (pet?.入手類型 ?? '').trim();
+const SKY_EY_PET_SOURCE_URL = 'https://cg.skyey.tw/pet/petbook.html';
 /** JSON 細項 + 改造購買 NPC（魔力豆知識）等程式注入來源 */
 const obtainExtra = [...(extra.obtainMethods ?? []), ...remodelObtain];
 const hasObtain = Boolean(obtainText || obtainType || obtainExtra.length);
@@ -542,6 +544,12 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
           )
         }
       </div>
+
+      {
+        pet.來源 === '一般寵物' && (
+          <SourceNote sourceUrl={SKY_EY_PET_SOURCE_URL} label="蔚藍幻境" />
+        )
+      }
 
       <script is:inline define:vars={{ growJson, formulaJson }}>
         (function () {
