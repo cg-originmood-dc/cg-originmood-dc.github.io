@@ -6,6 +6,7 @@
  */
 import Base from '../../layouts/Base.astro';
 import FusionTree from '../../components/FusionTree.astro';
+import PetElementDisplay from '../../components/PetElementDisplay.astro';
 import {
   listPetsForDetailPaths,
   getPet,
@@ -208,7 +209,7 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
           </tr>
           <tr>
             <td><b>屬性</b></td>
-            <td>{pet.屬性 || '—'}</td>
+            <td><PetElementDisplay value={pet.屬性} /></td>
             <td><b>卡片等級</b></td>
             <td>
               <span class:list={['badge', isCardUnknown ? 'badge-unknown' : 'badge-card']}>
