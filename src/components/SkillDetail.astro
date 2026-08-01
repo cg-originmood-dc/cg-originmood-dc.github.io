@@ -1,0 +1,335 @@
+---
+import { listPetsWithSkill, type PetSkillHolder } from '../lib/pets';
+import {
+  skillLevelRows,
+  type SkillEntry,
+  type SkillLevelRow,
+  type SkillRecord,
+} from '../lib/skillData';
+import { craftSkillHref } from '../lib/craftSkills';
+
+interface Props {
+  entry: SkillEntry;
+}
+
+type SideKey = 'char' | 'pet';
+
+interface DetailRow {
+  lv: string;
+  row: SkillLevelRow | null;
+  derived: boolean;
+}
+
+interface SkillSideView {
+  key: SideKey;
+  label: string;
+  skill: SkillRecord;
+  rows: DetailRow[];
+  hasLevel: boolean;
+  hasLearn: boolean;
+}
+
+const { entry } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const src = (value: string) => (value.startsWith('/') ? `${base}${value}` : value);
+const holders = listPetsWithSkill(entry.name);
+const holdersByLevel = new Map<number, PetSkillHolder[]>();
+
+for (const holder of holders) {
+  const level = holder.level ?? 0;
+  const group = holdersByLevel.get(level) ?? [];
+  group.push(holder);
+  holdersByLevel.set(level, group);
+}
+
+/** main 的規則：共用技能只在人物側掛持有寵物欄，避免兩側重複。 */
+const holderKey: SideKey = entry.char ? 'char' : 'pet';
+
+function maxLevelOf(skill: SkillRecord): number {
+  const value = (skill.最高等級 || '').match(/(?:LV\s*)?(\d+)/i)?.[1];
+  return value ? Number(value) : 0;
+}
+
+function buildRows(
+  skill: SkillRecord,
+  scope: 'character' | 'pet',
+  attachHolders: boolean,
+): DetailRow[] {
+  const levels = skillLevelRows(skill, holders, scope);
+  const max = maxLevelOf(skill);
+
+  if (!max) {
+    return levels.map((row) => ({ lv: row.label, row, derived: false }));
+  }
+
+  const byLevel = new Map<number, SkillLevelRow>();
+  for (const row of levels) {
+    if (row.level != null) byLevel.set(row.level, row);
+  }
+
+  const sourceLevels = [...byLevel.keys()];
+  const holderLevels = attachHolders
+    ? [...holdersByLevel.keys()].filter((level) => level > max)
+    : [];
+  const top = Math.max(max, ...sourceLevels, ...holderLevels);
+  const rows: DetailRow[] = [];
+
+  for (let level = 1; level <= top; level += 1) {
+    rows.push({
+      lv: `LV ${level}`,
+      row: byLevel.get(level) ?? null,
+      derived: level > max,
+    });
+  }
+
+  // SP／SP1 等非數字等級保留在一般等級列之後。
+  rows.push(
+    ...levels
+      .filter((row) => row.level == null)
+      .map((row) => ({ lv: row.label, row, derived: false })),
+  );
+  return rows;
+}
+
+function makeSide(key: SideKey, label: string, skill: SkillRecord): SkillSideView {
+  const scope = key === 'char' ? 'character' : 'pet';
+  const rows = buildRows(skill, scope, key === holderKey);
+  return {
+    key,
+    label,
+    skill,
+    rows,
+    hasLevel: maxLevelOf(skill) > 0,
+    hasLearn: rows.some((item) => Boolean(item.row?.learningInfo && item.row.learningInfo !== '—')),
+  };
+}
+
+const sides: SkillSideView[] = [];
+if (entry.char) sides.push(makeSide('char', '人物技能', entry.char));
+if (entry.pet) sides.push(makeSide('pet', '寵物技能', entry.pet));
+
+const craftPath = craftSkillHref(entry.name);
+const intro = [...new Set(sides.map((side) => side.skill.簡介?.trim()).filter(Boolean))].join('；');
+const iconFor = (category: string) => {
+  const icons: Record<string, string> = {
+    戰鬥攻擊技能: '⚔️',
+    戰鬥防禦技能: '🛡️',
+    戰鬥輔助技能: '✨',
+    屬性攻擊魔法: '🔥',
+    狀態變化魔法: '💤',
+    戰鬥輔助魔法: '🩹',
+    寵物一般技能: '🐾',
+    寵物戰鬥技能: '⚔️',
+    寵物魔法技能: '🔮',
+    狀態攻擊技能: '💫',
+    狀態抵抗技能: '🛡️',
+  };
+  return icons[category] ?? '⚡';
+};
+---
+
+<div class="skill-detail">
+  <a href={`${base}/技能總覽`} class="back-btn">⬅️ 返回技能總表</a>
+  <h1 class="page-title">{entry.name}</h1>
+  <p class="crumbs">
+    <a href={`${base}/`}>首頁</a>
+    <span aria-hidden="true"> / </span>
+    <a href={`${base}/技能總覽`}>技能總覽</a>
+    <span aria-hidden="true"> / </span>
+    <span>{entry.name}</span>
+  </p>
+
+  {craftPath && (
+    <p class="craft-banner">
+      此技能的站內配方表：
+      <a href={`${base}${craftPath}`}>{craftPath.replace(/^\//, '')}</a>
+    </p>
+  )}
+
+  {intro && <p class="skill-intro">{intro}</p>}
+
+  {sides.map((side) => (
+    <section class="skill-side">
+      <table class="info-table">
+        <tbody>
+          <tr class="head">
+            <td colspan="4">
+              {iconFor(side.skill.技能分類)} {side.label}
+              {sides.length > 1 && side.key === 'pet' && '（與人物側為不同技能資料）'}
+            </td>
+          </tr>
+          <tr>
+            <td class="label-cell">技能分類</td>
+            <td>{side.skill.技能分類 || '—'}</td>
+            <td class="label-cell">最高等級</td>
+            <td>{side.hasLevel ? `LV ${maxLevelOf(side.skill)}` : '無等級'}</td>
+          </tr>
+          {side.skill.技能來源 && (
+            <tr>
+              <td class="label-cell">技能來源</td>
+              <td colspan="3">{side.skill.技能來源}</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+
+      <table class="level-table">
+        <thead>
+          <tr>
+            {side.hasLevel && <th>等級</th>}
+            <th>魔力消耗</th>
+            <th>技能效果詳細說明</th>
+            {side.hasLearn && <th>學習資訊</th>}
+          </tr>
+        </thead>
+        <tbody>
+          {side.rows.map((detailRow) => {
+            const effect = detailRow.row?.description && detailRow.row.description !== '—'
+              ? detailRow.row.description
+              : null;
+            const learning = detailRow.row?.learningInfo && detailRow.row.learningInfo !== '—'
+              ? detailRow.row.learningInfo
+              : '—';
+            return (
+              <tr class:list={[detailRow.derived && 'lv-high']}>
+                {side.hasLevel && <td class="lv">{detailRow.lv}</td>}
+                <td class="mp">{detailRow.row?.mp || '—'}</td>
+                <td class="eff">
+                  {effect || (
+                    <span class="pending">
+                      {detailRow.derived
+                        ? '（技能表無此等級；由持有寵物資料推導）'
+                        : '—（改版後待確認）'}
+                    </span>
+                  )}
+                </td>
+                {side.hasLearn && <td class="learn">{learning}</td>}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </section>
+  ))}
+
+  <section>
+    <table class="info-table">
+      <tbody>
+        <tr class="head"><td>已知持有此技能的寵物</td></tr>
+      </tbody>
+    </table>
+    {holders.length ? (
+      <div class="holder-grid">
+        {holders.map((holder) => (
+          <a class="holder" href={`${base}/寵物資料/${encodeURIComponent(holder.name)}`}>
+            {holder.image && <img src={src(holder.image)} alt={holder.name} loading="lazy" decoding="async" />}
+            <span class="holder__name">{holder.name}</span>
+            <span class="holder__skill">{holder.skillLabel}</span>
+          </a>
+        ))}
+      </div>
+    ) : (
+      <p class="holder-empty">寵物資料中尚無登錄持有此技能的寵物。</p>
+    )}
+  </section>
+</div>
+
+<style>
+  .skill-detail {
+    color: #212121;
+    font-family: "Open Sans", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+  .back-btn {
+    display: inline-block;
+    margin-bottom: 8px;
+    color: #1155cc;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .back-btn:hover { text-decoration: underline; }
+  .crumbs {
+    font-size: 0.85rem;
+    color: #5f6368;
+    margin: -6px 0 14px;
+  }
+  /* 全站 crumbs 會自動補斜線；本頁沿用 main 的 aria-hidden 分隔字元，避免重複。 */
+  .skill-detail .crumbs > * + *::before {
+    content: none;
+    margin-right: 0;
+  }
+  .craft-banner {
+    margin: 0 0 12px;
+    padding: 10px 14px;
+    background: #e8f5e9;
+    border: 1px solid #a5d6a7;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+  .craft-banner a { color: #2e7d32; font-weight: 700; }
+  .skill-intro { margin: 0 0 14px; color: #5f6368; }
+  .skill-side { margin-bottom: 20px; }
+  .info-table {
+    width: 100%;
+    background: #e0e0e0;
+    border-collapse: separate;
+    border-spacing: 1px;
+    margin-bottom: 12px;
+  }
+  .info-table td {
+    background: #fff;
+    padding: 10px 12px;
+    vertical-align: middle;
+  }
+  .info-table .head td {
+    background: #f1f3f4;
+    border-left: 5px solid #1155cc;
+    font-weight: 700;
+  }
+  .label-cell { width: 120px; font-weight: 700; white-space: nowrap; }
+  .level-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  .level-table th {
+    background: #f1f3f4;
+    color: #1155cc;
+    font-size: 12px;
+    padding: 8px;
+    border-bottom: 2px solid #1155cc;
+  }
+  .level-table td {
+    padding: 8px 6px;
+    border-bottom: 1px solid #eee;
+    font-size: 13px;
+  }
+  .level-table tr.lv-high td { background: #fff8e1; }
+  .level-table .lv { color: #008be3; font-weight: 700; white-space: nowrap; }
+  .level-table .mp { color: #e65100; font-weight: 700; white-space: nowrap; }
+  .level-table .eff { text-align: left; }
+  .level-table .learn { text-align: left; font-size: 12px; }
+  .pending { color: #9e9e9e; }
+  .holder-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+  }
+  .holder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 6px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    background: #fff;
+    text-decoration: none;
+  }
+  .holder img { width: 64px; height: 64px; object-fit: contain; }
+  .holder__name { margin-top: 6px; font-weight: 700; }
+  .holder__skill { color: #5f6368; font-size: 12px; }
+  .holder-empty { color: #5f6368; }
+</style>

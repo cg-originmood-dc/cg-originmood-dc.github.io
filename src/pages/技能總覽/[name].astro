@@ -1,0 +1,16 @@
+---
+import Base from '../../layouts/Base.astro';
+import SkillDetail from '../../components/SkillDetail.astro';
+import { listSkillEntries, type SkillEntry } from '../../lib/skillData';
+
+export function getStaticPaths() {
+  return listSkillEntries().map((entry) => ({ params: { name: entry.name }, props: { entry } }));
+}
+
+const { name } = Astro.params;
+const { entry } = Astro.props as { entry: SkillEntry };
+---
+
+<Base title={`${name} - 技能詳情`}>
+  <SkillDetail entry={entry} />
+</Base>

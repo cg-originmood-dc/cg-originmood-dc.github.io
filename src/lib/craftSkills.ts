@@ -1,8 +1,8 @@
 /**
- * 生產製作／採集技能 → 站內配方表頁的對照。
- * 技能索引卡與詳情頁用它多給一條「配方一覽」捷徑（技能等級資料照常顯示）。
+ * 生產製作／採集技能 → 左側導覽對應頁
+ * 技能總覽「專屬詳情」改連配方表，而不是空的技能等級頁。
  */
-const CRAFT_SKILL_HREF: Record<string, string> = {
+export const CRAFT_SKILL_HREF: Record<string, string> = {
   鑄劍: '/生產製造/武器/劍',
   造槍: '/生產製造/武器/槍',
   造斧: '/生產製造/武器/斧',
@@ -27,4 +27,9 @@ const CRAFT_SKILL_HREF: Record<string, string> = {
 
 export function craftSkillHref(skillName: string): string | null {
   return CRAFT_SKILL_HREF[skillName.trim()] ?? null;
+}
+
+/** 是否為有站內配方頁的生產／採集技能 */
+export function isMappedCraftSkill(skillName: string): boolean {
+  return skillName.trim() in CRAFT_SKILL_HREF;
 }

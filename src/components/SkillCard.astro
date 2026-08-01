@@ -1,0 +1,105 @@
+---
+import type { SkillVariant } from '../lib/skillData';
+import { skillLearningInfo, skillPath } from '../lib/skillData';
+import PetSkillHolders from './PetSkillHolders.astro';
+import { renderCell } from '../lib/richtext';
+
+interface Props {
+  variant: SkillVariant;
+  base: string;
+}
+
+const { variant, base } = Astro.props;
+const { skill, scope, category, categoryKey } = variant;
+const detailPath = skillPath(skill.技能名稱);
+const skillHref = detailPath ? `${base}${detailPath}` : null;
+const htmlScope = scope === 'character' ? 'char' : 'pet';
+const simpleIntro = (skill.簡介 || '').trim();
+const learningLoc = skillLearningInfo(variant.levels, skill);
+const price = (skill.價格 || '').trim();
+const showLearn = scope === 'character' && learningLoc && learningLoc !== '—';
+---
+
+<div class="skill-card-block" data-scope={htmlScope} data-category={categoryKey}>
+  <div class="skill-header-bar">
+    <div class="skill-header-title">
+      <span class="skill-main-name">{skill.技能名稱}</span>
+      <span class:list={['skill-cat-badge', { 'pet-badge': scope === 'pet' }]}>{category}</span>
+    </div>
+    {skillHref && (
+      <a class="skill-detail-link" href={skillHref}>專屬詳情</a>
+    )}
+  </div>
+
+  {/* 有內容才顯示，禁止占位亂填 */}
+  {simpleIntro && (
+    <div class="skill-simple-intro">
+      <span class="skill-meta-label">簡易說明</span>
+      <span class="skill-meta-text">{simpleIntro}</span>
+    </div>
+  )}
+
+  {showLearn && (
+    <div class="skill-learn-loc">
+      <span class="skill-meta-label">習得方式</span>
+      <span class="skill-meta-text" set:html={renderCell(learningLoc, base)} />
+    </div>
+  )}
+
+  {price && (
+    <div class="skill-price-row">
+      <span class="skill-meta-label">價格</span>
+      <span class="skill-meta-text">{price}</span>
+    </div>
+  )}
+
+  <div class="skill-table-wrapper">
+    <table class="level-subtable">
+      {scope === 'character' ? (
+        <>
+          <thead>
+            <tr>
+              <th style="width: 70px">技能等級</th>
+              <th style="width: 110px">魔力消耗</th>
+              <th>技能效果詳細說明</th>
+              <th style="width: 220px">持有寵物列表</th>
+            </tr>
+          </thead>
+          <tbody>
+            {variant.levels.map((levelRow) => (
+              <tr class:list={{ 'lv-high': (levelRow.level ?? 0) >= 11 }}>
+                <td class="level-text">{levelRow.label}</td>
+                <td class="mp-text">{levelRow.mp}</td>
+                <td class="skill-summary">{levelRow.description}</td>
+                <td><PetSkillHolders holders={levelRow.holders} base={base} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </>
+      ) : (
+        <>
+          <thead>
+            <tr>
+              <th style="width: 100px">技能</th>
+              <th style="width: 100px">魔力消耗</th>
+              <th>技能效果詳細說明</th>
+              <th style="width: 240px">學習資訊</th>
+              <th style="width: 220px">持有寵物</th>
+            </tr>
+          </thead>
+          <tbody>
+            {variant.levels.map((levelRow) => (
+              <tr class:list={{ 'lv-high': (levelRow.level ?? 0) >= 11 }}>
+                <td class="level-text">{levelRow.label}</td>
+                <td class="mp-text">{levelRow.mp}</td>
+                <td class="skill-summary">{levelRow.description}</td>
+                <td class="learning-info">{levelRow.learningInfo}</td>
+                <td><PetSkillHolders holders={levelRow.holders} base={base} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </>
+      )}
+    </table>
+  </div>
+</div>

@@ -35,7 +35,7 @@ interface Props {
   /** 篩選欄改渲染成分頁籤（全部＋各值）取代下拉選單 */
   filterTabs?: boolean;
 }
-const { name, dataset: given, filterTabs = false } = Astro.props;
+const { name, dataset: given, filterTabs = false }: Props = Astro.props;
 const dataset = given ?? (name ? loadDataset(name) : null);
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const src = (v: string) => (v.startsWith('/') ? base + v : v);

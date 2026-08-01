@@ -1,0 +1,109 @@
+---
+import type { PetSkillHolder } from '../lib/pets';
+
+interface Props {
+  holders: PetSkillHolder[];
+  base: string;
+}
+
+const { holders, base } = Astro.props;
+const petImage = (image: string) => (image.startsWith('/') ? `${base}${image}` : image);
+const petHref = (name: string) => `${base}/寵物資料/${encodeURIComponent(name)}`;
+const previewHolders = holders.slice(0, 5);
+const hiddenHolders = holders.slice(5);
+---
+
+{holders.length > 0 ? (
+  <div class:list={['pet-mini-wrapper', { 'pet-mini-wrapper--collapsible': hiddenHolders.length > 0 }]}>
+    {previewHolders.map((holder) => (
+      <a class="pet-mini-chip" href={petHref(holder.name)} title={holder.skillLabel}>
+        <img src={petImage(holder.image)} alt={holder.name} loading="lazy" />
+        <span>{holder.name}</span>
+      </a>
+    ))}
+    {hiddenHolders.length > 0 && (
+      <details class="pet-more">
+        <summary class="pet-more__toggle"><span class="pet-more__label">還有 {hiddenHolders.length} 隻</span></summary>
+        <div class="pet-more__body">
+          {hiddenHolders.map((holder) => (
+            <a class="pet-mini-chip" href={petHref(holder.name)} title={holder.skillLabel}>
+              <img src={petImage(holder.image)} alt={holder.name} loading="lazy" />
+              <span>{holder.name}</span>
+            </a>
+          ))}
+        </div>
+      </details>
+    )}
+  </div>
+) : (
+  <span class="empty-pets">—</span>
+)}
+
+<style is:global>
+  /* 技能卡／道具詳情共用；樣式綁元件，不依賴 SkillOverview 頁面 */
+  .pet-mini-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    justify-content: flex-start;
+    align-items: center;
+  }
+  .pet-mini-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    padding: 2px 8px 2px 4px;
+    border: 1px solid #e0e0e0;
+    border-radius: 999px;
+    background: #fafafa;
+    color: #212121;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    line-height: 1.3;
+    max-width: 100%;
+  }
+  .pet-mini-chip:hover {
+    background-color: #e65100;
+    color: #fff;
+    border-color: #e65100;
+  }
+  .pet-mini-chip img {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    margin-right: 4px;
+    flex-shrink: 0;
+    image-rendering: pixelated;
+  }
+  .pet-more {
+    display: inline;
+  }
+  .pet-more__toggle {
+    list-style: none;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+    color: #1565c0;
+    padding: 2px 8px;
+    border: 1px dashed #90caf9;
+    border-radius: 999px;
+    background: #e3f2fd;
+  }
+  .pet-more__toggle::-webkit-details-marker {
+    display: none;
+  }
+  .pet-more__body {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 6px;
+    width: 100%;
+  }
+  .pet-mini-wrapper--collapsible {
+    align-items: flex-start;
+  }
+  .empty-pets {
+    color: #9e9e9e;
+  }
+</style>
