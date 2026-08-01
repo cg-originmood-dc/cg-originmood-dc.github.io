@@ -54,6 +54,18 @@ export const LIST_SEP = ' / ';
 const WRAP_AT_DEFAULT = 18;
 const WRAP_AT: Record<string, number> = { 料理: 48 };
 
+/** 依上面的門檻挑出要換行的欄位；組合出來的 Dataset（寵物清單）也共用這套判準 */
+export function pickWrapColumns(
+  columns: string[],
+  rows: Record<string, string>[],
+  wrapAt = WRAP_AT_DEFAULT,
+): string[] {
+  return columns.filter((c) => {
+    const longest = rows.reduce((m, r) => Math.max(m, (r[c] ?? '').length), 0);
+    return longest > wrapAt;
+  });
+}
+
 /**
  * 找出「CSV 本來就照它排好」的日期欄。
  *
@@ -83,18 +95,13 @@ function pickDefaultSort(
 }
 
 /**
- * 資料表接外部工具的按鈕。
+ * 資料表接外部工具的按鈕（以 CSV 檔名為鍵）。
  *
- * 這是介面層的設定而不是資料：寫進 CSV 的話 1069 列每一列都要重複同一個網址，
+ * 這是介面層的設定而不是資料：寫進 CSV 的話每一列都要重複同一個網址，
  * 而且會被 noteColumn 當成「帶連結的補充欄」搶走（「任務用途」就不會被認出來）。
+ * 組合出來的 Dataset（寵物清單）不走這裡，在組合處自帶 action。
  */
-const ACTIONS: Record<string, NonNullable<Dataset['action']>> = {
-  專屬寵物: {
-    label: '算檔次',
-    column: '名稱',
-    url: (v) => `https://cg-originmood-dc.github.io/monster-remake/?q=${encodeURIComponent(v)}`,
-  },
-};
+const ACTIONS: Record<string, NonNullable<Dataset['action']>> = {};
 
 /**
  * 猜哪一欄適合當下拉篩選。
@@ -183,11 +190,11 @@ export function loadDataset(name: string): Dataset | null {
     action: ACTIONS[name] && columns.includes(ACTIONS[name].column) ? ACTIONS[name] : null,
     defaultSort: pickDefaultSort(columns, records),
     filterColumn: pickFilterColumn(columns, records, imageColumn),
-    wrapColumns: columns.filter((c) => {
-      if (c === imageColumn) return false;
-      const longest = records.reduce((m, r) => Math.max(m, (r[c] ?? '').length), 0);
-      return longest > (WRAP_AT[name] ?? WRAP_AT_DEFAULT);
-    }),
+    wrapColumns: pickWrapColumns(
+      columns.filter((c) => c !== imageColumn),
+      records,
+      WRAP_AT[name] ?? WRAP_AT_DEFAULT,
+    ),
   };
   cache.set(name, dataset);
   cacheMtime.set(name, mtime);

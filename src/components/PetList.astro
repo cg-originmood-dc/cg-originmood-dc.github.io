@@ -1,0 +1,24 @@
+---
+/**
+ * 寵物清單：專屬寵物＋魔力原始寵物兩張 CSV 的合併檢視（pets.petListDataset）。
+ * 「全部／永恆初心專屬／一般寵物」分頁籤由 DataTable 的 filterTabs 模式渲染；
+ * 這裡只做一件事：「全部」檢視時幫初心專屬的列鋪淡底色，跟一般寵一眼可分。
+ */
+import DataTable from './DataTable.astro';
+import { petListDataset } from '../lib/pets';
+---
+
+<div class="pet-list">
+  <DataTable dataset={petListDataset()} filterTabs />
+</div>
+
+<style is:global>
+  /* 只在「全部」（data-filter-active 為空）上色——篩選後整頁同色就沒有資訊量了。
+     這組選擇器比 .dataset__row--link:hover td 具體，hover 色要自己補一條壓回去 */
+  .pet-list .dataset[data-filter-active=''] tbody tr[data-filter='永恆初心專屬'] td {
+    background-color: #fdf7e3;
+  }
+  .pet-list .dataset[data-filter-active=''] tbody tr[data-filter='永恆初心專屬']:hover td {
+    background-color: #f0e9cf;
+  }
+</style>

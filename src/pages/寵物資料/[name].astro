@@ -51,12 +51,8 @@ const extra = pet ? getPetExtra(pet.名稱) : {};
 const img = pet ? petImagePath(pet.名稱, pet.image) : '';
 const skills = pet ? splitSkills(pet.技能) : [];
 
-/**
- * 這隻是哪張表來的，決定標籤與「返回」要回哪一頁。
- * 找不到寵物時（?name= 亂打）沒有來源可用，就回專屬寵物。
- */
-const 來源 = pet?.來源 || '專屬寵物';
-const listTitle = 來源 === '魔力原始' ? '魔力原始寵物' : '專屬寵物';
+/** 這隻是哪批的（永恆初心專屬／一般寵物），顯示在名稱下方；清單頁已合併成一頁 */
+const 來源 = pet?.來源 || '永恆初心專屬';
 
 const grow = pet ? parseGrowFromPet(pet) : null;
 const statsAt = (lv: number) => {
@@ -155,14 +151,14 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
       <h1 class="page-title">找不到寵物</h1>
       <p>資料庫中沒有「{name}」的紀錄。</p>
       <p>
-        <a href={`${base}/專屬寵物`}>← 返回專屬寵物</a>
+        <a href={`${base}/寵物清單`}>← 返回寵物清單</a>
       </p>
     </Base>
   ) : (
     <Base title={`${pet.名稱} - 寵物資料`} dbEmbed>
       <div class="pet-page">
-        <a class="pet-page__back" href={`${base}/${listTitle}`}>
-          ← 返回{listTitle}
+        <a class="pet-page__back" href={`${base}/寵物清單`}>
+          ← 返回寵物清單
         </a>
 
         {/* 1. 大圖 */}
@@ -184,7 +180,7 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
                 )}
                 <div class="title-text">
                   <h2>{pet.名稱}</h2>
-                  <span>{listTitle}</span>
+                  <span>{來源}</span>
                 </div>
               </div>
             </td>

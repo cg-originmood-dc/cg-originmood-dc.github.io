@@ -1,5 +1,5 @@
 ---
-import { loadDataset, LIST_SEP } from '../lib/datasets';
+import { loadDataset, LIST_SEP, type Dataset } from '../lib/datasets';
 import { thumbOf } from '../lib/thumbs';
 import { renderCell } from '../lib/richtext';
 import { hasPet } from '../lib/pets';
@@ -28,10 +28,15 @@ import { hasPet } from '../lib/pets';
 const QUANTITY_LIST = /^[^、]+\(\d+\)(?:、[^、]+\(\d+\))+$/;
 
 interface Props {
-  name: string;
+  /** content/data/<name>.csv 檔名；與 dataset 擇一 */
+  name?: string;
+  /** 呼叫端已組合好的 Dataset（像寵物清單那種跨檔合併檢視），不經 loadDataset */
+  dataset?: Dataset;
+  /** 篩選欄改渲染成分頁籤（全部＋各值）取代下拉選單 */
+  filterTabs?: boolean;
 }
-const { name } = Astro.props;
-const dataset = loadDataset(name);
+const { name, dataset: given, filterTabs = false } = Astro.props;
+const dataset = given ?? (name ? loadDataset(name) : null);
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const src = (v: string) => (v.startsWith('/') ? base + v : v);
 const cols = dataset?.columns.filter((c) => c !== dataset.imageColumn) ?? [];
@@ -42,8 +47,9 @@ const cols = dataset?.columns.filter((c) => c !== dataset.imageColumn) ?? [];
  * 這裡列的是「這張表的名稱欄裝的是寵物」，不是「這些名字有頁面」——
  * 後者交給 hasPet 逐列判斷，免得表裡混進沒收錄的寵物時發出死連結。
  */
-const PET_NAME_DATASETS = new Set(['專屬寵物', '魔力原始寵物']);
-const linkNameCol = PET_NAME_DATASETS.has(name) && cols.includes('名稱') ? '名稱' : null;
+const PET_NAME_DATASETS = new Set(['專屬寵物', '魔力原始寵物', '寵物清單']);
+const linkNameCol =
+  dataset && PET_NAME_DATASETS.has(dataset.name) && cols.includes('名稱') ? '名稱' : null;
 const petDetailHref = (petName: string) =>
   hasPet(petName) ? `${base}/寵物資料/${encodeURIComponent(petName)}` : null;
 ---
@@ -52,14 +58,27 @@ const petDetailHref = (petName: string) =>
   !dataset ? (
     <p class="dataset-missing">找不到資料集 <code>{name}</code>（應在 content/data/{name}.csv）</p>
   ) : (
-    <figure class="dataset" data-dataset={name}>
+    <figure class="dataset" data-dataset={dataset.name} data-filter-active="">
+      {filterTabs && dataset.filterColumn && (
+        <div
+          class="dataset__tabs"
+          role="group"
+          aria-label={`篩選${dataset.filterColumn.name}`}
+          data-filter-col={cols.indexOf(dataset.filterColumn.name)}
+        >
+          <button type="button" class="dataset__tab is-active" data-value="">全部</button>
+          {dataset.filterColumn.values.map((v) => (
+            <button type="button" class="dataset__tab" data-value={v}>{v}</button>
+          ))}
+        </div>
+      )}
       <figcaption class="dataset__bar">
         <label class="dataset__field">
           搜尋:
           <input type="search" placeholder="輸入關鍵字" autocomplete="off" />
         </label>
         <button type="button" class="dataset__clear">清空</button>
-        {dataset.filterColumn && (
+        {!filterTabs && dataset.filterColumn && (
           <label class="dataset__field">
             篩選{dataset.filterColumn.name}:
             <select data-filter-col={cols.indexOf(dataset.filterColumn.name)}>
@@ -109,7 +128,13 @@ const petDetailHref = (petName: string) =>
               const petName = linkNameCol ? (row[linkNameCol] ?? '').trim() : '';
               const detail = petName ? petDetailHref(petName) : null;
               return (
-                <tr class={detail ? 'dataset__row--link' : undefined} data-href={detail ?? undefined}>
+                <tr
+                  class={detail ? 'dataset__row--link' : undefined}
+                  data-href={detail ?? undefined}
+                  data-filter={
+                    dataset.filterColumn ? (row[dataset.filterColumn.name] ?? '').trim() : undefined
+                  }
+                >
                   {dataset.imageColumn && (
                     <td class="col-img">
                       {row[dataset.imageColumn] ? (
@@ -197,6 +222,8 @@ const petDetailHref = (petName: string) =>
   document.querySelectorAll<HTMLElement>('.dataset').forEach((root) => {
     const input = root.querySelector<HTMLInputElement>('input[type=search]');
     const select = root.querySelector<HTMLSelectElement>('select[data-filter-col]');
+    // 篩選有兩種長相：下拉（select）或分頁籤（tabs），同一時間只會有一種
+    const tabs = root.querySelector<HTMLElement>('.dataset__tabs');
     const note = root.querySelector<HTMLInputElement>('input[data-note-col]');
     const clear = root.querySelector<HTMLButtonElement>('.dataset__clear');
     const count = root.querySelector<HTMLOutputElement>('.dataset__count');
@@ -231,20 +258,39 @@ const petDetailHref = (petName: string) =>
 
     const apply = () => {
       const q = input?.value.trim().toLowerCase() ?? '';
-      const want = select?.value ?? '';
-      const col = want && select ? Number(select.dataset.filterCol) + lead : -1;
+      const filterEl = select ?? tabs;
+      const want =
+        select?.value ??
+        tabs?.querySelector('.is-active')?.getAttribute('data-value') ??
+        '';
+      const col = want && filterEl ? Number(filterEl.dataset.filterCol) + lead : -1;
       const onlyNote = note?.checked ?? false;
       let shown = 0;
       for (const tr of rows) {
         const hit =
           (!q || hay.get(tr)!.includes(q)) &&
-          (!want || tr.cells[col]?.textContent?.trim() === want) &&
+          (!want || (tr.dataset.filter ?? tr.cells[col]?.textContent?.trim()) === want) &&
           (!onlyNote || !!tr.cells[noteCol]?.textContent?.trim());
         tr.hidden = !hit;
         if (hit) shown++;
       }
+      // 讓 CSS 知道現在停在哪個篩選值（寵物清單「全部」檢視的列底色靠這個）
+      root.dataset.filterActive = want;
       if (count) count.textContent = shown === total ? `${total} 筆` : `${shown} / ${total} 筆`;
     };
+
+    const resetTabs = () => {
+      tabs
+        ?.querySelectorAll<HTMLButtonElement>('.dataset__tab')
+        .forEach((b) => b.classList.toggle('is-active', b.dataset.value === ''));
+    };
+    tabs?.querySelectorAll<HTMLButtonElement>('.dataset__tab').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        tabs.querySelectorAll('.dataset__tab').forEach((b) => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        apply();
+      });
+    });
 
     input?.addEventListener('input', apply);
     select?.addEventListener('change', apply);
@@ -252,6 +298,7 @@ const petDetailHref = (petName: string) =>
     clear?.addEventListener('click', () => {
       if (input) input.value = '';
       if (select) select.value = '';
+      resetTabs();
       if (note) note.checked = false;
       apply();
     });

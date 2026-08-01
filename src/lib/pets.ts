@@ -6,6 +6,7 @@ import {
   setHandwrittenFusionTrees,
 } from './fusionGraph';
 import { itemImagePath } from './items';
+import { pickWrapColumns, type Dataset } from './datasets';
 
 export interface PetRecord {
   名稱: string;
@@ -26,7 +27,7 @@ export interface PetRecord {
   /** 入手分類，供列表篩選：捕捉 / 合成 / 任務 / 活動 / 兌換 / 未知 */
   入手類型: string;
   /**
-   * 這隻是哪一批的：初心專屬 / 魔力原始。
+   * 這隻是哪一批的：永恆初心專屬 / 一般寵物（魔力原本的野生寵）。
    * 不寫在 CSV 裡——同一份檔案整欄同值等於白佔一欄，
    * 是「哪個檔」決定的事，讀檔時蓋上去就好。見 SOURCES。
    */
@@ -126,15 +127,15 @@ const STAT_KEYS = ['體力', '力量', '防禦', '速度', '魔法', '技格', '
 /**
  * 寵物資料的兩張來源表。
  *
- * 分兩個檔而不是併成一張：欄位本來就不同。專屬寵有公告日／公告連結／圖，
+ * 資料檔分兩個而不是併成一張：欄位本來就不同。專屬寵有公告日／公告連結／圖，
  * 魔力原始寵沒有；原始寵有一級捕捉地點，專屬寵多半是合成或活動來的。
- * 併起來會變成兩邊各有一半欄位長期空白，看表的人也分不出哪隻是哪種。
+ * 清單頁的合併檢視在 petListDataset() 渲染時發生，資料層不動。
  *
  * 前面的優先：兩表同名時（翼龍、幻影那幾隻）以專屬寵物表為準。
  */
 const SOURCES: ReadonlyArray<{ file: string; 來源: string }> = [
-  { file: '專屬寵物.csv', 來源: '初心專屬' },
-  { file: '魔力原始寵物.csv', 來源: '魔力原始' },
+  { file: '專屬寵物.csv', 來源: '永恆初心專屬' },
+  { file: '魔力原始寵物.csv', 來源: '一般寵物' },
 ];
 
 let cache: PetRecord[] | null = null;
@@ -189,6 +190,39 @@ export function getPet(name: string): PetRecord | null {
 /** 是否有這隻寵的資料列（合成樹連結用，對齊 items 的 hasItem） */
 export function hasPet(name: string): boolean {
   return !!getPet(name.trim());
+}
+
+/**
+ * 寵物清單頁的合併檢視：兩張來源表串成一個 Dataset 交給 DataTable。
+ * 「來源」欄跟著每一列，清單頁才能用分頁籤篩選、在全部檢視幫初心列上色；
+ * 欄序照專屬寵物表的習慣，一般寵缺的欄（技能／公告…）就空著。
+ */
+export function petListDataset(): Dataset {
+  const columns = [
+    '名稱', '來源', '種族', '體力', '力量', '防禦', '速度', '魔法',
+    '技格', '總檔', '屬性', '技能', '公告日', '公告連結', '任務用途',
+    '入手方法', '入手類型',
+  ];
+  const rows = listPets().map((r) => ({
+    ...r,
+    // 一般寵物表沒有 image 欄，走預設路徑；檔案不存在就空著（不出破圖）
+    image: petImagePath(r.名稱, r.image),
+  }));
+  return {
+    name: '寵物清單',
+    columns: [...columns, 'image'],
+    rows,
+    imageColumn: 'image',
+    filterColumn: { name: '來源', values: SOURCES.map((s) => s.來源) },
+    wrapColumns: pickWrapColumns(columns, rows),
+    noteColumn: '任務用途',
+    action: {
+      label: '算檔次',
+      column: '名稱',
+      url: (v) => `https://cg-originmood-dc.github.io/monster-remake/?q=${encodeURIComponent(v)}`,
+    },
+    defaultSort: null,
+  };
 }
 
 export function petStatKeys(): readonly string[] {
