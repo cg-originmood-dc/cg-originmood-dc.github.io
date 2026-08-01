@@ -35,26 +35,43 @@ export interface PetRecord {
   [key: string]: string;
 }
 
-/** 循環轉換模組內的一條 reaction（展示用，已扁平） */
-export interface FusionCycleReactionView {
+/** 循環圖的實體節點；匯合位置不是節點，不放進這個集合。 */
+export interface FusionCycleGraphNode {
+  id: string;
+  node: FusionNode;
+}
+
+export interface FusionCycleGraphInput {
+  nodeId: string;
+  qty?: number;
+}
+
+export interface FusionCycleGraphOutput {
+  nodeId: string;
+  prob?: string;
+  qty?: number;
+}
+
+/** 一條多材料／多產物反應；畫面以不可見幾何匯合位置渲染。 */
+export interface FusionCycleGraphReaction {
   id: string;
   kind: 'acquire' | 'reroll' | 'convert';
-  materials: FusionNode[];
-  products: FusionNode[];
+  inputs: FusionCycleGraphInput[];
+  outputs: FusionCycleGraphOutput[];
   npc?: string;
 }
 
-/** 互轉循環群組節點資料（一般樹外的局部模組） */
+export interface FusionCycleGraph {
+  nodes: FusionCycleGraphNode[];
+  reactions: FusionCycleGraphReaction[];
+}
+
+/** 互轉循環群組節點資料（一般樹外的局部圖） */
 export interface FusionCycleModuleView {
   id: string;
   label: string;
   focusedPet: string;
-  members: string[];
-  sections: Array<{
-    kind: 'acquire' | 'reroll' | 'convert';
-    title: string;
-    reactions: FusionCycleReactionView[];
-  }>;
+  graph: FusionCycleGraph;
 }
 
 /** 合成樹節點（之後可由其他 agent 補資料） */
@@ -450,6 +467,11 @@ export function collectPetNamesInTree(node: FusionNode, out = new Set<string>())
   if (node.type === 'pet' && node.name) out.add(node.name);
   for (const h of node.heads ?? []) collectPetNamesInTree(h, out);
   for (const c of node.children ?? []) collectPetNamesInTree(c, out);
+  for (const graphNode of node.cycleModule?.graph.nodes ?? []) {
+    if (graphNode.node.type === 'pet' && graphNode.node.name) {
+      out.add(graphNode.node.name);
+    }
+  }
   return out;
 }
 
@@ -465,14 +487,13 @@ export function applyPetImagesFromSsot(node: FusionNode): FusionNode {
   const cycleModule = node.cycleModule
     ? {
         ...node.cycleModule,
-        sections: node.cycleModule.sections.map((sec) => ({
-          ...sec,
-          reactions: sec.reactions.map((rx) => ({
-            ...rx,
-            materials: rx.materials.map(applyPetImagesFromSsot),
-            products: rx.products.map(applyPetImagesFromSsot),
+        graph: {
+          ...node.cycleModule.graph,
+          nodes: node.cycleModule.graph.nodes.map((graphNode) => ({
+            ...graphNode,
+            node: applyPetImagesFromSsot(graphNode.node),
           })),
-        })),
+        },
       }
     : undefined;
   const base: FusionNode = {

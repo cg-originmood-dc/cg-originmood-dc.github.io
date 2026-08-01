@@ -2,8 +2,8 @@
  * 查詢／展樹：只讀 CompiledFusionGraph
  */
 import type {
-  FusionCycleModuleView,
-  FusionCycleReactionView,
+  FusionCycleGraph,
+  FusionCycleGraphReaction,
   FusionNode,
 } from '../pets';
 import { itemImagePath } from '../items';
@@ -339,19 +339,6 @@ function inGraph(name: string): boolean {
   return graph().petNodes.has(name);
 }
 
-function productSlotNode(s: FusionSlot): FusionNode {
-  if (s.kind === 'pet') {
-    return {
-      type: 'pet',
-      name: s.symbol,
-      image: petImg(s.symbol),
-      ...(s.prob ? { countLabel: `機率 ${s.prob}` } : {}),
-      ...(s.qty != null ? { qty: s.qty } : {}),
-    };
-  }
-  return slotToMaterialNode(s);
-}
-
 /** 形狀推斷 reaction_kind（資料未填 kind 時） */
 function inferReactionKind(
   r: FusionReaction,
@@ -369,111 +356,112 @@ function inferReactionKind(
   return 'acquire';
 }
 
-const KIND_TITLE: Record<ReactionKind, string> = {
-  acquire: '取得',
-  reroll: '重抽',
-  convert: '洗回／轉換',
-};
-
-const KIND_ORDER: ReactionKind[] = ['acquire', 'reroll', 'convert'];
-
-function reactionToCycleView(
-  r: FusionReaction,
-  kind: ReactionKind,
-): FusionCycleReactionView {
-  // 多產物永遠完整列出（含機率），不因進入點拆成單一 2%
-  const products = r.products.map(productSlotNode);
-  products.sort((a, b) => {
-    const pa = a.countLabel?.match(/([\d.]+)%/)?.[1];
-    const pb = b.countLabel?.match(/([\d.]+)%/)?.[1];
-    const na = pa ? Number(pa) : -1;
-    const nb = pb ? Number(pb) : -1;
-    if (nb !== na) return nb - na;
-    return a.name.localeCompare(b.name, 'zh-Hant');
-  });
-  const npc = (r.npc || '').trim();
-  return {
-    id: r.id,
-    kind,
-    materials: r.materials.map(slotToMaterialNode),
-    products,
-    ...(npc ? { npc } : {}),
-  };
-}
-
 /**
- * 循環群組成員頁：外層樹（群組外取得）+ 一個轉換模組（內部 reaction 各一次）。
- * viewKey = group.id；focusedPet 僅影響高亮，不重算不同樹。
+ * 把循環群組正規化成「實體節點＋反應超邊」：
+ * - 寵物／道具是唯一可見節點；反應匯合位置只存在於畫面幾何，不是節點
+ * - 多產物反應的每個產物保留自己的節點實例，避免把自循環錯誤壓成一張卡
+ * - 同一個道具在多條反應間共用一張節點卡（例如洗髓丹）
  */
-function buildCycleGroupView(
-  focusedPet: string,
-  group: FusionCycleGroup,
-  opts: { maxDepth: number },
-): FusionNode {
-  const g = graph();
-  const memberSet = new Set(group.members);
-  const byId = new Map(g.reactions.map((r) => [r.id, r]));
+function buildCycleGraph(
+  internal: FusionReaction[],
+  memberSet: Set<string>,
+): FusionCycleGraph {
+  const nodes: FusionCycleGraph['nodes'] = [];
+  const reactions: FusionCycleGraphReaction[] = [];
+  const sharedEntities = new Map<string, string>();
 
-  // 內部：群組 reactionIds（材料寵皆在群組內）
-  const internal: FusionReaction[] = [];
-  for (const id of group.reactionIds) {
-    const r = byId.get(id);
-    if (r) internal.push(r);
-  }
-
-  // 外部取得：產物在群組、但有寵物材料在群組外
-  const external: FusionReaction[] = [];
-  const seenExt = new Set<string>();
-  for (const m of group.members) {
-    for (const r of g.byProduct.get(m) ?? []) {
-      if (seenExt.has(r.id) || group.reactionIds.includes(r.id)) continue;
-      const mats = petSymbols(r.materials);
-      if (!mats.length) continue;
-      if (mats.every((x) => memberSet.has(x))) continue;
-      if (!petSymbols(r.products).some((p) => memberSet.has(p))) continue;
-      seenExt.add(r.id);
-      external.push(r);
+  function addNode(slot: FusionSlot, occurrence: string, shared = false): string {
+    const key = `${slot.kind}:${slot.symbol}`;
+    if (shared) {
+      const existing = sharedEntities.get(key);
+      if (existing) return existing;
     }
+
+    const id = shared ? key : `${key}:${occurrence}`;
+    nodes.push({ id, node: slotToMaterialNode(slot) });
+    if (shared) sharedEntities.set(key, id);
+    return id;
   }
 
-  // 外層：取得線用舊 expand，但 stack 預填群組成員，避免嵌回循環
-  const stackSeed = new Set(group.members);
-  const acquireTrees: FusionNode[] = [];
-  for (const r of external) {
-    const prod =
-      r.products.find((p) => p.kind === 'pet' && memberSet.has(p.symbol))
-        ?.symbol ?? focusedPet;
-    acquireTrees.push(
-      expandOneReaction(prod, r, {
-        stack: stackSeed,
-        depth: 0,
-        maxDepth: opts.maxDepth,
-        isRoot: true,
-      }),
-    );
+  function addInputNode(
+    slot: FusionSlot,
+    reactionId: string,
+    index: number,
+    hubOutputs: Map<string, string>,
+  ): string {
+    // 循環內的寵物產物接回同一張產物節點；道具則依名稱共用。
+    if (slot.kind === 'pet') {
+      const upstream = hubOutputs.get(slot.symbol);
+      if (upstream) return upstream;
+      return addNode(slot, `input:${reactionId}:${index}`);
+    }
+    return addNode(slot, `input:${reactionId}:${index}`, true);
   }
 
-  // 模組內依 kind 分節；每條 reaction_id 一次
-  const byKind = new Map<ReactionKind, FusionCycleReactionView[]>();
-  for (const r of internal) {
-    const kind = inferReactionKind(r, memberSet);
-    const list = byKind.get(kind) ?? [];
-    list.push(reactionToCycleView(r, kind));
-    byKind.set(kind, list);
-  }
-  const sections: FusionCycleModuleView['sections'] = [];
-  for (const kind of KIND_ORDER) {
-    const reactions = byKind.get(kind);
-    if (!reactions?.length) continue;
-    reactions.sort((a, b) => a.id.localeCompare(b.id));
-    sections.push({
-      kind,
-      title: KIND_TITLE[kind],
-      reactions,
+  if (!internal.length) return { nodes, reactions };
+
+  // 目前循環的主幹是多產物重抽；先放它，後續反應才能接到 C／D 等產物節點。
+  const hub =
+    internal.find((reaction) => reaction.products.length > 1) ?? internal[0]!;
+  const rest = internal.filter((reaction) => reaction.id !== hub.id);
+  const hubOutputs = new Map<string, string>();
+
+  const hubInputs = hub.materials.map((slot, index) => ({
+    nodeId: addNode(slot, `input:${hub.id}:${index}`, slot.kind !== 'pet'),
+    ...(slot.qty != null ? { qty: slot.qty } : {}),
+  }));
+  const hubProducts = hub.products.map((slot, index) => {
+    const nodeId = addNode(slot, `output:${hub.id}:${index}`, slot.kind !== 'pet');
+    if (slot.kind === 'pet' && !hubOutputs.has(slot.symbol)) {
+      hubOutputs.set(slot.symbol, nodeId);
+    }
+    return {
+      nodeId,
+      ...(slot.prob ? { prob: slot.prob } : {}),
+      ...(slot.qty != null ? { qty: slot.qty } : {}),
+    };
+  });
+  reactions.push({
+    id: hub.id,
+    kind: inferReactionKind(hub, memberSet),
+    inputs: hubInputs,
+    outputs: hubProducts,
+    ...((hub.npc || '').trim() ? { npc: hub.npc.trim() } : {}),
+  });
+
+  for (const reaction of rest) {
+    const inputs = reaction.materials.map((slot, index) => ({
+      nodeId: addInputNode(slot, reaction.id, index, hubOutputs),
+      ...(slot.qty != null ? { qty: slot.qty } : {}),
+    }));
+    const outputs = reaction.products.map((slot, index) => ({
+      nodeId: addNode(slot, `output:${reaction.id}:${index}`, slot.kind !== 'pet'),
+      ...(slot.prob ? { prob: slot.prob } : {}),
+      ...(slot.qty != null ? { qty: slot.qty } : {}),
+    }));
+    reactions.push({
+      id: reaction.id,
+      kind: inferReactionKind(reaction, memberSet),
+      inputs,
+      outputs,
+      ...((reaction.npc || '').trim() ? { npc: reaction.npc.trim() } : {}),
     });
   }
 
-  const moduleNode: FusionNode = {
+  return { nodes, reactions };
+}
+
+function buildCycleGroupView(
+  focusedPet: string,
+  group: FusionCycleGroup,
+): FusionNode {
+  const g = graph();
+  const byId = new Map(g.reactions.map((reaction) => [reaction.id, reaction]));
+  const internal = group.reactionIds
+    .map((id) => byId.get(id))
+    .filter((reaction): reaction is FusionReaction => Boolean(reaction));
+
+  return {
     type: 'material',
     name: group.label,
     target: true,
@@ -481,24 +469,14 @@ function buildCycleGroupView(
       id: group.id,
       label: group.label,
       focusedPet,
-      members: group.members.slice(),
-      sections,
+      graph: buildCycleGraph(internal, new Set(group.members)),
     },
-  };
-
-  const children = [...acquireTrees, moduleNode];
-  if (children.length === 1) return children[0]!;
-  return {
-    type: 'material',
-    name: '',
-    target: true,
-    children,
   };
 }
 
 /**
  * 顯示用合成樹（SSOT 算法）：
- * 1. 若寵物屬互轉循環群組 → 外層取得樹 + 局部轉換模組（reaction 各一次）
+ * 1. 若寵物屬互轉循環群組 → 只顯示一張由實體節點與連線組成的局部圖
  * 2. 否則：從目前寵沿上級上溯 → 找全部根 → 各根向下完整展開
  * 3. 多根／多配方 → 森林
  */
@@ -513,7 +491,7 @@ export function buildFusionTreeFromGraph(
   const g = graph();
   const cycle = g.petToCycleGroup.get(name);
   if (cycle) {
-    const tree = buildCycleGroupView(name, cycle, { maxDepth });
+    const tree = buildCycleGroupView(name, cycle);
     return treeHasBody(tree) ? tree : null;
   }
 
