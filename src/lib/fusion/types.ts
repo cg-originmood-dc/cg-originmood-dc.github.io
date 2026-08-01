@@ -17,6 +17,10 @@ export interface FusionSlot {
   qty?: number;
   /** 產物機率，如 "80%" */
   prob?: string;
+  /** 材料寵物的最低等級（例如「Lv40以上」） */
+  minLevel?: number;
+  /** 材料寵物可使用任意等級 */
+  anyLevel?: boolean;
 }
 
 /**

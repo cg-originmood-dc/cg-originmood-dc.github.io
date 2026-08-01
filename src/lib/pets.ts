@@ -89,6 +89,10 @@ export interface FusionNode {
   countLabel?: string;
   /** NPC / 座標 / 機率 */
   npc?: string;
+  /** 材料寵物的最低等級（例如「Lv40以上」） */
+  minLevel?: number;
+  /** 材料寵物可使用任意等級 */
+  anyLevel?: boolean;
   /** 是否為樹尖目標 */
   target?: boolean;
   /**
