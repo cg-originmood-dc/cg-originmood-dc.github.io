@@ -7,7 +7,7 @@
 import Base from '../../layouts/Base.astro';
 import FusionTree from '../../components/FusionTree.astro';
 import {
-  listPets,
+  listPetsForDetailPaths,
   getPet,
   getPetExtra,
   splitSkills,
@@ -16,43 +16,40 @@ import {
   petImagePath,
   resolveFusionTree,
   obtainTypeLabel,
+  petCatalogLabel,
 } from '../../lib/pets';
 import {
   listActivitiesForPet,
   synthesisActivityHref,
 } from '../../lib/synthesis';
-import {
-  militaryLabObtainMethods,
-  MILITARY_LAB_PAGE,
-} from '../../lib/militaryLab';
-import {
-  remodelVendorObtainMethods,
-  REMODEL_VENDOR_PAGE,
-} from '../../lib/remodelVendor';
+import { militaryLabObtainMethods } from '../../lib/militaryLab';
+import { MILITARY_LAB_PAGE } from '../../lib/militaryLabData';
+import { remodelVendorObtainMethods } from '../../lib/remodelVendor';
+import { REMODEL_VENDOR_PAGE } from '../../lib/remodelVendorData';
 import {
   parseGrowFromPet,
   calculatePetStats,
   roundStat,
   clientFormulaPayload,
 } from '../../lib/petStats';
-import { skillPath } from '../../lib/skills';
 import { renderCell } from '../../lib/richtext';
 
 export function getStaticPaths() {
-  return listPets().map((p) => ({ params: { name: p.名稱 } }));
+  return listPetsForDetailPaths().map((p) => ({ params: { name: p.名稱 } }));
 }
 
 const { name } = Astro.params;
 const pet = name ? getPet(name) : null;
+const catalog = pet?._catalog ?? null;
+const catalogLabel = petCatalogLabel(catalog);
+const listHref =
+  catalog === 'native' ? '/原生寵物' : '/專屬寵物';
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const src = (v: string) => (v.startsWith('/') ? base + v : v);
 
 const extra = pet ? getPetExtra(pet.名稱) : {};
 const img = pet ? petImagePath(pet.名稱, pet.image) : '';
 const skills = pet ? splitSkills(pet.技能) : [];
-
-/** 這隻是哪批的（永恆初心專屬／一般寵物），顯示在名稱下方；清單頁已合併成一頁 */
-const 來源 = pet?.來源 || '永恆初心專屬';
 
 const grow = pet ? parseGrowFromPet(pet) : null;
 const statsAt = (lv: number) => {
@@ -121,11 +118,8 @@ function fmtGrade(v: string): string {
   return /D$/i.test(v) ? v : `${v}D`;
 }
 
-// CSV 的技能欄偶爾放的不是技能（有幾隻寫的是出沒地點、有一隻寫整段技能說明），
-// 那些名字沒有對應的技能頁。查得到才給連結，查不到就只印字。
-function skillHref(sk: string): string | null {
-  const path = skillPath(skillBaseName(sk));
-  return path ? `${base}${path}` : null;
+function skillHref(sk: string): string {
+  return `${base}/技能總覽/${encodeURIComponent(skillBaseName(sk))}`;
 }
 
 function skillNote(sk: string): string {
@@ -151,14 +145,16 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
       <h1 class="page-title">找不到寵物</h1>
       <p>資料庫中沒有「{name}」的紀錄。</p>
       <p>
-        <a href={`${base}/寵物清單`}>← 返回寵物清單</a>
+        <a href={`${base}/專屬寵物`}>← 返回專屬寵物</a>
+        {' · '}
+        <a href={`${base}/原生寵物`}>原生寵物</a>
       </p>
     </Base>
   ) : (
     <Base title={`${pet.名稱} - 寵物資料`} dbEmbed>
       <div class="pet-page">
-        <a class="pet-page__back" href={`${base}/寵物清單`}>
-          ← 返回寵物清單
+        <a class="pet-page__back" href={`${base}${listHref}`}>
+          ← 返回{catalogLabel}
         </a>
 
         {/* 1. 大圖 */}
@@ -180,7 +176,7 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
                 )}
                 <div class="title-text">
                   <h2>{pet.名稱}</h2>
-                  <span>{來源}</span>
+                  <span>{catalogLabel}</span>
                 </div>
               </div>
             </td>
@@ -193,10 +189,10 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
             <td colspan="4">基本資訊</td>
           </tr>
           <tr>
-            <td width="120"><b>種族</b></td>
-            <td width="230">{pet.種族 || '—'}</td>
-            <td width="120"><b>可否封印</b></td>
-            <td width="230">
+            <td style="width: 120px"><b>種族</b></td>
+            <td style="width: 230px">{pet.種族 || '—'}</td>
+            <td style="width: 120px"><b>可否封印</b></td>
+            <td style="width: 230px">
               {
                 extra.sealable === true ? (
                   <span class="badge badge-yes">可封印</span>
@@ -273,13 +269,9 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
                   <div class="skill-list">
                     {skills.map((sk) => (
                       <div class="skill-chip">
-                        {skillHref(sk) ? (
-                          <a class="skill-link" href={skillHref(sk)}>
-                            {sk}
-                          </a>
-                        ) : (
-                          <span class="skill-link skill-link--plain">{sk}</span>
-                        )}
+                        <a class="skill-link" href={skillHref(sk)}>
+                          {sk}
+                        </a>
                         {skillNote(sk) && (
                           <span class="skill-note">{skillNote(sk)}</span>
                         )}
@@ -477,13 +469,13 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
           </tr>
         </table>
 
-        {/* 8. 合成樹（完整樹 + 目前寵物邊框） */}
-        <table class="info-table">
+        {/* 8. 合成樹（完整樹 + 目前寵物邊框；過寬可橫向捲動） */}
+        <table class="info-table info-table--fusion-tree">
           <tr class="head">
             <td>合成樹 (由頂點向下解構)</td>
           </tr>
           <tr>
-            <td style="padding: 10px 0;">
+            <td class="fusion-tree-cell">
               <div class="tree-container" data-fusion-tree>
                 <ul class="tree-diagram">
                   <FusionTree node={fusionRoot} base={base} currentName={pet.名稱} />
@@ -1033,10 +1025,6 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
   .skill-link:hover {
     text-decoration: underline;
   }
-  /* 沒有對應技能頁的（CSV 技能欄放了地點那幾筆），不裝成連結 */
-  .skill-link--plain {
-    color: inherit;
-  }
   .skill-note {
     font-size: 12px;
     color: #5f6368;
@@ -1144,12 +1132,28 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
     font-weight: 600 !important;
   }
 
-  /* ---- 合成樹（版面 flex；連線由 SVG 依卡片座標繪製） ---- */
+  /* ---- 合成樹（版面 flex；過寬橫向捲動；連線 SVG 依卡片座標） ---- */
+  .info-table--fusion-tree {
+    table-layout: fixed;
+    width: 100%;
+  }
+  .info-table--fusion-tree .fusion-tree-cell {
+    padding: 10px 0;
+    /* 讓內部 scroll 生效，避免整頁被撐開 */
+    overflow: hidden;
+    max-width: 100%;
+  }
   .tree-container {
     position: relative;
     width: 100%;
+    max-width: 100%;
     overflow-x: auto;
+    overflow-y: hidden;
     padding: 15px 8px;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    /* 明顯的橫向捲軸 */
+    scrollbar-gutter: stable;
   }
   .tree-container > svg.tree-lines {
     position: absolute;
@@ -1162,6 +1166,7 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
   .tree-diagram,
   .tree-diagram ul {
     display: flex;
+    flex-wrap: nowrap;
     justify-content: center;
     align-items: flex-start;
     margin: 0;
@@ -1169,14 +1174,22 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
     list-style: none;
     position: relative;
   }
+  /* 內容比容器寬時撐開，啟用橫向捲動 */
+  .tree-diagram {
+    width: max-content;
+    min-width: 100%;
+    box-sizing: border-box;
+  }
   .tree-diagram ul,
   .tree-diagram .tree-children {
     padding-top: 28px;
     gap: 0 8px;
+    flex-wrap: nowrap;
   }
   .tree-diagram .tree-children--forest {
     padding-top: 0;
     gap: 24px;
+    flex-wrap: nowrap;
   }
   .tree-diagram > li,
   .tree-diagram li.tree-node,
@@ -1187,12 +1200,14 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
     align-items: center;
     position: relative;
     padding: 0 4px;
+    flex: 0 0 auto;
   }
   /* 多產物：多頭並列 → 共用材料 */
   .tree-multi-head {
     display: flex;
     flex-direction: column;
     align-items: center;
+    flex: 0 0 auto;
   }
   .tree-multi-head__tops {
     display: flex;
@@ -1203,7 +1218,7 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
   }
   .tree-diagram .tree-multi-head__heads {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: center;
     align-items: flex-start;
     gap: 10px 14px;
@@ -1211,6 +1226,7 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
     margin: 0;
     padding: 0;
     position: relative;
+    width: max-content;
   }
   .tree-diagram .tree-multi-head__head {
     display: flex;
@@ -1218,6 +1234,7 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
     align-items: center;
     position: relative;
     padding: 0;
+    flex: 0 0 auto;
   }
   .tree-diagram .tree-forest-root {
     padding: 0;

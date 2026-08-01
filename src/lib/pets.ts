@@ -1,12 +1,12 @@
 import { readFileSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse } from 'csv-parse/sync';
-import {
-  buildFusionTreeFromGraph,
-  setHandwrittenFusionTrees,
-} from './fusionGraph';
+import { buildFusionTreeFromGraph } from './fusionGraph';
+import { loadFusionLibraryFile } from './fusion/library';
 import { itemImagePath } from './items';
 import { pickWrapColumns, type Dataset } from './datasets';
+
+export type PetCatalog = 'exclusive' | 'native';
 
 export interface PetRecord {
   名稱: string;
@@ -26,13 +26,9 @@ export interface PetRecord {
   入手方法: string;
   /** 入手分類，供列表篩選：捕捉 / 合成 / 任務 / 活動 / 兌換 / 未知 */
   入手類型: string;
-  /**
-   * 這隻是哪一批的：永恆初心專屬 / 一般寵物（魔力原本的野生寵）。
-   * 不寫在 CSV 裡——同一份檔案整欄同值等於白佔一欄，
-   * 是「哪個檔」決定的事，讀檔時蓋上去就好。見 SOURCES。
-   */
-  來源: string;
-  [key: string]: string;
+  /** exclusive=專屬寵物；native=原生寵物（蔚藍圖鑑 001–175） */
+  _catalog?: PetCatalog;
+  [key: string]: string | undefined;
 }
 
 /** 合成樹節點（之後可由其他 agent 補資料） */
@@ -48,12 +44,12 @@ export interface FusionNode {
   qty?: number | string;
   /** 數量旁說明，如「金幣」 */
   countLabel?: string;
-  /** 材料要求的最低等級（公告寫 LvN／LvN 以上時） */
-  minLevel?: number;
-  /** 材料要求任意等級（公告寫「任意等級」時） */
-  anyLevel?: boolean;
-  /** NPC / 座標 / 機率 */
+  /** NPC / 座標；可含等級前綴如「40等@聖巫羅莎」「任意@…」 */
   npc?: string;
+  /** 材料寵最低等級（展示用；通常已併入 npc） */
+  minLevel?: number;
+  /** 材料為任意等級 */
+  anyLevel?: boolean;
   /** 是否為樹尖目標 */
   target?: boolean;
   /**
@@ -128,78 +124,96 @@ export function obtainTypeLabel(type?: string): string {
 
 const STAT_KEYS = ['體力', '力量', '防禦', '速度', '魔法', '技格', '總檔'] as const;
 
-/**
- * 寵物資料的兩張來源表。
- *
- * 資料檔分兩個而不是併成一張：欄位本來就不同。專屬寵有公告日／公告連結／圖，
- * 魔力原始寵沒有；原始寵有一級捕捉地點，專屬寵多半是合成或活動來的。
- * 清單頁的合併檢視在 petListDataset() 渲染時發生，資料層不動。
- *
- * 前面的優先：兩表同名時（翼龍、幻影那幾隻）以專屬寵物表為準。
- */
-const SOURCES: ReadonlyArray<{ file: string; 來源: string }> = [
-  { file: '專屬寵物.csv', 來源: '永恆初心專屬' },
-  { file: '魔力原始寵物.csv', 來源: '一般寵物' },
-];
+let exclusiveCache: PetRecord[] | null = null;
+let exclusiveByName: Map<string, PetRecord> | null = null;
+let exclusiveMtime = 0;
 
-let cache: PetRecord[] | null = null;
-let byName: Map<string, PetRecord> | null = null;
-/** 各來源 CSV 的修改時間；dev 改表後會自動重讀，避免入手方法等欄位一直空白 */
-let cacheMtimeMs = '';
-let extrasCache: Map<string, PetDetailExtra> | null = null;
-let extrasMtimeMs = 0;
+let nativeCache: PetRecord[] | null = null;
+let nativeByName: Map<string, PetRecord> | null = null;
+let nativeMtime = 0;
 
-function loadAll(): PetRecord[] {
-  const files = SOURCES.map((s) => ({
-    ...s,
-    path: join(process.cwd(), 'content', 'data', s.file),
-  })).filter((s) => existsSync(s.path));
-
-  const mtime = files.map((s) => `${s.file}:${statSync(s.path).mtimeMs}`).join('|');
-  if (cache && mtime === cacheMtimeMs) return cache;
-
-  const merged: PetRecord[] = [];
-  const seen = new Map<string, PetRecord>();
-  for (const s of files) {
-    const text = readFileSync(s.path, 'utf8').replace(/^\uFEFF/, '');
-    const records = parse(text, {
-      columns: true,
-      skip_empty_lines: true,
-      relax_column_count: true,
-      trim: true,
-    }) as PetRecord[];
-    for (const r of records) {
-      const name = (r.名稱 ?? '').trim();
-      if (!name || seen.has(name)) continue;
-      r.來源 = s.來源;
-      seen.set(name, r);
-      merged.push(r);
-    }
-  }
-  cache = merged;
-  byName = seen;
-  cacheMtimeMs = mtime;
-  return cache;
+function loadCsvPets(
+  relativePath: string,
+  catalog: PetCatalog,
+): { rows: PetRecord[]; mtime: number } {
+  const file = join(process.cwd(), relativePath);
+  if (!existsSync(file)) return { rows: [], mtime: 0 };
+  const mtime = statSync(file).mtimeMs;
+  const text = readFileSync(file, 'utf8').replace(/^\uFEFF/, '');
+  const records = parse(text, {
+    columns: true,
+    skip_empty_lines: true,
+    relax_column_count: true,
+    trim: true,
+  }) as PetRecord[];
+  const rows = records
+    .filter((r) => (r.名稱 ?? '').trim())
+    .map((r) => ({ ...r, _catalog: catalog }));
+  return { rows, mtime };
 }
 
+function loadExclusive(): PetRecord[] {
+  const file = join(process.cwd(), 'content', 'data', '專屬寵物.csv');
+  const mtime = existsSync(file) ? statSync(file).mtimeMs : 0;
+  if (exclusiveCache && mtime === exclusiveMtime) return exclusiveCache;
+  const { rows, mtime: mt } = loadCsvPets('content/data/專屬寵物.csv', 'exclusive');
+  exclusiveCache = rows;
+  exclusiveByName = new Map(rows.map((r) => [r.名稱.trim(), r]));
+  exclusiveMtime = mt;
+  return exclusiveCache;
+}
+
+function loadNative(): PetRecord[] {
+  const file = join(process.cwd(), 'content', 'data', '原生寵物.csv');
+  const mtime = existsSync(file) ? statSync(file).mtimeMs : 0;
+  if (nativeCache && mtime === nativeMtime) return nativeCache;
+  const { rows, mtime: mt } = loadCsvPets('content/data/原生寵物.csv', 'native');
+  nativeCache = rows;
+  nativeByName = new Map(rows.map((r) => [r.名稱.trim(), r]));
+  nativeMtime = mt;
+  return nativeCache;
+}
+
+/** 專屬寵物列表（技能持有者、專屬列表頁） */
 export function listPets(): PetRecord[] {
-  return loadAll();
+  return loadExclusive();
 }
 
-export function getPet(name: string): PetRecord | null {
-  loadAll();
-  return byName?.get(name) ?? null;
-}
-
-/** 是否有這隻寵的資料列（合成樹連結用，對齊 items 的 hasItem） */
-export function hasPet(name: string): boolean {
-  return !!getPet(name.trim());
+/** 原生寵物（蔚藍圖鑑 001–175） */
+export function listNativePets(): PetRecord[] {
+  return loadNative();
 }
 
 /**
- * 寵物清單頁的合併檢視：兩張來源表串成一個 Dataset 交給 DataTable。
- * 「來源」欄跟著每一列，清單頁才能用分頁籤篩選、在全部檢視幫初心列上色；
- * 欄序照專屬寵物表的習慣，一般寵缺的欄（技能／公告…）就空著。
+ * 詳情靜態路徑用：專屬 + 原生（名稱重複時只留專屬，避免雙路徑）
+ */
+export function listPetsForDetailPaths(): PetRecord[] {
+  const exclusive = loadExclusive();
+  const native = loadNative();
+  const names = new Set(exclusive.map((p) => p.名稱.trim()));
+  return [...exclusive, ...native.filter((p) => !names.has(p.名稱.trim()))];
+}
+
+/**
+ * 查寵物：優先專屬，沒有再原生。
+ * 合成樹／詳情／圖檔都走這裡。
+ */
+export function getPet(name: string): PetRecord | null {
+  const n = (name ?? '').trim();
+  if (!n) return null;
+  loadExclusive();
+  loadNative();
+  return exclusiveByName?.get(n) ?? nativeByName?.get(n) ?? null;
+}
+
+/** 是否有這隻寵物的正式資料列（表格與合成樹連結共用）。 */
+export function hasPet(name: string): boolean {
+  return !!getPet(name);
+}
+
+/**
+ * 寵物清單頁的合併檢視：專屬寵物與原生寵物共用 DataTable。
+ * 正式寵物詳情仍由各自的 CSV 載入；這裡只在展示邊界組合列，不建立第二份 SSOT。
  */
 export function petListDataset(): Dataset {
   const columns = [
@@ -207,82 +221,83 @@ export function petListDataset(): Dataset {
     '技格', '總檔', '屬性', '技能', '公告日', '公告連結', '任務用途',
     '入手方法', '入手類型',
   ];
-  const rows = listPets().map((r) => ({
-    ...r,
-    // 一般寵物表沒有 image 欄，走預設路徑；檔案不存在就空著（不出破圖）
-    image: petImagePath(r.名稱, r.image),
-  }));
+  const rows: Record<string, string>[] = listPetsForDetailPaths().map((pet) => {
+    const row: Record<string, string> = {};
+    for (const column of columns) row[column] = pet[column] ?? '';
+    row.來源 = pet._catalog === 'native' ? '一般寵物' : '永恆初心專屬';
+    row.image = petImagePath(pet.名稱, pet.image);
+    return row;
+  });
+
   return {
     name: '寵物清單',
     columns: [...columns, 'image'],
     rows,
     imageColumn: 'image',
-    filterColumn: { name: '來源', values: SOURCES.map((s) => s.來源) },
+    filterColumn: { name: '來源', values: ['永恆初心專屬', '一般寵物'] },
     wrapColumns: pickWrapColumns(columns, rows),
     noteColumn: '任務用途',
     action: {
       label: '算檔次',
       column: '名稱',
-      url: (v) => `https://cg-originmood-dc.github.io/monster-remake/?q=${encodeURIComponent(v)}`,
+      url: (value) =>
+        `https://cg-originmood-dc.github.io/monster-remake/?q=${encodeURIComponent(value)}`,
     },
     defaultSort: null,
   };
+}
+
+export function getPetCatalog(name: string): PetCatalog | null {
+  return getPet(name)?._catalog ?? null;
+}
+
+export function petCatalogLabel(catalog?: PetCatalog | null): string {
+  if (catalog === 'native') return '原生寵物';
+  if (catalog === 'exclusive') return '專屬寵物';
+  return '寵物';
 }
 
 export function petStatKeys(): readonly string[] {
   return STAT_KEYS;
 }
 
-/** 將技能字串拆成個別技能（用頓號／逗號分隔） */
+/** 將標準技能字串拆成個別技能。 */
 export function splitSkills(raw: string): string[] {
-  if (!raw?.trim()) return [];
   return raw
-    .split(/[、,，]/)
+    .split('、')
     .map((s) => s.trim())
-    .filter(Boolean)
-    .map((s) => s.replace(/\s+.*$/, ''))
-    // 過濾明顯非技能的註解碎片
-    .filter((s) => !/^(並|傷害|最大|沒有|第三|轉換|隨機|捕捉|Lv1點)/.test(s));
+    .filter(Boolean);
 }
 
-/** 從「連擊LV11」取出技能名「連擊」供連結 */
+/**
+ * 是否為 SP 變體標籤（無 LV）：突襲之舞SP、突襲之舞SP1…
+ * 資料層必須已寫成「技能名+SP」，不做別名表轉換。
+ */
+export function isSkillSpVariantLabel(skillToken: string): boolean {
+  return /SP\d*$/u.test(skillToken.trim());
+}
+
+/**
+ * 取出 SP 後綴標籤：突襲之舞SP → SP；裂空斬SP2 → SP2。
+ * 非 SP 則 null。
+ */
+export function skillSpLabel(skillToken: string): string | null {
+  const m = skillToken.trim().match(/SP(\d*)$/u);
+  if (!m) return null;
+  return m[1] ? `SP${m[1]}` : 'SP';
+}
+
+/** 從「連擊LV11」「突襲之舞SP」取出技能庫正式名 */
 export function skillBaseName(skill: string): string {
-  return (
-    skill
-      .replace(/[（(][^）)]*[）)]/g, '') // 去掉括註
-      .replace(/LV\s*\d+.*$/i, '')
-      .replace(/Lv\s*\d+.*$/i, '')
-      .replace(/；.*$/, '') // 複合技能取前半
-      .trim() || skill
-  );
-}
-
-/** 去掉尾端羅馬數字／純數字後綴（氣功彈I → 氣功彈） */
-function stripSkillSuffix(name: string): string {
-  return name.replace(/[IVX]+$/i, '').replace(/\d+$/, '').trim() || name;
+  return skill.replace(/(?:LV\d+|SP\d*)$/u, '').trim();
 }
 
 /**
  * 判斷寵物技能字串是否對應某個技能頁名稱
- * 例：頁「諸刃」↔「諸刃LV13」；頁「氣功彈」↔「氣功彈I」「氣功彈LV4」
+ * 例：頁「諸刃」↔「諸刃LV13」；頁「突襲之舞」↔「突襲之舞SP」
  */
 export function skillMatchesPage(skillToken: string, pageName: string): boolean {
-  const token = skillToken.trim();
-  const page = pageName.trim();
-  if (!token || !page) return false;
-  if (token === page) return true;
-
-  const base = skillBaseName(token);
-  if (base === page) return true;
-
-  const pageBase = skillBaseName(page);
-  if (base === pageBase) return true;
-
-  const core = stripSkillSuffix(base);
-  const pageCore = stripSkillSuffix(pageBase);
-  if (core.length >= 2 && core === pageCore) return true;
-
-  return false;
+  return skillBaseName(skillToken) === pageName;
 }
 
 export interface PetSkillHolder {
@@ -294,27 +309,41 @@ export interface PetSkillHolder {
   level: number | null;
 }
 
-/** 從「連擊LV11」「昏睡攻擊Lv12」取出等級數字 */
+/** 從「連擊LV11」「昏睡攻擊LV12」取出等級數字。 */
 export function parseSkillLevel(skillLabel: string): number | null {
-  const m = skillLabel.match(/(?:LV|Lv)\s*(\d+)/i);
-  if (!m) return null;
-  const n = Number(m[1]);
-  return Number.isFinite(n) ? n : null;
+  const level = skillLabel.match(/LV(\d+)$/)?.[1];
+  return level ? Number(level) : null;
 }
 
-/** 從專屬寵物 CSV 反查持有某技能的寵物（供技能詳情頁） */
-export function listPetsWithSkill(skillPageName: string): PetSkillHolder[] {
-  /** 同一寵物若寫了多個等級（連擊LV11、連擊LV12），取最高等 */
-  const best = new Map<string, PetSkillHolder>();
-  for (const pet of listPets()) {
+/** 技能名 → 持有寵（一次掃描寵物表建索引，避免技能總覽 O(技能×寵) 卡死） */
+let skillHoldersIndex: Map<string, PetSkillHolder[]> | null = null;
+let skillHoldersIndexMtime = 0;
+
+function getSkillHoldersIndex(): Map<string, PetSkillHolder[]> {
+  // 寵物 CSV 變更時重建
+  const exclusivePath = join(process.cwd(), 'content', 'data', '專屬寵物.csv');
+  const nativePath = join(process.cwd(), 'content', 'data', '原生寵物.csv');
+  let mtime = 0;
+  if (existsSync(exclusivePath)) mtime = Math.max(mtime, statSync(exclusivePath).mtimeMs);
+  if (existsSync(nativePath)) mtime = Math.max(mtime, statSync(nativePath).mtimeMs);
+  if (skillHoldersIndex && mtime === skillHoldersIndexMtime) return skillHoldersIndex;
+
+  const index = new Map<string, Map<string, PetSkillHolder>>();
+  for (const pet of listPetsForDetailPaths()) {
     const name = (pet.名稱 ?? '').trim();
     if (!name) continue;
     for (const sk of splitSkills(pet.技能)) {
-      if (!skillMatchesPage(sk, skillPageName)) continue;
+      const base = skillBaseName(sk);
+      if (!base) continue;
       const level = parseSkillLevel(sk);
-      const prev = best.get(name);
+      let byPet = index.get(base);
+      if (!byPet) {
+        byPet = new Map();
+        index.set(base, byPet);
+      }
+      const prev = byPet.get(name);
       if (!prev || (level ?? -1) > (prev.level ?? -1)) {
-        best.set(name, {
+        byPet.set(name, {
           name,
           image: petImagePath(name, pet.image),
           skillLabel: sk,
@@ -323,12 +352,78 @@ export function listPetsWithSkill(skillPageName: string): PetSkillHolder[] {
       }
     }
   }
-  const out = [...best.values()];
-  // 先按等級、再按名稱
+
+  skillHoldersIndex = new Map();
+  for (const [skill, byPet] of index) {
+    const out = [...byPet.values()];
+    out.sort((a, b) => {
+      const la = a.level ?? 999;
+      const lb = b.level ?? 999;
+      if (la !== lb) return la - lb;
+      return a.name.localeCompare(b.name, 'zh-Hant');
+    });
+    skillHoldersIndex.set(skill, out);
+  }
+  skillHoldersIndexMtime = mtime;
+  return skillHoldersIndex;
+}
+
+/** 從專屬＋原生反查持有某技能的寵物（供技能詳情頁；同名專屬優先已由 getPet 處理） */
+export function listPetsWithSkill(skillPageName: string): PetSkillHolder[] {
+  const key = (skillPageName ?? '').trim();
+  if (!key) return [];
+  return (getSkillHoldersIndex().get(key) ?? []).slice();
+}
+
+/**
+ * 從合成庫反查與該道具有關的寵物（建頁時 parse，不加中間檔）。
+ * 放在 pets 避免 items↔pets 循環依賴。
+ */
+export function listPetsWithItem(itemName: string): PetSkillHolder[] {
+  const item = (itemName ?? '').trim();
+  if (!item) return [];
+
+  const lib = loadFusionLibraryFile();
+  const best = new Map<string, PetSkillHolder & { rank: number }>();
+
+  const upsert = (petName: string, label: string, rank: number) => {
+    const n = petName.trim();
+    if (!n) return;
+    const prev = best.get(n);
+    if (prev && prev.rank >= rank) return;
+    best.set(n, {
+      name: n,
+      image: petImagePath(n),
+      skillLabel: label,
+      level: null,
+      rank,
+    });
+  };
+
+  for (const r of lib.reactions) {
+    const asMat = r.materials.some((m) => m.kind === 'item' && m.symbol === item);
+    const asProd = r.products.some((p) => p.kind === 'item' && p.symbol === item);
+    if (!asMat && !asProd) continue;
+    if (asMat) {
+      for (const p of r.products) {
+        if (p.kind === 'pet' && p.symbol) upsert(p.symbol, '合成產物', 2);
+      }
+      for (const m of r.materials) {
+        if (m.kind === 'pet' && m.symbol) upsert(m.symbol, '合成材料', 1);
+      }
+    }
+    if (asProd) {
+      for (const m of r.materials) {
+        if (m.kind === 'pet' && m.symbol) upsert(m.symbol, '合成材料', 1);
+      }
+    }
+  }
+
+  const out: PetSkillHolder[] = [...best.values()].map(({ rank: _r, ...h }) => h);
   out.sort((a, b) => {
-    const la = a.level ?? 999;
-    const lb = b.level ?? 999;
-    if (la !== lb) return la - lb;
+    const ra = a.skillLabel === '合成產物' ? 0 : 1;
+    const rb = b.skillLabel === '合成產物' ? 0 : 1;
+    if (ra !== rb) return ra - rb;
     return a.name.localeCompare(b.name, 'zh-Hant');
   });
   return out;
@@ -342,62 +437,23 @@ export function gradePct(value: string, isTotal = false): number {
   return Math.min(100, Math.round((n / max) * 100));
 }
 
-function loadExtras(): Map<string, PetDetailExtra> {
-  const file = join(process.cwd(), 'content', 'data', '寵物詳情補充.json');
-  const mtime = existsSync(file) ? statSync(file).mtimeMs : 0;
-  if (extrasCache && mtime === extrasMtimeMs) return extrasCache;
-
-  extrasCache = new Map();
-  extrasMtimeMs = mtime;
-
-  if (existsSync(file)) {
-    let raw: Record<string, PetDetailExtra>;
-    try {
-      raw = JSON.parse(readFileSync(file, 'utf8'));
-    } catch (e) {
-      // 這檔現在裝的是真資料（風之使徒的合成樹在裡面），
-      // 壞 JSON 靜默略過等於整包補充資料無聲消失，寧可讓 build 停下來。
-      throw new Error(`content/data/寵物詳情補充.json 不是合法 JSON：${e}`);
-    }
-    for (const [name, extra] of Object.entries(raw)) {
-      extrasCache.set(name, extra);
-    }
-  }
-  return extrasCache;
-}
-
 export function getPetExtra(name: string): PetDetailExtra {
-  return loadExtras().get(name) ?? {};
+  return name.trim() === '風之使徒' ? WIND_APOSTLE_EXTRA : {};
 }
 
 /**
- * public/ 底下真的有這個檔嗎。
- * 合成樹會帶到沒有圖的底寵，組得出路徑不代表檔案在，
- * 給不存在的路徑等於讓每張破圖各發一次 404。外連（http…）不在這裡管。
- */
-const localImageCache = new Map<string, boolean>();
-function localImageExists(path: string): boolean {
-  if (!path.startsWith('/')) return true;
-  const hit = localImageCache.get(path);
-  if (hit !== undefined) return hit;
-  const ok = existsSync(join(process.cwd(), 'public', path.slice(1)));
-  localImageCache.set(path, ok);
-  return ok;
-}
-
-/**
- * 寵物圖 SSOT：只認「專屬寵物」CSV 該寵列的 image。
- * - 有 CSV 列且 image 有值 → 用那格（與專屬寵物列表同一來源）
- * - 否則 → `/img/專屬寵物/{名稱}.gif`（不借用其他寵、不做模糊 fallback）
- * - 檔案不在就回空字串，讓 UI 走既有的文字佔位，不要吐一個必定 404 的路徑
- * `fromCsv` 僅在呼叫端已持有同一列時可傳入，避免重複查表；仍以該寵自己的路徑為準。
+ * 寵物圖：優先該列 image；否則依目錄預設路徑。
+ * 查表順序與 getPet 相同（專屬 → 原生）。
  */
 export function petImagePath(name: string, fromCsv?: string): string {
   const n = (name ?? '').trim();
   if (!n) return '';
-  const fromRow = (fromCsv ?? getPet(n)?.image ?? '').trim();
-  const path = fromRow || `/img/專屬寵物/${n}.gif`;
-  return localImageExists(path) ? path : '';
+  const pet = getPet(n);
+  const fromRow = (fromCsv ?? pet?.image ?? '').trim();
+  if (fromRow) return fromRow;
+  // 與專屬相同：檔名 = 寵物名稱.gif
+  if (pet?._catalog === 'native') return `/img/原生寵物/${n}.gif`;
+  return `/img/專屬寵物/${n}.gif`;
 }
 
 /** 收集樹上所有寵物名稱 */
@@ -438,40 +494,19 @@ export function applyPetImagesFromSsot(node: FusionNode): FusionNode {
 /**
  * 取得要顯示的「完整」合成樹。
  *
- * 統一圖管線（見 src/lib/fusion/）：
- * - 各來源 adapter → FusionReaction → compile 成圖
- * - 顯示：反向找全部根 → 各根向下完整展開（不挑主配方）
- * - 手寫 extras 的 fusionTree 拆成反應邊入圖，不再整棵覆蓋
+ * 只讀 content/data/generated/fusion-library.json（npm run fusion:build 產出）。
+ * 顯示：反向找全部根 → 各根向下完整展開（不挑主配方）。
+ * 禁止在此路徑 parse 寵物合成配方.csv。
  */
 function treeHasBody(node: FusionNode | null | undefined): boolean {
   if (!node) return false;
   return Boolean(node.children?.length || node.heads?.length);
 }
 
-let fusionHandwrittenHooked = false;
-
-/** 把 extras 手寫樹注入合成圖（整站建置期間只掛一次） */
-function ensureFusionGraphHandwritten(): void {
-  if (fusionHandwrittenHooked) return;
-  fusionHandwrittenHooked = true;
-  setHandwrittenFusionTrees(() => {
-    const extras = loadExtras();
-    const trees: FusionNode[] = [];
-    for (const extra of extras.values()) {
-      if (extra.fusionTree && treeHasBody(extra.fusionTree)) {
-        trees.push(extra.fusionTree);
-      }
-    }
-    return trees;
-  });
-}
-
 export function resolveFusionTree(
   petName: string,
   image: string,
 ): { tree: FusionNode; hasFullData: boolean } {
-  ensureFusionGraphHandwritten();
-
   const fromGraph = buildFusionTreeFromGraph(petName);
   if (fromGraph && treeHasBody(fromGraph)) {
     return { tree: applyPetImagesFromSsot(fromGraph), hasFullData: true };
@@ -488,3 +523,69 @@ export function resolveFusionTree(
     hasFullData: false,
   };
 }
+
+// ---------------------------------------------------------------------------
+// 風之使徒：合成樹等與 pet_page_template.html 一致（使用者確認正確）
+// 卡片等級改為「未知」；素質改由 petStats 公式計算，不寫死
+// ---------------------------------------------------------------------------
+const WIND_APOSTLE_EXTRA: PetDetailExtra = {
+  sealable: false,
+  cardLevel: '未知',
+  skillNotes: {
+    '超強昏睡魔法LV10': '使敵方全體陷入昏睡狀態',
+    '潔淨魔法LV3': '解除隊友的異常狀態',
+    '超強補血魔法LV7': '為我方全體回復大量生命值',
+  },
+  questNote: '攜帶風之使徒將在迷宮時空長廊中可獲得任意 NPC 的協助抵達終點。',
+  // 寵物節點不寫 image：resolveFusionTree 會用專屬寵物 CSV 的 SSOT 填入
+  fusionTree: {
+    type: 'pet',
+    name: '風之使徒',
+    target: true,
+    npc: '大法師安蕾雅 @ 艾爾瑪城元素師家 (216.188) (5%)',
+    children: [
+      {
+        type: 'pet',
+        name: '天空元素使',
+        npc: 'NPC: 愛卡勒恩 @ 寵物研究所 (15，8)',
+        children: [
+          {
+            // 材料由軍方研究所一改接上（enrich）；此處只掛產物節點
+            type: 'pet',
+            name: '光精靈',
+          },
+          {
+            type: 'item',
+            name: '風元素之卵',
+            qty: 3,
+          },
+          {
+            type: 'item',
+            name: '閃耀變異之源',
+            qty: 10,
+          },
+          {
+            type: 'item',
+            name: '精靈王契約',
+            qty: 100,
+          },
+        ],
+      },
+      {
+        type: 'item',
+        name: '風元素之卵',
+        qty: 1,
+      },
+      {
+        type: 'item',
+        name: '閃耀變異之源',
+        qty: 10,
+      },
+      {
+        type: 'gold',
+        name: '50,000G',
+        countLabel: '金幣',
+      },
+    ],
+  },
+};

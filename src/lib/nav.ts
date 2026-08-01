@@ -49,7 +49,7 @@ export async function buildNav(): Promise<NavNode[]> {
 
   for (const entry of entries) {
     // 首頁另外 prepend 到最上方，不走 breadcrumb 樹
-    if (entry.id === HOME_ID) continue;
+    if (entry.id === HOME_ID || entry.data.title === HOME_ID) continue;
     let level = roots;
     for (const crumb of entry.data.breadcrumb) {
       level = find(level, crumb).children;
