@@ -627,6 +627,8 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
 
           function childAnchor(li) {
             if (li.classList.contains('tree-forest-root')) return null;
+            // 循環圖有自己的超邊連線，不走一般樹的父子連線
+            if (li.classList.contains('tree-cycle-module')) return null;
             if (li.classList.contains('tree-multi-head')) {
               var heads = li.querySelectorAll(
                 ':scope > .tree-multi-head__tops .tree-multi-head__head > .node-card'
@@ -826,6 +828,115 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
           document.querySelectorAll('[data-fusion-tree] img').forEach(function (img) {
             if (!img.complete) img.addEventListener('load', drawAll, { once: true });
           });
+        })();
+      </script>
+
+      {/* 循環圖連線：多條線在同一幾何位置匯合，但匯合位置不渲染成節點。 */}
+      <script is:inline>
+        (function () {
+          function rectOf(el, root) {
+            var r = el.getBoundingClientRect();
+            var b = root.getBoundingClientRect();
+            return {
+              left: r.left - b.left,
+              top: r.top - b.top,
+              right: r.right - b.left,
+              bottom: r.bottom - b.top,
+              midX: (r.left + r.right) / 2 - b.left,
+              midY: (r.top + r.bottom) / 2 - b.top,
+              width: r.width,
+              height: r.height,
+            };
+          }
+
+          function borderPoint(rect, targetX, targetY) {
+            var dx = targetX - rect.midX;
+            var dy = targetY - rect.midY;
+            var scale = 1 / Math.max(
+              Math.abs(dx) / Math.max(rect.width / 2, 1),
+              Math.abs(dy) / Math.max(rect.height / 2, 1),
+              0.0001
+            );
+            return {
+              x: rect.midX + dx * scale,
+              y: rect.midY + dy * scale,
+            };
+          }
+
+          function drawPath(path, nodes, root, width, height) {
+            var role = path.getAttribute('data-cycle-role') || '';
+            var nodeId = role === 'input'
+              ? path.getAttribute('data-cycle-from') || ''
+              : path.getAttribute('data-cycle-to') || '';
+            var node = nodes[nodeId];
+            if (!node) return;
+
+            var junctionX = (Number(path.getAttribute('data-cycle-junction-x')) / 100) * width;
+            var junctionY = (Number(path.getAttribute('data-cycle-junction-y')) / 100) * height;
+            var routeX = (Number(path.getAttribute('data-cycle-route-x')) / 100) * width;
+            var rect = rectOf(node, root);
+            if (!Number.isFinite(routeX)) routeX = junctionX;
+            var endpoint = borderPoint(rect, routeX, rect.midY);
+            var d;
+
+            if (role === 'input') {
+              d =
+                'M ' + endpoint.x + ' ' + endpoint.y +
+                ' H ' + routeX +
+                ' V ' + junctionY +
+                ' H ' + junctionX;
+            } else {
+              d =
+                'M ' + junctionX + ' ' + junctionY +
+                ' H ' + routeX;
+              if (Math.abs(endpoint.y - junctionY) >= 1) {
+                d += ' V ' + endpoint.y;
+              }
+              d += ' H ' + endpoint.x;
+            }
+            path.setAttribute('d', d);
+          }
+
+          function drawGraph(root) {
+            var svg = root.querySelector('[data-cycle-edges]');
+            if (!svg) return;
+            var width = root.clientWidth;
+            var height = root.clientHeight;
+            if (!width || !height) return;
+            svg.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
+            svg.setAttribute('width', String(width));
+            svg.setAttribute('height', String(height));
+
+            var nodes = Object.create(null);
+            root.querySelectorAll('[data-cycle-node]').forEach(function (node) {
+              nodes[node.getAttribute('data-cycle-node') || ''] = node;
+            });
+            root.querySelectorAll('[data-cycle-path]').forEach(function (path) {
+              drawPath(path, nodes, root, width, height);
+            });
+          }
+
+          function drawAll() {
+            document.querySelectorAll('[data-cycle-graph]').forEach(drawGraph);
+          }
+
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', drawAll);
+          } else {
+            drawAll();
+          }
+          window.addEventListener('resize', drawAll);
+          if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(drawAll).catch(function () {});
+          }
+          document.querySelectorAll('[data-cycle-graph] img').forEach(function (img) {
+            if (!img.complete) img.addEventListener('load', drawAll, { once: true });
+          });
+          if (window.ResizeObserver) {
+            document.querySelectorAll('[data-cycle-graph]').forEach(function (graph) {
+              new ResizeObserver(drawAll).observe(graph);
+            });
+          }
         })();
       </script>
     </Base>
@@ -1251,6 +1362,18 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
   }
   .tree-diagram .tree-forest-root {
     padding: 0;
+  }
+  .tree-diagram li.tree-cycle-module {
+    list-style: none;
+    width: 100%;
+    max-width: 100%;
+    flex: 1 1 auto;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  .tree-diagram:has(> .tree-cycle-module) {
+    width: 100%;
+    min-width: 100%;
   }
 
   .node-card {

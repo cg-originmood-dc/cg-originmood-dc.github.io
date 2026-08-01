@@ -76,9 +76,31 @@ const GOLD_RE = /金幣|^\d{1,3}(?:,\d{3})+G$|\d+G$/;
 const QTY_RE = /[×*xX]\s*(\d+)\s*$/;
 /** 公告常見寫法：（概率80%）、概率98%、（概率 2%） */
 const PROB_RE = /[（(]\s*概率\s*[^）)]*[）)]|概率\s*\d+(?:\.\d+)?\s*%?/g;
-/** Lv1的／Lv1／任意等級的…（「的」可省略，公告常寫 Lv1奪魂陰影） */
+/** 等級限制前綴：Lv40以上的／任意等級的／以上的… */
 const LV_PREFIX_RE =
-  /^(?:任意等級的|Lv\s*\d+\s*的?|LV\s*\d+\s*的?|lv\s*\d+\s*的?)\s*/i;
+  /^(?:任意等級以上的?|任意等級的+|等級以上的?|以上的?|(?:Lv|LV|lv)\.?\s*\d+\s*(?:以上的?|的?)|(?:Lv|LV|lv)\.?\s*的?)\s*/iu;
+
+function stripLevelPrefix(s: string): string {
+  let t = (s ?? '').trim();
+  for (let i = 0; i < 6; i++) {
+    const next = t.replace(LV_PREFIX_RE, '').replace(/^的+/u, '').trim();
+    if (next === t) break;
+    t = next;
+  }
+  return t;
+}
+
+export function extractLevelRequirement(token: string): {
+  minLevel?: number;
+  anyLevel?: boolean;
+} {
+  const t = (token ?? '').trim();
+  if (!t) return {};
+  if (/^任意等級/u.test(t)) return { anyLevel: true };
+  const mLv = t.match(/^(?:Lv|LV|lv)\.?\s*(\d+)/u);
+  if (mLv) return { minLevel: Number(mLv[1]) };
+  return {};
+}
 
 /** 從產物標籤抽出機率，回傳正規化後的 "80%" 與清乾淨的文字 */
 function extractProb(s: string): { clean: string; prob?: string } {
@@ -161,10 +183,10 @@ function matchExactPetToken(token: string): string | null {
   if (!token?.trim() || !petNamesLongest?.length) return null;
   let t = token
     .replace(PROB_RE, '')
-    .replace(LV_PREFIX_RE, '')
     .replace(QTY_RE, '')
     .replace(/\s+/g, '')
     .trim();
+  t = stripLevelPrefix(t);
   if (!t) return null;
   // 召喚書 → 對應寵物
   if (t.endsWith('召喚書')) t = t.slice(0, -3);
@@ -186,8 +208,8 @@ export function findPetNamesInText(text: string): string[] {
   // 先把「OO召喚書」收成「OO」，再做最長匹配
   let clean = text
     .replace(PROB_RE, ' ')
-    .replace(/召喚書/g, ' ')
-    .replace(LV_PREFIX_RE, '');
+    .replace(/召喚書/g, ' ');
+  clean = stripLevelPrefix(clean);
   clean = clean.replace(/\s+/g, '');
   const used = new Array(clean.length).fill(false);
   const found: string[] = [];
@@ -216,8 +238,7 @@ export function findPetNamesInText(text: string): string[] {
  */
 function petFromProductLabel(lab: string): string | null {
   const { clean } = extractProb(lab);
-  const stripped = clean
-    .replace(LV_PREFIX_RE, '')
+  const stripped = stripLevelPrefix(clean)
     .replace(/\s+/g, '')
     .replace(/召喚書$/u, '')
     .trim();
@@ -257,17 +278,21 @@ function ingredientNode(token: string): FusionNode {
     };
   }
 
-  // 材料：只接受「整段就是寵物名」（含 Lv1的／任意等級的 前綴）
+  const levelReq = extractLevelRequirement(raw);
+
+  // 材料：只接受「整段就是寵物名」（含等級限制前綴）
   const exact = matchExactPetToken(raw);
   if (exact) {
     return {
       type: 'pet',
       name: exact,
       image: ssotImage(exact),
+      ...(levelReq.minLevel != null ? { minLevel: levelReq.minLevel } : {}),
+      ...(levelReq.anyLevel ? { anyLevel: true } : {}),
     };
   }
 
-  const { name, qty } = parseQty(raw.replace(LV_PREFIX_RE, ''));
+  const { name, qty } = parseQty(stripLevelPrefix(raw));
   const itemName = name || raw;
   // 道具圖從道具庫引用；無圖不塞 emoji，留給 UI 顯示分類文字
   const fromLib = getItem(itemName);

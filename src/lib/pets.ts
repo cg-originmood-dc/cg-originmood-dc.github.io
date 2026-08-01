@@ -35,6 +35,45 @@ export interface PetRecord {
   [key: string]: string;
 }
 
+/** 循環圖的實體節點；匯合位置不是節點，不放進這個集合。 */
+export interface FusionCycleGraphNode {
+  id: string;
+  node: FusionNode;
+}
+
+export interface FusionCycleGraphInput {
+  nodeId: string;
+  qty?: number;
+}
+
+export interface FusionCycleGraphOutput {
+  nodeId: string;
+  prob?: string;
+  qty?: number;
+}
+
+/** 一條多材料／多產物反應；畫面以不可見幾何匯合位置渲染。 */
+export interface FusionCycleGraphReaction {
+  id: string;
+  kind: 'acquire' | 'reroll' | 'convert';
+  inputs: FusionCycleGraphInput[];
+  outputs: FusionCycleGraphOutput[];
+  npc?: string;
+}
+
+export interface FusionCycleGraph {
+  nodes: FusionCycleGraphNode[];
+  reactions: FusionCycleGraphReaction[];
+}
+
+/** 互轉循環群組節點資料（一般樹外的局部圖） */
+export interface FusionCycleModuleView {
+  id: string;
+  label: string;
+  focusedPet: string;
+  graph: FusionCycleGraph;
+}
+
 /** 合成樹節點（之後可由其他 agent 補資料） */
 export interface FusionNode {
   /** pet | item | gold | material */
@@ -50,6 +89,10 @@ export interface FusionNode {
   countLabel?: string;
   /** NPC / 座標 / 機率 */
   npc?: string;
+  /** 材料寵物的最低等級（例如「Lv40以上」） */
+  minLevel?: number;
+  /** 材料寵物可使用任意等級 */
+  anyLevel?: boolean;
   /** 是否為樹尖目標 */
   target?: boolean;
   /**
@@ -59,6 +102,11 @@ export interface FusionNode {
   heads?: FusionNode[];
   /** 子節點（向下解構＝材料） */
   children?: FusionNode[];
+  /**
+   * 互轉循環模組：有此欄時 UI 畫「配方群組」而非一般材料卡。
+   * 同一 viewKey（cycle id）在群組成員頁應相同，僅 focusedPet 不同。
+   */
+  cycleModule?: FusionCycleModuleView;
 }
 
 /** 詳情補充：多筆／結構化入手（CSV「入手方法」放一句話；這裡放細項） */
@@ -423,6 +471,11 @@ export function collectPetNamesInTree(node: FusionNode, out = new Set<string>())
   if (node.type === 'pet' && node.name) out.add(node.name);
   for (const h of node.heads ?? []) collectPetNamesInTree(h, out);
   for (const c of node.children ?? []) collectPetNamesInTree(c, out);
+  for (const graphNode of node.cycleModule?.graph.nodes ?? []) {
+    if (graphNode.node.type === 'pet' && graphNode.node.name) {
+      out.add(graphNode.node.name);
+    }
+  }
   return out;
 }
 
@@ -435,10 +488,23 @@ export function collectPetNamesInTree(node: FusionNode, out = new Set<string>())
 export function applyPetImagesFromSsot(node: FusionNode): FusionNode {
   const children = node.children?.map(applyPetImagesFromSsot);
   const heads = node.heads?.map(applyPetImagesFromSsot);
+  const cycleModule = node.cycleModule
+    ? {
+        ...node.cycleModule,
+        graph: {
+          ...node.cycleModule.graph,
+          nodes: node.cycleModule.graph.nodes.map((graphNode) => ({
+            ...graphNode,
+            node: applyPetImagesFromSsot(graphNode.node),
+          })),
+        },
+      }
+    : undefined;
   const base: FusionNode = {
     ...node,
     ...(children ? { children } : {}),
     ...(heads ? { heads } : {}),
+    ...(cycleModule ? { cycleModule } : {}),
   };
   // 不再沿用手填 emoji
   if (base.icon) delete base.icon;
@@ -463,7 +529,9 @@ export function applyPetImagesFromSsot(node: FusionNode): FusionNode {
  */
 function treeHasBody(node: FusionNode | null | undefined): boolean {
   if (!node) return false;
-  return Boolean(node.children?.length || node.heads?.length);
+  return Boolean(
+    node.children?.length || node.heads?.length || node.cycleModule,
+  );
 }
 
 let fusionHandwrittenHooked = false;
