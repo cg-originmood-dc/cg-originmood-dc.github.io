@@ -13,6 +13,7 @@
 import { readFileSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse } from 'csv-parse/sync';
+import { anyPetHasSkill } from './pets';
 
 export interface SkillLevelRow {
   /** 空字串＝這技能沒有等級（寵物一般技能那批） */
@@ -108,7 +109,11 @@ export function getSkill(name: string): SkillEntry | null {
 
 /**
  * 技能詳情頁的網址三分：人專屬 /skill/char/、寵專屬 /skill/pet/、
- * 兩側都有的共用技能放 /skill/shared/。每個技能只有一個正式網址。
+ * 人寵共用放 /skill/shared/。每個技能只有一個正式網址。
+ *
+ * 「共用」不只看技能表兩側都有列：技能表只有人物側、但專屬寵物的技能欄
+ * 記載有寵持有的（恢復魔法那批），也算共用——「寵物側沒有等級表」跟
+ * 「寵物不會這招」是兩回事，持有資料說了算。
  */
 export type SkillScope = 'char' | 'pet' | 'shared';
 
@@ -116,7 +121,8 @@ export function skillScope(name: string): SkillScope | null {
   const e = getSkill(name);
   if (!e) return null;
   if (e.char && e.pet) return 'shared';
-  return e.char ? 'char' : 'pet';
+  if (e.char) return anyPetHasSkill(e.name) ? 'shared' : 'char';
+  return 'pet';
 }
 
 /**

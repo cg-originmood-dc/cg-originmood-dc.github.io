@@ -298,6 +298,28 @@ export function parseSkillLevel(skillLabel: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+/**
+ * 是否有任何寵物持有此技能（skillScope 判共用技能用）。
+ * skillScope 對站上每一條技能連結都會問一次，這裡以技能頁名稱做快取，
+ * 寵物 CSV 更新（cacheMtimeMs 變動）時整批失效。
+ */
+let holderFlagCache = new Map<string, boolean>();
+let holderFlagMtime = '';
+
+export function anyPetHasSkill(skillPageName: string): boolean {
+  loadAll();
+  if (holderFlagMtime !== cacheMtimeMs) {
+    holderFlagCache = new Map();
+    holderFlagMtime = cacheMtimeMs;
+  }
+  const key = skillPageName.trim();
+  const hit = holderFlagCache.get(key);
+  if (hit !== undefined) return hit;
+  const v = listPets().some((p) => splitSkills(p.技能).some((sk) => skillMatchesPage(sk, key)));
+  holderFlagCache.set(key, v);
+  return v;
+}
+
 /** 從專屬寵物 CSV 反查持有某技能的寵物（供技能詳情頁） */
 export function listPetsWithSkill(skillPageName: string): PetSkillHolder[] {
   /** 同一寵物若寫了多個等級（連擊LV11、連擊LV12），取最高等 */
