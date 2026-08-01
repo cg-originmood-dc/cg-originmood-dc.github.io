@@ -6,20 +6,35 @@
  * 同名技能人寵是兩回事，共用頁兩側各自一張表；持有寵物由 專屬寵物.csv 技能欄推導。
  */
 import Base from '../../../layouts/Base.astro';
-import { listSkills, getSkill, skillScope, skillIcon, mpLabel, type SkillSide } from '../../../lib/skills';
+import { listSkills, getSkill, skillScope, skillPath, skillIcon, mpLabel, type SkillSide } from '../../../lib/skills';
 import { listPetsWithSkill } from '../../../lib/pets';
 import { craftSkillHref } from '../../../lib/craftSkills';
 
 export function getStaticPaths() {
-  return listSkills().map((s) => ({
+  const real = listSkills().map((s) => ({
     params: { scope: skillScope(s.name)!, name: s.name },
     props: { name: s.name },
   }));
+  // 共用技能的舊 /skill/char/ 網址接盤：共用技能一定有人物側，寵物持有
+  // 資料一多技能就可能從 char 改判成 shared，舊網址（快取頁、外部貼過的
+  // 連結）不能跟著 404。這裡替每個共用技能在 char 網址長出轉址頁，
+  // 跟著資料自動增減，不必手動維護 astro.config 的 moved 表。
+  const moved = listSkills()
+    .filter((s) => skillScope(s.name) === 'shared')
+    .map((s) => ({
+      params: { scope: 'char', name: s.name },
+      props: { name: s.name, movedToShared: true },
+    }));
+  return [...real, ...moved];
 }
 
-const { name } = Astro.props as { name: string };
+const { name, movedToShared = false } = Astro.props as {
+  name: string;
+  movedToShared?: boolean;
+};
 const skill = getSkill(name);
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const movedTarget = movedToShared ? `${base}${skillPath(name)!}/` : '';
 const src = (v: string) => (v.startsWith('/') ? base + v : v);
 
 const holders = skill ? listPetsWithSkill(name) : [];
@@ -66,7 +81,22 @@ if (skill?.pet) sides.push({ key: 'pet', label: '寵物技能', side: skill.pet 
 ---
 
 {
-  !skill ? (
+  movedToShared ? (
+    <html lang="zh-Hant">
+      <head>
+        <meta charset="utf-8" />
+        <title>轉址中… {name}</title>
+        <meta http-equiv="refresh" content={`0;url=${movedTarget}`} />
+        <meta name="robots" content="noindex" />
+        <link rel="canonical" href={movedTarget} />
+      </head>
+      <body>
+        <p>
+          <a href={movedTarget}>「{name}」已列為人寵共用技能，點此前往新網址</a>
+        </p>
+      </body>
+    </html>
+  ) : !skill ? (
     <Base title="找不到技能">
       <h1 class="page-title">找不到技能</h1>
       <p>
