@@ -130,18 +130,6 @@ const focusedNodeId = cycle
     )?.id
   : undefined;
 
-const outputMetaByNode = new Map<string, string[]>();
-if (cycle) {
-  for (const reaction of cycle.graph.reactions) {
-    for (const output of reaction.outputs) {
-      const labels = outputMetaByNode.get(output.nodeId) ?? [];
-      if (output.prob) labels.push(`機率 ${output.prob}`);
-      if (reaction.npc) labels.push(`NPC：${reaction.npc}`);
-      outputMetaByNode.set(output.nodeId, [...new Set(labels)]);
-    }
-  }
-}
-
 ---
 
 {
@@ -195,26 +183,17 @@ if (cycle) {
           <div class="cycle-graph__nodes">
             {cycle.graph.nodes.map((graphNode) => {
               const point = layout.positions.get(graphNode.id)!;
-              const meta = outputMetaByNode.get(graphNode.id) ?? [];
               return (
                 <div
                   class="cycle-graph__node"
                   data-cycle-node={graphNode.id}
                   style={`left: ${point.x}%; top: ${point.y}%;`}
                 >
-                  {
-                    meta.length > 0 && (
-                      <div class="cycle-graph__node-meta">
-                        {meta.map((label) => <span>{label}</span>)}
-                      </div>
-                    )
-                  }
                   <FusionNodeCard
                     node={graphNode.node}
                     base={base}
                     currentName=""
                     isCurrent={graphNode.id === focusedNodeId}
-                    className="cycle-graph__entity-card"
                   />
                 </div>
               );
@@ -344,64 +323,15 @@ if (cycle) {
   .cycle-graph__node {
     position: absolute;
     z-index: 3;
-    width: 154px;
+    width: 168px;
     transform: translate(-50%, -50%);
-  }
-  .cycle-graph__entity-card {
-    width: 100%;
-    min-width: 0;
-    padding: 8px 7px;
-    border-color: #c9b8aa;
-    background: #fff;
-  }
-  .cycle-graph__entity-card img {
-    width: 42px;
-    height: 42px;
-    margin-bottom: 4px;
-  }
-  .cycle-graph__entity-card a,
-  .cycle-graph__entity-card .node-card__name {
-    overflow-wrap: anywhere;
-    white-space: normal;
-  }
-  .cycle-graph__node-meta {
-    position: absolute;
-    right: 50%;
-    bottom: calc(100% + 5px);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: max-content;
-    max-width: 230px;
-    padding: 3px 6px;
-    color: #9b4319;
-    background: rgba(255, 253, 250, 0.97);
-    border: 1px solid #e5c8b4;
-    border-radius: 5px;
-    font-size: 10px;
-    line-height: 1.35;
-    text-align: center;
-    transform: translateX(50%);
-    pointer-events: none;
-  }
-  .cycle-graph__node-meta span:last-child {
-    color: #75685f;
-    font-size: 9px;
   }
   @media (max-width: 700px) {
     .cycle-graph {
       min-height: 700px;
     }
     .cycle-graph__node {
-      width: 136px;
-    }
-    .cycle-graph__entity-card img {
-      width: 36px;
-      height: 36px;
-    }
-    .cycle-graph__node-meta {
-      max-width: 190px;
-      font-size: 9px;
+      width: 168px;
     }
   }
 </style>

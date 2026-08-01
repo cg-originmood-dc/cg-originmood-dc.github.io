@@ -888,9 +888,11 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
             } else {
               d =
                 'M ' + junctionX + ' ' + junctionY +
-                ' H ' + routeX +
-                ' V ' + endpoint.y +
-                ' H ' + endpoint.x;
+                ' H ' + routeX;
+              if (Math.abs(endpoint.y - junctionY) >= 1) {
+                d += ' V ' + endpoint.y;
+              }
+              d += ' H ' + endpoint.x;
             }
             path.setAttribute('d', d);
           }

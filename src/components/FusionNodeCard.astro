@@ -9,7 +9,6 @@ interface Props {
   currentName?: string;
   isCurrent?: boolean;
   isTarget?: boolean;
-  className?: string;
 }
 
 const {
@@ -18,7 +17,6 @@ const {
   currentName = '',
   isCurrent: currentProp,
   isTarget = false,
-  className = '',
 } = Astro.props;
 
 const isCurrent =
@@ -52,7 +50,6 @@ const href = hrefFor(node);
 <div
   class:list={[
     'node-card',
-    className,
     { 'node-target': isTarget && !isCurrent },
     { 'node-current': isCurrent },
   ]}

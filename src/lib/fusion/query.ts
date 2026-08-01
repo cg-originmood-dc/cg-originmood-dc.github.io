@@ -370,7 +370,12 @@ function buildCycleGraph(
   const reactions: FusionCycleGraphReaction[] = [];
   const sharedEntities = new Map<string, string>();
 
-  function addNode(slot: FusionSlot, occurrence: string, shared = false): string {
+  function addNode(
+    slot: FusionSlot,
+    occurrence: string,
+    shared = false,
+    display?: { prob?: string; npc?: string },
+  ): string {
     const key = `${slot.kind}:${slot.symbol}`;
     if (shared) {
       const existing = sharedEntities.get(key);
@@ -378,7 +383,14 @@ function buildCycleGraph(
     }
 
     const id = shared ? key : `${key}:${occurrence}`;
-    nodes.push({ id, node: slotToMaterialNode(slot) });
+    nodes.push({
+      id,
+      node: {
+        ...slotToMaterialNode(slot),
+        ...(display?.prob ? { countLabel: `機率 ${display.prob}` } : {}),
+        ...(display?.npc ? { npc: display.npc } : {}),
+      },
+    });
     if (shared) sharedEntities.set(key, id);
     return id;
   }
@@ -411,7 +423,12 @@ function buildCycleGraph(
     ...(slot.qty != null ? { qty: slot.qty } : {}),
   }));
   const hubProducts = hub.products.map((slot, index) => {
-    const nodeId = addNode(slot, `output:${hub.id}:${index}`, slot.kind !== 'pet');
+    const nodeId = addNode(
+      slot,
+      `output:${hub.id}:${index}`,
+      slot.kind !== 'pet',
+      { prob: slot.prob, npc: hub.npc.trim() },
+    );
     if (slot.kind === 'pet' && !hubOutputs.has(slot.symbol)) {
       hubOutputs.set(slot.symbol, nodeId);
     }
@@ -435,7 +452,12 @@ function buildCycleGraph(
       ...(slot.qty != null ? { qty: slot.qty } : {}),
     }));
     const outputs = reaction.products.map((slot, index) => ({
-      nodeId: addNode(slot, `output:${reaction.id}:${index}`, slot.kind !== 'pet'),
+      nodeId: addNode(
+        slot,
+        `output:${reaction.id}:${index}`,
+        slot.kind !== 'pet',
+        { prob: slot.prob, npc: reaction.npc.trim() },
+      ),
       ...(slot.prob ? { prob: slot.prob } : {}),
       ...(slot.qty != null ? { qty: slot.qty } : {}),
     }));
