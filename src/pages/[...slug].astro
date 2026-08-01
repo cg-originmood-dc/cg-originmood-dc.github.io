@@ -2,6 +2,7 @@
 import { getCollection, render } from 'astro:content';
 import Base from '../layouts/Base.astro';
 import DataTable from '../components/DataTable.astro';
+import ExclusiveSkills from '../components/ExclusiveSkills.astro';
 import PetList from '../components/PetList.astro';
 import PetSynthesisTables from '../components/PetSynthesisTables.astro';
 import SkillIndex from '../components/SkillIndex.astro';
@@ -35,6 +36,8 @@ const hasProse = entry.body != null && entry.body.trim().length > 0;
     <SkillIndex />
   ) : entry.data.title === '寵物清單' ? (
     <PetList />
+  ) : entry.data.title === '專屬技能' ? (
+    <ExclusiveSkills />
   ) : (
     entry.data.datasets.map((name) => <DataTable name={name} />)
   )}
