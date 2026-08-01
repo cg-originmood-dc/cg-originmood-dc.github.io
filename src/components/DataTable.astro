@@ -52,6 +52,12 @@ const linkNameCol =
   dataset && PET_NAME_DATASETS.has(dataset.name) && cols.includes('名稱') ? '名稱' : null;
 const petDetailHref = (petName: string) =>
   hasPet(petName) ? `${base}/寵物資料/${encodeURIComponent(petName)}` : null;
+
+/**
+ * 圖欄的位置：寵物表的圖是該列主角的肖像，跟名稱一樣放最前面；
+ * 其他表的圖是佐證用的存檔截圖，放最後才不會把名稱、材料往右擠。
+ */
+const imageFirst = dataset ? PET_NAME_DATASETS.has(dataset.name) : false;
 ---
 
 {
@@ -102,7 +108,7 @@ const petDetailHref = (petName: string) =>
         <table>
           <thead>
             <tr>
-              {dataset.imageColumn && <th scope="col" class="col-img">圖</th>}
+              {dataset.imageColumn && imageFirst && <th scope="col" class="col-img">圖</th>}
               {dataset.action && <th scope="col" class="col-act">工具</th>}
               {cols.map((c, i) => (
                 <th
@@ -121,12 +127,32 @@ const petDetailHref = (petName: string) =>
                   {c}
                 </th>
               ))}
+              {dataset.imageColumn && !imageFirst && <th scope="col" class="col-img">圖</th>}
             </tr>
           </thead>
           <tbody>
             {dataset.rows.map((row) => {
               const petName = linkNameCol ? (row[linkNameCol] ?? '').trim() : '';
               const detail = petName ? petDetailHref(petName) : null;
+              const imgCell = dataset.imageColumn ? (
+                <td class="col-img">
+                  {row[dataset.imageColumn] ? (
+                    detail ? (
+                      <a class="dataset__img-link" href={detail}>
+                        <span class="hoverpic">
+                          <img src={src(thumbOf(row[dataset.imageColumn]))} alt={petName} loading="lazy" decoding="async" />
+                          <img class="hoverpic__big" src={src(row[dataset.imageColumn])} alt="" loading="lazy" decoding="async" />
+                        </span>
+                      </a>
+                    ) : (
+                      <span class="hoverpic">
+                        <img src={src(thumbOf(row[dataset.imageColumn]))} alt="" loading="lazy" decoding="async" />
+                        <img class="hoverpic__big" src={src(row[dataset.imageColumn])} alt="" loading="lazy" decoding="async" />
+                      </span>
+                    )
+                  ) : null}
+                </td>
+              ) : null;
               return (
                 <tr
                   class={detail ? 'dataset__row--link' : undefined}
@@ -135,25 +161,7 @@ const petDetailHref = (petName: string) =>
                     dataset.filterColumn ? (row[dataset.filterColumn.name] ?? '').trim() : undefined
                   }
                 >
-                  {dataset.imageColumn && (
-                    <td class="col-img">
-                      {row[dataset.imageColumn] ? (
-                        detail ? (
-                          <a class="dataset__img-link" href={detail}>
-                            <span class="hoverpic">
-                              <img src={src(thumbOf(row[dataset.imageColumn]))} alt={petName} loading="lazy" decoding="async" />
-                              <img class="hoverpic__big" src={src(row[dataset.imageColumn])} alt="" loading="lazy" decoding="async" />
-                            </span>
-                          </a>
-                        ) : (
-                          <span class="hoverpic">
-                            <img src={src(thumbOf(row[dataset.imageColumn]))} alt="" loading="lazy" decoding="async" />
-                            <img class="hoverpic__big" src={src(row[dataset.imageColumn])} alt="" loading="lazy" decoding="async" />
-                          </span>
-                        )
-                      ) : null}
-                    </td>
-                  )}
+                  {imageFirst && imgCell}
                   {dataset.action && (
                     <td class="col-act">
                       {row[dataset.action.column] ? (
@@ -207,6 +215,7 @@ const petDetailHref = (petName: string) =>
                       <td class={classes || undefined}>{value}</td>
                     );
                   })}
+                  {!imageFirst && imgCell}
                 </tr>
               );
             })}
@@ -231,10 +240,16 @@ const petDetailHref = (petName: string) =>
     if (!tbody) return;
     const rows = Array.from(tbody.rows);
     const total = rows.length;
-    // 資料欄前面可能插了圖片欄與工具按鈕欄，兩者都不在 cols 裡，
-    // 所以 data-sort-index / data-filter-col 這些索引都要加上這個偏移
-    const lead =
-      (root.querySelector('.col-img') ? 1 : 0) + (root.querySelector('.col-act') ? 1 : 0);
+    // 資料欄前面可能插了肖像圖欄（寵物表）與工具按鈕欄，兩者都不在 cols 裡，
+    // 所以 data-sort-index / data-filter-col 這些索引都要加上這個偏移。
+    // 偏移直接數「第一個資料表頭之前有幾個 th」——
+    // 佐證截圖表的圖欄擺在最後面，不能算進來。
+    const lead = Math.max(
+      0,
+      Array.from(root.querySelectorAll('thead th')).findIndex((th) =>
+        th.hasAttribute('data-sort-index'),
+      ),
+    );
     const noteCol = note ? Number(note.dataset.noteCol) + lead : -1;
 
     // 搜尋字串先算好：一來 1069 列每次按鍵都跑 textContent 很浪費，
