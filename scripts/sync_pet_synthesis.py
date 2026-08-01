@@ -55,6 +55,21 @@ REQUIRED_ITEM_HEADERS = (
 RESULT_PET_HEADERS = ("獲得寵物", "寵物", "寵物名稱")
 CELL_LINE_BREAK = " / "
 
+# 公告 17584 的結果欄誤寫成「Lv1的Lv1的白依試做體」；
+# 保留第一個等級前綴，避免重新同步時把重複前綴寫回正式 CSV。
+_DUPLICATE_LEVEL_PREFIX_RE = re.compile(
+    r"(?P<prefix>(?:Lv\.?\s*\d+\s*(?:等|級)?\s*的\s*))"
+    r"(?P=prefix)+",
+    re.I,
+)
+
+
+def normalize_level_prefixes(value: str) -> str:
+    return _DUPLICATE_LEVEL_PREFIX_RE.sub(
+        lambda match: match.group("prefix"),
+        clean(value),
+    )
+
 
 @dataclass
 class Recipe:
@@ -243,7 +258,7 @@ def pet_key(value: str) -> str:
 
 
 def output_parts(value: str) -> list[str]:
-    value = clean(value)
+    value = normalize_level_prefixes(value)
     probability_matches = list(
         re.finditer(
             r"(?:概率|機率)\s*[\d.]+\s*%(?:\s*[）)])?",
@@ -292,7 +307,7 @@ def format_materials(value: str) -> str:
 
 
 def format_result(value: str) -> str:
-    value = clean(value).replace("*", "×")
+    value = normalize_level_prefixes(value).replace("*", "×")
     value = re.sub(r"\s+([（(](?:概率|機率))", r"\1", value)
     value = re.sub(
         r"(?<![（(])\s*((?:概率|機率)\s*[\d.]+\s*%)",
@@ -767,7 +782,7 @@ def parse_recipes(ref: NewsRef, source: str) -> list[Recipe]:
                 continue
             required_pet = row[pet_col] if pet_col is not None else "不需要"
             required_item = row[item_col]
-            result_pet = row[result_col]
+            result_pet = normalize_level_prefixes(row[result_col])
             no_required_pet = required_pet.strip() in {"/", "／", "-", "無", "不需要"}
             if (
                 not required_item
