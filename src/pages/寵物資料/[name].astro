@@ -9,7 +9,6 @@ import FusionTree from '../../components/FusionTree.astro';
 import {
   listPetsForDetailPaths,
   getPet,
-  getPetExtra,
   splitSkills,
   skillBaseName,
   gradePct,
@@ -47,9 +46,16 @@ const listHref =
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const src = (v: string) => (v.startsWith('/') ? base + v : v);
 
-const extra = pet ? getPetExtra(pet.名稱) : {};
 const img = pet ? petImagePath(pet.名稱, pet.image) : '';
 const skills = pet ? splitSkills(pet.技能) : [];
+
+const sealValue = (pet?.封印 ?? '').trim();
+const sealable =
+  sealValue === '○'
+    ? true
+    : sealValue === '╳' || sealValue === '×' || sealValue.toUpperCase() === 'X'
+      ? false
+      : null;
 
 const grow = pet ? parseGrowFromPet(pet) : null;
 const statsAt = (lv: number) => {
@@ -122,17 +128,13 @@ function skillHref(sk: string): string {
   return `${base}/技能總覽/${encodeURIComponent(skillBaseName(sk))}`;
 }
 
-function skillNote(sk: string): string {
-  return extra.skillNotes?.[sk] ?? extra.skillNotes?.[skillBaseName(sk)] ?? '';
-}
-
-const cardLabel = extra.cardLevel?.trim() || '未知';
-const isCardUnknown = !extra.cardLevel || extra.cardLevel === '未知';
+const cardLabel = (pet?.卡片 ?? '').trim() || '未知';
+const isCardUnknown = !pet?.卡片?.trim() || cardLabel === '未知';
 
 const obtainText = (pet?.入手方法 ?? '').trim();
 const obtainType = (pet?.入手類型 ?? '').trim();
-/** JSON 細項 + 改造購買 NPC（魔力豆知識）等程式注入來源 */
-const obtainExtra = [...(extra.obtainMethods ?? []), ...remodelObtain];
+/** 改造購買 NPC（魔力豆知識）等程式注入來源 */
+const obtainExtra = [...remodelObtain];
 const hasObtain = Boolean(obtainText || obtainType || obtainExtra.length);
 
 // 可選等級 1~160（第三列預設 140）
@@ -194,9 +196,9 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
             <td style="width: 120px"><b>可否封印</b></td>
             <td style="width: 230px">
               {
-                extra.sealable === true ? (
+                sealable === true ? (
                   <span class="badge badge-yes">可封印</span>
-                ) : extra.sealable === false ? (
+                ) : sealable === false ? (
                   <span class="badge badge-no">不可封印</span>
                 ) : (
                   <span class="badge badge-unknown">未知</span>
@@ -272,9 +274,6 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
                         <a class="skill-link" href={skillHref(sk)}>
                           {sk}
                         </a>
-                        {skillNote(sk) && (
-                          <span class="skill-note">{skillNote(sk)}</span>
-                        )}
                       </div>
                     ))}
                   </div>
@@ -284,7 +283,7 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
           </tr>
         </table>
 
-        {/* 5. 入手方法（CSV 短述 + JSON 細項；與「相關任務」分開） */}
+        {/* 5. 入手方法（CSV 短述 + 改造購買資料；與「相關任務」分開） */}
         <table class="info-table">
           <tr class="head">
             <td>入手方法</td>
@@ -458,11 +457,6 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
                   <div set:html={renderCell(pet.任務用途, base)} />
                 ) : (
                   <div class="muted">尚無任務關聯</div>
-                )
-              }
-              {
-                extra.questNote && (
-                  <div class="quest-tip">{extra.questNote}</div>
                 )
               }
             </td>

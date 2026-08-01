@@ -1,86 +1,12 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-31T19:13:55.045Z",
+  "generatedAt": "2026-08-01T06:57:44.124Z",
   "sources": {
-    "csv": 290,
-    "handwritten": 1,
+    "csv": 291,
     "military": 39,
     "remodel": 14
   },
   "reactions": [
-    {
-      "id": "csv:ae8bcc88c32d",
-      "source": "csv",
-      "materials": [
-        {
-          "symbol": "天空元素使",
-          "kind": "pet",
-          "anyLevel": true
-        },
-        {
-          "symbol": "風元素之卵",
-          "kind": "item",
-          "qty": 1
-        },
-        {
-          "symbol": "閃耀變異之源",
-          "kind": "item",
-          "qty": 10
-        },
-        {
-          "symbol": "50,000 G",
-          "kind": "gold"
-        }
-      ],
-      "products": [
-        {
-          "symbol": "天空元素使",
-          "kind": "pet",
-          "prob": "95%"
-        },
-        {
-          "symbol": "風之使徒",
-          "kind": "pet",
-          "prob": "5%"
-        }
-      ],
-      "npc": "大法師安蕾雅(艾爾瑪城元素師家 216.188）",
-      "meta": {
-        "activityId": "act-2025-10-29-e4e40be656"
-      }
-    },
-    {
-      "id": "hand:6038169e9437",
-      "source": "handwritten",
-      "materials": [
-        {
-          "symbol": "光精靈",
-          "kind": "pet"
-        },
-        {
-          "symbol": "風元素之卵",
-          "kind": "item",
-          "qty": 3
-        },
-        {
-          "symbol": "閃耀變異之源",
-          "kind": "item",
-          "qty": 10
-        },
-        {
-          "symbol": "精靈王契約",
-          "kind": "item",
-          "qty": 100
-        }
-      ],
-      "products": [
-        {
-          "symbol": "天空元素使",
-          "kind": "pet"
-        }
-      ],
-      "npc": "NPC: 愛卡勒恩 @ 寵物研究所 (15，8)"
-    },
     {
       "id": "csv:52a3a095e6f4",
       "source": "csv",
@@ -2171,6 +2097,47 @@
       "npc": "冥界祭司長海文克（魔法大學研究所 41.45）",
       "meta": {
         "activityId": "act-2025-11-10-1c03e833f1"
+      }
+    },
+    {
+      "id": "csv:ae8bcc88c32d",
+      "source": "csv",
+      "materials": [
+        {
+          "symbol": "天空元素使",
+          "kind": "pet",
+          "anyLevel": true
+        },
+        {
+          "symbol": "風元素之卵",
+          "kind": "item",
+          "qty": 1
+        },
+        {
+          "symbol": "閃耀變異之源",
+          "kind": "item",
+          "qty": 10
+        },
+        {
+          "symbol": "50,000 G",
+          "kind": "gold"
+        }
+      ],
+      "products": [
+        {
+          "symbol": "天空元素使",
+          "kind": "pet",
+          "prob": "95%"
+        },
+        {
+          "symbol": "風之使徒",
+          "kind": "pet",
+          "prob": "5%"
+        }
+      ],
+      "npc": "大法師安蕾雅(艾爾瑪城元素師家 216.188）",
+      "meta": {
+        "activityId": "act-2025-10-29-e4e40be656"
       }
     },
     {
@@ -6995,6 +6962,42 @@
       "products": [
         {
           "symbol": "大地元素使",
+          "kind": "pet"
+        }
+      ],
+      "npc": "愛卡勒恩(寵物研究所15，8）",
+      "meta": {
+        "activityId": "act-2023-09-21-02ef47c47c"
+      }
+    },
+    {
+      "id": "csv:e14f87939c05",
+      "source": "csv",
+      "materials": [
+        {
+          "symbol": "光精靈",
+          "kind": "pet",
+          "minLevel": 1
+        },
+        {
+          "symbol": "風元素之卵",
+          "kind": "item",
+          "qty": 3
+        },
+        {
+          "symbol": "閃耀變異之源",
+          "kind": "item",
+          "qty": 10
+        },
+        {
+          "symbol": "精靈王契約",
+          "kind": "item",
+          "qty": 100
+        }
+      ],
+      "products": [
+        {
+          "symbol": "天空元素使",
           "kind": "pet"
         }
       ],
@@ -12661,7 +12664,7 @@
     {
       "from": "光精靈",
       "to": "天空元素使",
-      "recipeId": "hand:6038169e9437"
+      "recipeId": "csv:e14f87939c05"
     },
     {
       "from": "冰冷樹精",

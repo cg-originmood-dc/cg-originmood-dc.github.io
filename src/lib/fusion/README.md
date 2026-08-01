@@ -61,7 +61,7 @@ npm run build          # 會先 fusion:build 再 astro build
 
 | 優先 | 來源 | 說明 |
 |------|------|------|
-| 高 | `handwritten` | 已確認模板（如風之使徒） |
+| 高 | `handwritten` | 另有獨立確認、且需要補充的手寫模板 |
 | | `csv` | 官方公告，常含金幣／Lv |
 | | `military` | 軍方研究所 |
 | 低 | `remodel` | 豆知識改造；與 CSV 同線時丟棄（避免改造地獄骷髏雙份） |

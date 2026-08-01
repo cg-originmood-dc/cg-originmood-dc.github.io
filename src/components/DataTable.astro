@@ -47,7 +47,7 @@ const cols = dataset?.columns.filter((c) => c !== dataset.imageColumn) ?? [];
  * 這裡列的是「這張表的名稱欄裝的是寵物」，不是「這些名字有頁面」——
  * 後者交給 hasPet 逐列判斷，免得表裡混進沒收錄的寵物時發出死連結。
  */
-const PET_NAME_DATASETS = new Set(['專屬寵物', '魔力原始寵物', '寵物清單']);
+const PET_NAME_DATASETS = new Set(['專屬寵物', '原生寵物', '寵物清單']);
 const linkNameCol =
   dataset && PET_NAME_DATASETS.has(dataset.name) && cols.includes('名稱') ? '名稱' : null;
 const petDetailHref = (petName: string) =>

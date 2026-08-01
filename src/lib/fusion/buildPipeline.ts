@@ -33,7 +33,7 @@ const SOURCE_RANK: Record<FusionSource, number> = {
 };
 
 function preferReaction(a: FusionReaction, b: FusionReaction): FusionReaction {
-  // 多產物分支（含機率）優於單產物手寫摘要（例：風之使徒 csv 95%/5% vs handwritten）
+  // 多產物分支（含機率）優於單產物補充摘要。
   const pa = petSymbols(a.products).length;
   const pb = petSymbols(b.products).length;
   if (pa !== pb) return pa >= pb ? a : b;
@@ -67,7 +67,7 @@ function petProductsOverlap(a: FusionReaction, b: FusionReaction): boolean {
 /**
  * 去重：
  * 1. 粗簽名（略金幣／等級／NPC）合併 csv+remodel 等同線
- * 2. 同材料且產物有交集 → 再合（風之使徒 handwritten 單產物 vs csv 多產物）
+ * 2. 同材料且產物有交集 → 再合，保留完整的多產物分支
  * 3. 細簽名再擋完全相同列
  */
 function dedupeReactions(raw: FusionReaction[]): FusionReaction[] {
@@ -82,7 +82,7 @@ function dedupeReactions(raw: FusionReaction[]): FusionReaction[] {
     byCore.set(core, preferReaction(prev, r));
   }
 
-  // 材料相同、產物重疊：合併（例 風之使徒）
+  // 材料相同、產物重疊：合併
   const byMats = new Map<string, FusionReaction[]>();
   for (const r of byCore.values()) {
     const key = materialCoreSignature(r) || `__empty__${r.id}`;

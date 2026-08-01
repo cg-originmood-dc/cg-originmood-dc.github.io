@@ -75,32 +75,6 @@ export interface ObtainMethod {
   link?: string;
 }
 
-export interface PetDetailExtra {
-  /** 可否封印 */
-  sealable?: boolean | null;
-  /** 卡片等級文字，如「金卡 5 級」 */
-  cardLevel?: string;
-  /** 各階段素質：1 / 100 / 140 */
-  growth?: Array<{
-    level: string;
-    hp: string;
-    mp: string;
-    atk: string;
-    def: string;
-    agi: string;
-    spi: string;
-    rec: string;
-  }>;
-  /** 技能說明（技能全名 → 簡述） */
-  skillNotes?: Record<string, string>;
-  /** 相關任務補充說明 */
-  questNote?: string;
-  /** 結構化入手細項（可多筆） */
-  obtainMethods?: ObtainMethod[];
-  /** 合成樹 */
-  fusionTree?: FusionNode;
-}
-
 /** 入手類型顯示用中文 */
 export function obtainTypeLabel(type?: string): string {
   if (!type?.trim()) return '';
@@ -437,10 +411,6 @@ export function gradePct(value: string, isTotal = false): number {
   return Math.min(100, Math.round((n / max) * 100));
 }
 
-export function getPetExtra(name: string): PetDetailExtra {
-  return name.trim() === '風之使徒' ? WIND_APOSTLE_EXTRA : {};
-}
-
 /**
  * 寵物圖：優先該列 image；否則依目錄預設路徑。
  * 查表順序與 getPet 相同（專屬 → 原生）。
@@ -523,69 +493,3 @@ export function resolveFusionTree(
     hasFullData: false,
   };
 }
-
-// ---------------------------------------------------------------------------
-// 風之使徒：合成樹等與 pet_page_template.html 一致（使用者確認正確）
-// 卡片等級改為「未知」；素質改由 petStats 公式計算，不寫死
-// ---------------------------------------------------------------------------
-const WIND_APOSTLE_EXTRA: PetDetailExtra = {
-  sealable: false,
-  cardLevel: '未知',
-  skillNotes: {
-    '超強昏睡魔法LV10': '使敵方全體陷入昏睡狀態',
-    '潔淨魔法LV3': '解除隊友的異常狀態',
-    '超強補血魔法LV7': '為我方全體回復大量生命值',
-  },
-  questNote: '攜帶風之使徒將在迷宮時空長廊中可獲得任意 NPC 的協助抵達終點。',
-  // 寵物節點不寫 image：resolveFusionTree 會用專屬寵物 CSV 的 SSOT 填入
-  fusionTree: {
-    type: 'pet',
-    name: '風之使徒',
-    target: true,
-    npc: '大法師安蕾雅 @ 艾爾瑪城元素師家 (216.188) (5%)',
-    children: [
-      {
-        type: 'pet',
-        name: '天空元素使',
-        npc: 'NPC: 愛卡勒恩 @ 寵物研究所 (15，8)',
-        children: [
-          {
-            // 材料由軍方研究所一改接上（enrich）；此處只掛產物節點
-            type: 'pet',
-            name: '光精靈',
-          },
-          {
-            type: 'item',
-            name: '風元素之卵',
-            qty: 3,
-          },
-          {
-            type: 'item',
-            name: '閃耀變異之源',
-            qty: 10,
-          },
-          {
-            type: 'item',
-            name: '精靈王契約',
-            qty: 100,
-          },
-        ],
-      },
-      {
-        type: 'item',
-        name: '風元素之卵',
-        qty: 1,
-      },
-      {
-        type: 'item',
-        name: '閃耀變異之源',
-        qty: 10,
-      },
-      {
-        type: 'gold',
-        name: '50,000G',
-        countLabel: '金幣',
-      },
-    ],
-  },
-};
