@@ -1,13 +1,30 @@
 /**
  * 來源：活動 寵物合成配方.csv（經 synthesis.listSynthesisRecipes）
+ * 設計圖打包檔次在此展開為 OO設計圖A…E。
  */
 import { createHash } from 'node:crypto';
 import { listSynthesisRecipes } from '../../synthesis';
 import type { FusionReaction, FusionSlot } from '../types';
+import { expandDesignDrawingName } from '../blueprints';
 import { normalizePetName } from '../names';
 
 function reactionId(parts: string): string {
   return `csv:${createHash('sha1').update(parts).digest('hex').slice(0, 12)}`;
+}
+
+function pushItemMaterial(
+  materials: FusionSlot[],
+  name: string,
+  qty?: number,
+): void {
+  const expanded = expandDesignDrawingName(name);
+  for (const symbol of expanded) {
+    materials.push({
+      symbol,
+      kind: 'item',
+      ...(qty != null && expanded.length === 1 ? { qty } : {}),
+    });
+  }
 }
 
 export function adaptCsvReactions(): FusionReaction[] {
@@ -21,6 +38,8 @@ export function adaptCsvReactions(): FusionReaction[] {
           symbol: normalizePetName(ing.name),
           kind: 'pet',
           ...(ing.qty != null ? { qty: Number(ing.qty) } : {}),
+          ...(ing.minLevel != null ? { minLevel: Number(ing.minLevel) } : {}),
+          ...(ing.anyLevel ? { anyLevel: true } : {}),
         });
       } else if (ing.type === 'gold') {
         materials.push({
@@ -28,11 +47,11 @@ export function adaptCsvReactions(): FusionReaction[] {
           kind: 'gold',
         });
       } else if (ing.name) {
-        materials.push({
-          symbol: ing.name,
-          kind: 'item',
-          ...(ing.qty != null ? { qty: Number(ing.qty) } : {}),
-        });
+        pushItemMaterial(
+          materials,
+          ing.name,
+          ing.qty != null ? Number(ing.qty) : undefined,
+        );
       }
     }
 
@@ -47,12 +66,15 @@ export function adaptCsvReactions(): FusionReaction[] {
             ...(o.qty != null ? { qty: o.qty } : {}),
           });
         } else if (o.type === 'item' && o.name) {
-          products.push({
-            symbol: o.name,
-            kind: 'item',
-            ...(o.prob ? { prob: o.prob } : {}),
-            ...(o.qty != null ? { qty: o.qty } : {}),
-          });
+          // 產物側極少是打包設計圖；若有也展開
+          for (const symbol of expandDesignDrawingName(o.name)) {
+            products.push({
+              symbol,
+              kind: 'item',
+              ...(o.prob ? { prob: o.prob } : {}),
+              ...(o.qty != null ? { qty: o.qty } : {}),
+            });
+          }
         }
       }
     } else {

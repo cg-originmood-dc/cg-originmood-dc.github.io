@@ -17,6 +17,13 @@ export interface FusionSlot {
   qty?: number;
   /** 產物機率，如 "80%" */
   prob?: string;
+  /**
+   * 材料寫明的等級（公告「Lv40以上的…」／「Lv80的…」→ 40／80）。
+   * 展樹 NPC 側：有則「{等級}等@」，任意等級則「任意@」，沒寫不標。
+   */
+  minLevel?: number;
+  /** 材料為「任意等級的…」→ 顯示 任意@ */
+  anyLevel?: boolean;
 }
 
 /**
@@ -80,6 +87,25 @@ export function reactionSignature(r: Pick<FusionReaction, 'materials' | 'product
     .sort()
     .join('|');
   return `${mats}#${prods}#${r.npc}`;
+}
+
+/**
+ * 同配方線粗簽名：略金幣／數量／等級／機率／NPC。
+ * 用來合併「CSV 有金幣」與「remodel 只有底寵+設計圖」這類重複線。
+ */
+export function reactionCoreSignature(
+  r: Pick<FusionReaction, 'materials' | 'products'>,
+): string {
+  const mats = r.materials
+    .filter((m) => m.kind !== 'gold')
+    .map((m) => `${m.kind}\t${m.symbol}`)
+    .sort()
+    .join('|');
+  const prods = r.products
+    .map((p) => `${p.kind}\t${p.symbol}`)
+    .sort()
+    .join('|');
+  return `${mats}#${prods}`;
 }
 
 export function petSymbols(slots: FusionSlot[]): string[] {

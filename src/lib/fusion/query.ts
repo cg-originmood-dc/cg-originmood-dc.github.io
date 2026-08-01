@@ -1,7 +1,15 @@
 /**
- * 查詢／展樹：只讀 CompiledFusionGraph
+ * 查詢／展樹：只讀 CompiledFusionGraph（圖論視圖）
+ *
+ * 不變量：
+ * - SSOT 是圖（reaction 超邊 + parent 邊），不是每寵一棵獨立樹
+ * - 同一視圖內，相同 reaction.id 的子結構只實例化一次（DAG memo）
+ * - 不在此 parse 配方 CSV
+ *
+ * 效能：庫 ~數百 KB、反應 ~數百條；展樹僅 SSG 建頁，全寵合計通常 <100ms。
  */
 import type { FusionNode } from '../pets';
+import { petImagePath } from '../pets';
 import { itemImagePath } from '../items';
 import { compileFusionGraph } from './compile';
 import { normalizePetName } from './names';
@@ -14,11 +22,39 @@ import type {
 import { petSymbols } from './types';
 
 function petImg(name: string): string {
-  return `/img/專屬寵物/${name}.gif`;
+  // 專屬優先、再原生（與 getPet 一致）
+  return petImagePath(name);
 }
 
 function graph(): CompiledFusionGraph {
   return compileFusionGraph();
+}
+
+/** 單一寵物頁的展開上下文（視圖生命週期內共用） */
+interface ExpandCtx {
+  maxDepth: number;
+  /** reaction 展開結果：同 id 同角色只建一次 */
+  byReaction: Map<string, FusionNode>;
+  /** 嵌套產物向下展開 */
+  byProductNested: Map<string, FusionNode>;
+}
+
+function newExpandCtx(maxDepth: number): ExpandCtx {
+  return {
+    maxDepth,
+    byReaction: new Map(),
+    byProductNested: new Map(),
+  };
+}
+
+function reactionMemoKey(
+  reaction: FusionReaction,
+  focusName: string,
+  isRoot: boolean,
+): string {
+  // 多產物根：只看 reaction（與 focus 無關）→ 多根共用一枝
+  if (isMulti(reaction) && isRoot) return `M:${reaction.id}`;
+  return `S:${reaction.id}:${focusName}`;
 }
 
 export function getReactionsForProduct(productPet: string): FusionReaction[] {
@@ -40,8 +76,8 @@ export function findFusionRoots(startPet: string): string[] {
 }
 
 /**
- * 從 start 沿 parent 邊上溯祖先，取全部根。
- * 根 = 祖先集合內不再有上級者。
+ * 從 start 沿 parent 邊（材料→產物）走，取全部根。
+ * 根 = 祖先集合內不再有出邊指向集合內者。
  */
 export function findFusionRootPaths(startPet: string): FusionRootPath[] {
   const g = graph();
@@ -59,7 +95,6 @@ export function findFusionRootPaths(startPet: string): FusionRootPath[] {
     }
   }
 
-  // 穩定：每點在 anc 內選字典序最小上級，構成 start→root 鏈
   const childToParent = new Map<string, string>();
   for (const n of anc) {
     const pars = (g.parents.get(n) ?? [])
@@ -99,12 +134,10 @@ export function findFusionRootPaths(startPet: string): FusionRootPath[] {
 }
 
 /**
- * 展開用反應列表（固定算法，勿再改成「上溯路徑裁成一條」）：
- *
- * 1. **根結點**：該產物的**全部**反應 → 完整樹／森林（不挑主配方、不因入邊縮成一層）
- * 2. **嵌套材料**：優先「取得線」（材料不含自己），避免重抽自環把上級塞回材料格
- *
- * findFusionRootPaths 的 viaMaterial 只是上溯路徑紀錄，**不得**餵進來裁剪配方集合。
+ * 展開用反應列表：
+ * 1. 根：該產物全部反應
+ * 2. 嵌套：取得線優先；僅自環重抽 → 空（當葉）
+ * viaMaterial 不得裁剪根的配方集合。
  */
 function resolveReactions(
   productPet: string,
@@ -113,14 +146,11 @@ function resolveReactions(
   const g = graph();
   const all = g.byProduct.get(productPet)?.slice() ?? [];
   if (!all.length) return [];
-
-  // 根：完整全部配方
   if (!opts.nested) return all;
 
-  // 嵌套：取得線優先
   const obtain = all.filter((r) => !petSymbols(r.materials).includes(productPet));
   if (obtain.length) return obtain;
-  return all;
+  return [];
 }
 
 function slotToMaterialNode(s: FusionSlot): FusionNode {
@@ -148,9 +178,30 @@ function slotToMaterialNode(s: FusionSlot): FusionNode {
   };
 }
 
-/** 多產物頭：NPC 掛在每個產物（名稱／機率下） */
-function outcomeHeads(reaction: FusionReaction): FusionNode[] {
+/**
+ * 材料等級 + NPC 顯示字串（Spec）
+ * - 任意等級 → 任意@
+ * - 有寫等級 → {等級}等@（例 40等@）
+ * - 沒寫 → 不標
+ * 多材料時：有明確數字取最高；否則才用任意。
+ */
+export function formatReactionNpc(reaction: FusionReaction): string {
   const npc = (reaction.npc || '').trim();
+  const levels = reaction.materials
+    .filter((m) => m.kind === 'pet' && m.minLevel != null && m.minLevel > 0)
+    .map((m) => m.minLevel!);
+  const anyLevel = reaction.materials.some((m) => m.kind === 'pet' && m.anyLevel);
+  let prefix = '';
+  if (levels.length) {
+    prefix = `${Math.max(...levels)}等@`;
+  } else if (anyLevel) {
+    prefix = '任意@';
+  }
+  return `${prefix}${npc}`;
+}
+
+function outcomeHeads(reaction: FusionReaction): FusionNode[] {
+  const npc = formatReactionNpc(reaction);
   const heads: FusionNode[] = reaction.products.map((p) => {
     if (p.kind === 'pet') {
       return {
@@ -204,61 +255,75 @@ function isMulti(reaction: FusionReaction): boolean {
   return reaction.products.length > 1;
 }
 
+function leafPet(name: string, isRoot: boolean): FusionNode {
+  return {
+    type: 'pet',
+    name,
+    image: petImg(name),
+    ...(isRoot ? { target: true } : {}),
+  };
+}
+
 function expandOneReaction(
   name: string,
   reaction: FusionReaction,
   opts: {
     stack: Set<string>;
     depth: number;
-    maxDepth: number;
     isRoot: boolean;
+    ctx: ExpandCtx;
   },
 ): FusionNode {
   const g = graph();
-  const { stack: next, depth, maxDepth, isRoot } = opts;
+  const { stack, depth, isRoot, ctx } = opts;
+  const key = reactionMemoKey(reaction, name, isRoot);
+  const hit = ctx.byReaction.get(key);
+  if (hit) return hit;
 
   const children = reaction.materials.map((mat) => {
     if (mat.kind !== 'pet') return slotToMaterialNode(mat);
-    if (next.has(mat.symbol) || depth + 1 > maxDepth) {
+    if (stack.has(mat.symbol) || depth + 1 > ctx.maxDepth) {
       return slotToMaterialNode(mat);
     }
     if (g.byProduct.has(mat.symbol)) {
       return expandFusionDown(mat.symbol, {
-        stack: next,
+        stack,
         depth: depth + 1,
-        maxDepth,
         isRoot: false,
+        ctx,
       });
     }
     return slotToMaterialNode(mat);
   });
 
-  // 多產物頭只在展開根；NPC 在 heads 上
+  let node: FusionNode;
   if (isMulti(reaction) && isRoot) {
-    return {
+    node = {
       type: 'material',
       name: '',
       target: true,
       heads: outcomeHeads(reaction),
       children,
     };
+  } else {
+    const selfProd = reaction.products.find(
+      (p) => p.kind === 'pet' && p.symbol === name,
+    );
+    const prob = selfProd?.prob;
+    const npc = formatReactionNpc(reaction);
+    node = {
+      type: 'pet',
+      name,
+      image: petImg(name),
+      target: isRoot,
+      ...(prob ? { countLabel: `機率 ${prob}` } : {}),
+      ...(npc ? { npc } : {}),
+      children,
+    };
   }
 
-  const selfProd = reaction.products.find(
-    (p) => p.kind === 'pet' && p.symbol === name,
-  );
-  const prob = selfProd?.prob;
-  const npc = (reaction.npc || '').trim();
-
-  return {
-    type: 'pet',
-    name,
-    image: petImg(name),
-    target: isRoot,
-    ...(prob ? { countLabel: `機率 ${prob}` } : {}),
-    ...(npc ? { npc } : {}),
-    children,
-  };
+  ctx.byReaction.set(key, node);
+  return node;
 }
 
 export function expandFusionDown(
@@ -268,31 +333,30 @@ export function expandFusionDown(
     depth?: number;
     maxDepth?: number;
     isRoot?: boolean;
+    viaMaterial?: string | null;
+    ctx?: ExpandCtx;
   } = {},
 ): FusionNode {
   const name = normalizePetName(productPet) || productPet;
-  const maxDepth = opts.maxDepth ?? 10;
   const depth = opts.depth ?? 0;
   const stack = opts.stack ?? new Set<string>();
   const isRoot = opts.isRoot ?? depth === 0;
+  const ctx =
+    opts.ctx ??
+    newExpandCtx(opts.maxDepth ?? 10);
 
-  if (!name || stack.has(name) || depth > maxDepth) {
-    return {
-      type: 'pet',
-      name,
-      image: petImg(name),
-      ...(isRoot ? { target: true } : {}),
-    };
+  if (!name || stack.has(name) || depth > ctx.maxDepth) {
+    return leafPet(name, isRoot);
+  }
+
+  if (!isRoot) {
+    const nestedHit = ctx.byProductNested.get(name);
+    if (nestedHit) return nestedHit;
   }
 
   const reactions = resolveReactions(name, { nested: !isRoot });
   if (!reactions.length) {
-    return {
-      type: 'pet',
-      name,
-      image: petImg(name),
-      ...(isRoot ? { target: true } : {}),
-    };
+    return leafPet(name, isRoot);
   }
 
   const next = new Set(stack);
@@ -302,31 +366,36 @@ export function expandFusionDown(
     expandOneReaction(name, reaction, {
       stack: next,
       depth,
-      maxDepth,
       isRoot,
+      ctx,
     }),
   );
-  return forestOrSingle(expanded, isRoot);
+  const result = forestOrSingle(expanded, isRoot);
+  if (!isRoot) ctx.byProductNested.set(name, result);
+  return result;
 }
 
 function treeHasBody(node: FusionNode): boolean {
   return Boolean(node.children?.length || node.heads?.length);
 }
 
-/**
- * petNodes 在 compile 時就收了每條反應的全部寵物符號（產物＋材料），
- * byProduct／byMaterial／parents／edgeReactions 的鍵與端點都出自同一批，
- * 不必再逐一檢查——尤其別掃 edgeReactions 的 key，那是 O(邊數) 的線性掃描。
- */
 function inGraph(name: string): boolean {
-  return graph().petNodes.has(name);
+  const g = graph();
+  if (g.byProduct.has(name) || g.byMaterial.has(name) || g.petNodes.has(name)) {
+    return true;
+  }
+  if ((g.parents.get(name)?.length ?? 0) > 0) return true;
+  for (const k of g.edgeReactions.keys()) {
+    if (k.startsWith(`${name}\0`) || k.endsWith(`\0${name}`)) return true;
+  }
+  return false;
 }
 
 /**
- * 顯示用合成樹（SSOT 算法）：
- * 1. 從目前寵沿上級上溯 → 找**全部根**
- * 2. 從每個根向下 DFS **完整樹**（該根全部配方，不裁一條）
- * 3. 多根／多配方 → 森林
+ * 顯示用合成視圖（有根 DAG → 給 UI 的樹形）：
+ * 1. 上溯全部根
+ * 2. 各根向下展開；同一 reaction 子結構 memo 共用
+ * 3. 森林層對「同一 memo 節點」去重（多產物重抽不會兩枝）
  */
 export function buildFusionTreeFromGraph(
   petName: string,
@@ -335,29 +404,27 @@ export function buildFusionTreeFromGraph(
   const name = normalizePetName(petName) || petName;
   if (!name || !inGraph(name)) return null;
 
-  // 只取根名；via 不參與展開裁剪
-  const roots = [...new Set(findFusionRootPaths(name).map((r) => r.root))];
   const maxDepth = opts.maxDepth ?? 10;
+  const ctx = newExpandCtx(maxDepth);
+  const roots = [...new Set(findFusionRootPaths(name).map((r) => r.root))];
 
-  if (roots.length === 1) {
-    const tree = expandFusionDown(roots[0]!, {
+  const children: FusionNode[] = [];
+  const seenNodes = new Set<FusionNode>();
+
+  for (const root of roots) {
+    const tree = expandFusionDown(root, {
       stack: new Set(),
       depth: 0,
-      maxDepth,
       isRoot: true,
+      ctx,
     });
-    return treeHasBody(tree) ? tree : null;
+    if (seenNodes.has(tree)) continue;
+    seenNodes.add(tree);
+    children.push(tree);
   }
 
-  const children = roots.map((root) =>
-    expandFusionDown(root, {
-      stack: new Set(),
-      depth: 0,
-      maxDepth,
-      isRoot: true,
-    }),
-  );
   if (!children.some(treeHasBody)) return null;
+  if (children.length === 1) return children[0]!;
   return {
     type: 'material',
     name: '',

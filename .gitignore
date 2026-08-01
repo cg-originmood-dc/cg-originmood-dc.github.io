@@ -7,6 +7,7 @@ dist/
 scripts/*
 !scripts/sync_official_news.py
 !scripts/sync_pet_synthesis.py
+!scripts/build_fusion_library.ts
 
 # 抓取用的中繼檔：原始 HTML 快取很大且可重新產生
 .cache/

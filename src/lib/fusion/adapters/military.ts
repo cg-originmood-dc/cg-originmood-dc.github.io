@@ -1,5 +1,5 @@
 /**
- * 來源：軍方研究所（content/data/軍方研究所配方.csv，經 militaryLab 讀入）
+ * 來源：軍方研究所（militaryLabData 靜態表）
  */
 import { createHash } from 'node:crypto';
 import { listMilitaryLabRecipes } from '../../militaryLab';

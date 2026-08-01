@@ -1,47 +1,74 @@
-# 合成圖（Fusion Graph）
+# 合成庫（Fusion Library）
 
-## 目標
+## 原則（強制）
 
-多來源髒資料 → **統一 Reaction 結構** → 編譯成圖 → 查詢／展樹。  
-之後**只加資料 + adapter**，不要在 UI 或 expand 旁路塞邏輯。
+1. **髒來源只解析一次**，寫入標準中間檔
+   `content/data/generated/fusion-library.json`
+2. **Astro／寵物頁只讀該檔**，禁止 runtime parse `寵物合成配方.csv` 來展樹
+3. 新來源：adapter → 註冊 `buildPipeline.collectAllReactions` → `npm run fusion:build`
+4. **圖論視圖**：庫是圖（reaction 超邊）；展樹同一 `reaction.id` 子結構只建一次（DAG memo），禁止相同子樹複製貼上
 
-## 架構
+## 效能
+
+| 項目 | 量級（約） |
+|------|------------|
+| 合成庫檔 | ~0.5 MB |
+| 反應／邊 | 數百條 |
+| 讀庫 + 建索引 | 建頁時一次，~20ms |
+| 全寵展樹 | 合計通常 <100ms |
+
+展樹只在 **Astro SSG 建頁**做，不是瀏覽器每次 request 重算；memo 只減工作量、不加重 loading。
+
+## 管線
 
 ```
-adapters/*     各來源 → FusionReaction[]
-compile.ts     去重、建 byProduct / parents / edgeReactions
-query.ts       全部根、完整向下展開（不挑主配方）
-index.ts       公開 API
+寵物合成配方.csv / military / remodel / 手寫
+  → adapters（僅 scripts/build_fusion_library.ts）
+  → FusionReaction[] + parentEdges
+  → content/data/generated/fusion-library.json   ← SSOT
+  → compileFusionGraph() 建索引
+  → query：上溯全部根 → 向下完整 DFS
+  → 寵物頁 FusionTree
 ```
 
-`../fusionGraph.ts` 為相容 re-export（舊 `FusionRecipe` 形狀可選）。
-
-## 統一結構：`FusionReaction`
+## 中間檔格式
 
 ```ts
 {
-  id, source,           // csv | military | remodel | handwritten
-  materials: [{ symbol, kind: pet|item|gold, qty? }],
-  products:  [{ symbol, kind, prob? }],
-  npc,
-  meta?: { activityId?, grades?, quest? }
+  version: 1,
+  generatedAt: string,
+  sources: { csv?: number, military?: number, ... },
+  reactions: FusionReaction[],  // 一級公民
+  parentEdges: ParentEdge[],    // 材料寵 → 產物寵
+  activitiesByPet: { [pet: string]: ActivityMeta[] }
 }
 ```
 
-- **Parent 邊**（衍生）：材料寵 → 產物寵（`from ≠ to`，重抽自環不建）
-- **全部配方**保留在 `byProduct`，禁止主配方勝負
+## 指令
+
+```bash
+npm run fusion:build   # 重產合成庫（改配方／adapter 後必跑）
+npm run build          # 會先 fusion:build 再 astro build
+```
+
+`fusion:build` **不會**改 `專屬寵物.csv`／`道具庫.csv`。
+一次性補主表缺列的工具在工作區沙盒：
+`魔力資料分析資料夾/02-爬蟲與工具腳本/fusion-init/`（不進本 repo）。
+
+### 跨來源去重
+
+`buildPipeline.dedupeReactions` 用**粗簽名**（略金幣／數量／等級／NPC）合併同配方線：
+
+| 優先 | 來源 | 說明 |
+|------|------|------|
+| 高 | `handwritten` | 已確認模板（如風之使徒） |
+| | `csv` | 官方公告，常含金幣／Lv |
+| | `military` | 軍方研究所 |
+| 低 | `remodel` | 豆知識改造；與 CSV 同線時丟棄（避免改造地獄骷髏雙份） |
+
 
 ## 加新來源
 
-1. 準備靜態資料（CSV / `*Data.ts`，勿 runtime 重讀 MD）
-2. 新增 `adapters/foo.ts` → `adaptFooReactions(): FusionReaction[]`
-3. 在 `compile.ts` 的 `collectAllReactions()` 加一行
-4. 別名寫入對應表並在 `names.ts` 合併（注意：底寵名不可當產物異名）
-
-## 展樹規則
-
-1. 從目前寵沿 parent 上溯祖先
-2. 祖先中找**全部根**
-3. 每根用對應反應向下 DFS；多反應 → 森林
-4. 嵌套優先「取得線」（材料不含自己）
-5. NPC 掛在**產物**名稱／機率下（多頭在 heads 上）
+1. 靜態資料 + `adapters/foo.ts` → `FusionReaction[]`
+2. `buildPipeline.collectAllReactions()` 加一行
+3. `npm run fusion:build`，commit 更新後的 `fusion-library.json`

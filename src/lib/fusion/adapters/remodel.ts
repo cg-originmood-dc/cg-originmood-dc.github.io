@@ -1,5 +1,5 @@
 /**
- * 來源：初心改造（content/data/改造寵販售.csv，經 remodelVendor 讀入）
+ * 來源：初心改造（remodelVendorData，對應魔力豆知識一次整理）
  * 規則：產物 = 底寵 + 改造圖A + 改造圖B + …（grades 展開）
  */
 import { createHash } from 'node:crypto';

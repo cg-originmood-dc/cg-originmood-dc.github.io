@@ -6,7 +6,6 @@
  * currentName：目前瀏覽的寵物，加上 node-current 邊框
  */
 import type { FusionNode } from '../lib/pets';
-import { hasPet } from '../lib/pets';
 import { hasItem } from '../lib/items';
 
 interface Props {
@@ -33,12 +32,8 @@ const isCurrent =
   node.name === currentName;
 const isRoot = depth === 0 || !!node.target;
 
-// 樹上會出現沒有資料列的底寵（風精、大地翼龍那些野生原寵），
-// 有名字不代表有頁面，跟道具一樣要先確認查得到才給連結。
 function hrefFor(n: FusionNode): string | null {
-  if (n.type === 'pet') {
-    return hasPet(n.name) ? `${base}/寵物資料/${encodeURIComponent(n.name)}` : null;
-  }
+  if (n.type === 'pet') return `${base}/寵物資料/${encodeURIComponent(n.name)}`;
   if (n.type === 'item' || n.type === 'material') {
     return hasItem(n.name) ? `${base}/道具總覽/${encodeURIComponent(n.name)}` : null;
   }

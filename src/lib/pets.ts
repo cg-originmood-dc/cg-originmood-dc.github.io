@@ -48,6 +48,10 @@ export interface FusionNode {
   qty?: number | string;
   /** 數量旁說明，如「金幣」 */
   countLabel?: string;
+  /** 材料要求的最低等級（公告寫 LvN／LvN 以上時） */
+  minLevel?: number;
+  /** 材料要求任意等級（公告寫「任意等級」時） */
+  anyLevel?: boolean;
   /** NPC / 座標 / 機率 */
   npc?: string;
   /** 是否為樹尖目標 */
