@@ -35,6 +35,28 @@ export interface PetRecord {
   [key: string]: string;
 }
 
+/** 循環轉換模組內的一條 reaction（展示用，已扁平） */
+export interface FusionCycleReactionView {
+  id: string;
+  kind: 'acquire' | 'reroll' | 'convert';
+  materials: FusionNode[];
+  products: FusionNode[];
+  npc?: string;
+}
+
+/** 互轉循環群組節點資料（一般樹外的局部模組） */
+export interface FusionCycleModuleView {
+  id: string;
+  label: string;
+  focusedPet: string;
+  members: string[];
+  sections: Array<{
+    kind: 'acquire' | 'reroll' | 'convert';
+    title: string;
+    reactions: FusionCycleReactionView[];
+  }>;
+}
+
 /** 合成樹節點（之後可由其他 agent 補資料） */
 export interface FusionNode {
   /** pet | item | gold | material */
@@ -59,6 +81,11 @@ export interface FusionNode {
   heads?: FusionNode[];
   /** 子節點（向下解構＝材料） */
   children?: FusionNode[];
+  /**
+   * 互轉循環模組：有此欄時 UI 畫「配方群組」而非一般材料卡。
+   * 同一 viewKey（cycle id）在群組成員頁應相同，僅 focusedPet 不同。
+   */
+  cycleModule?: FusionCycleModuleView;
 }
 
 /** 詳情補充：多筆／結構化入手（CSV「入手方法」放一句話；這裡放細項） */
@@ -435,10 +462,24 @@ export function collectPetNamesInTree(node: FusionNode, out = new Set<string>())
 export function applyPetImagesFromSsot(node: FusionNode): FusionNode {
   const children = node.children?.map(applyPetImagesFromSsot);
   const heads = node.heads?.map(applyPetImagesFromSsot);
+  const cycleModule = node.cycleModule
+    ? {
+        ...node.cycleModule,
+        sections: node.cycleModule.sections.map((sec) => ({
+          ...sec,
+          reactions: sec.reactions.map((rx) => ({
+            ...rx,
+            materials: rx.materials.map(applyPetImagesFromSsot),
+            products: rx.products.map(applyPetImagesFromSsot),
+          })),
+        })),
+      }
+    : undefined;
   const base: FusionNode = {
     ...node,
     ...(children ? { children } : {}),
     ...(heads ? { heads } : {}),
+    ...(cycleModule ? { cycleModule } : {}),
   };
   // 不再沿用手填 emoji
   if (base.icon) delete base.icon;
@@ -463,7 +504,9 @@ export function applyPetImagesFromSsot(node: FusionNode): FusionNode {
  */
 function treeHasBody(node: FusionNode | null | undefined): boolean {
   if (!node) return false;
-  return Boolean(node.children?.length || node.heads?.length);
+  return Boolean(
+    node.children?.length || node.heads?.length || node.cycleModule,
+  );
 }
 
 let fusionHandwrittenHooked = false;
