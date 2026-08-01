@@ -1,10 +1,10 @@
 ---
 const tabs = [
-  { level: '等級 > 30', island: '大地鼠島' },
-  { level: '等級 > 45', island: '火焰鼠島' },
-  { level: '等級 > 60', island: '惡夢鼠島' },
-  { level: '等級 > 70', island: '寶石鼠島' },
-  { level: '等級 > 80', island: '水藍鼠島' },
+  { level: '等級 > 30', island: '大地鼠島', anchor: 'level-30' },
+  { level: '等級 > 45', island: '火焰鼠島', anchor: 'level-45' },
+  { level: '等級 > 60', island: '惡夢鼠島', anchor: 'level-60' },
+  { level: '等級 > 70', island: '寶石鼠島', anchor: 'level-70' },
+  { level: '等級 > 80', island: '水藍鼠島', anchor: 'level-80' },
 ];
 ---
 
@@ -16,10 +16,11 @@ const tabs = [
         type="button"
         role="tab"
         id={`pet-island-tab-${index}`}
-        aria-controls={`pet-island-panel-${index}`}
+        aria-controls={tab.anchor}
         aria-selected={index === 0 ? 'true' : 'false'}
         tabindex={index === 0 ? 0 : -1}
         data-index={index}
+        data-anchor={tab.anchor}
       >
         <strong>{tab.level}</strong>
         <span>{tab.island}</span>
@@ -45,7 +46,7 @@ const tabs = [
     headings.forEach((heading, index) => {
       const panel = document.createElement('section');
       panel.className = 'pet-islands__panel';
-      panel.id = `pet-island-panel-${index}`;
+      panel.id = buttons[index]?.dataset.anchor ?? `pet-island-panel-${index}`;
       panel.setAttribute('role', 'tabpanel');
       panel.setAttribute('aria-labelledby', `pet-island-tab-${index}`);
       panel.hidden = index !== 0;
@@ -66,11 +67,12 @@ const tabs = [
       });
       panel.querySelectorAll('tbody tr').forEach((row) => {
         if (row.textContent?.includes('一級寵無法交付兌換')) row.classList.add('is-unexchangeable');
+        if (row.textContent?.includes('特別危險')) row.classList.add('is-dangerous');
       });
       panels.append(panel);
     });
 
-    const activate = (index: number, focus = false) => {
+    const activate = (index: number, focus = false, updateHash = true) => {
       const panelList = Array.from(panels.querySelectorAll<HTMLElement>('[role="tabpanel"]'));
       buttons.forEach((button, buttonIndex) => {
         const active = buttonIndex === index;
@@ -81,6 +83,8 @@ const tabs = [
       panelList.forEach((panel, panelIndex) => {
         panel.hidden = panelIndex !== index;
       });
+      const anchor = buttons[index]?.dataset.anchor;
+      if (updateHash && anchor) history.replaceState(null, '', `#${anchor}`);
       if (focus) buttons[index]?.focus();
     };
 
@@ -96,6 +100,14 @@ const tabs = [
         event.preventDefault();
         activate(next, true);
       });
+    });
+
+    const indexFromHash = () => buttons.findIndex((button) => `#${button.dataset.anchor}` === location.hash);
+    const initialIndex = indexFromHash();
+    activate(initialIndex >= 0 ? initialIndex : 0, false, false);
+    window.addEventListener('hashchange', () => {
+      const index = indexFromHash();
+      if (index >= 0) activate(index, false, false);
     });
 
     root.hidden = false;
@@ -164,6 +176,30 @@ const tabs = [
   :global(.pet-islands__panel tr.is-unexchangeable td) {
     background: var(--surface-2);
     color: var(--text-2);
+  }
+
+  :global(.pet-islands__panel tr.is-dangerous td) {
+    background: #fff0f0;
+    border-color: #d98989;
+  }
+
+  :global(.pet-danger-badge),
+  :global(.skill-danger),
+  :global(.pet-danger-note) {
+    color: #b42318;
+    font-weight: 700;
+  }
+
+  :global(.pet-danger-badge) {
+    display: inline-block;
+    margin-left: 0.35rem;
+    white-space: nowrap;
+  }
+
+  :global(.skill-mana-drain),
+  :global(.skill-mana-note) {
+    color: #075fc7;
+    font-weight: 700;
   }
 
   @media (max-width: 700px) {
