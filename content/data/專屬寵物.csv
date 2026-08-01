@@ -25,7 +25,7 @@
 青翼獵隼,飛行系,29,37,15,34,10,8,125,風2地8,裂空斬LV10、突襲之舞LV10,2026-05-27,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17094.html),/img/專屬寵物/青翼獵隼.gif,,,
 火之使徒,特殊系,50,50,4,17,4,8,125,火10,亂射LV10、潔淨魔法LV4、氣功彈LV3、必殺狙擊LV10,2026-05-21,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17074.html),/img/專屬寵物/火之使徒.gif,,,
 使徒小鬧鐘,金屬系,35,38,21,21,10,8,125,火8風2,乾坤一擲LV11、魔法反彈LV3、氣功彈LV1,2026-05-21,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17074.html),/img/專屬寵物/使徒小鬧鐘.gif,,,
-摯愛喵比特,飛行系,24,40,18,33,10,8,125,火10,突襲之舞LV10、亂射LV4,2026-05-20,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17054.html),/img/專屬寵物/摯愛喵比特.gif,,,
+摯愛喵比特,飛行系,24,40,18,33,10,8,125,火10,突襲之舞LV10、亂射LV4,,,/img/專屬寵物/摯愛喵比特.gif,,,
 御魂雷影,金屬系,50,50,4,17,4,8,125,地10,連擊LV11、戰慄襲心LV13、裂空斬LV10、氣功彈LV3,2026-05-13,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17034.html),/img/專屬寵物/御魂雷影.gif,[黃金寶藏迷宮](/任務攻略/限時活動/黃金寶藏迷宮) 與入口處食夢貘對話可直達黃金之洞窟地下 50 階,,
 鬼泣雷影,金屬系,50,4,4,17,50,8,125,地10,超強石化魔法LV10、戰慄襲心LV13、強力補血魔法LV10,2026-05-13,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17034.html),/img/專屬寵物/鬼泣雷影.gif,[黃金寶藏迷宮](/任務攻略/限時活動/黃金寶藏迷宮) 與入口處食夢貘對話可直達黃金之洞窟地下 50 階,,
 影,金屬系,34,45,20,20,6,8,125,地10,連擊LV11,2026-05-13,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17034.html),/img/專屬寵物/影.gif,,,
@@ -631,7 +631,7 @@
 火焰牛頭怪,人形系,16,30,20,32,22,7,120,火6風4,,2022-03-03,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_7123.html),/img/專屬寵物/火焰牛頭怪.gif,,,
 煉獄牛頭怪,人形系,41,6,16,19,43,9,125,火6風4,,2022-03-03,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_7123.html),/img/專屬寵物/火焰牛頭怪.gif,,,
 艾兒卡絲,人形系,42,6,20,17,40,9,125,地6水4,,2022-03-03,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_7123.html),/img/專屬寵物/艾兒卡絲.gif,,,
-歐茲那克,人形系,28,36,19,19,18,7,120,火10,,2022-01-28,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_6963.html),/img/專屬寵物/歐茲那克.gif,,,
+歐茲那克,人形系,28,36,19,19,18,7,120,火10,,2022-01-27,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_6943.html),/img/專屬寵物/歐茲那克.gif,,,
 熊霸歐茲那克,人形系,50,37,12,20,6,9,125,火10,,2022-01-28,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_6963.html),/img/專屬寵物/歐茲那克.gif,,,
 歐茲尼克,人形系,21,36,13,28,22,7,120,水5火5,,2022-01-28,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_6963.html),/img/專屬寵物/歐茲尼克.gif,,,
 煞氣歐茲尼克,人形系,14,50,12,43,6,9,125,水5火5,氣功彈LV1,2022-01-28,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_6963.html),/img/專屬寵物/歐茲尼克.gif,,,
@@ -705,7 +705,7 @@
 祭奠火焰鼠,野獸系,17,47,17,17,17,10,115,火10,,,,/img/專屬寵物/祭奠火焰鼠.gif,,,
 浮潛惡夢鼠,野獸系,17,17,17,17,47,10,115,水10,,,,/img/專屬寵物/浮潛惡夢鼠.gif,,,
 兜風寶石鼠,野獸系,17,17,17,47,17,10,115,風10,,,,/img/專屬寵物/兜風寶石鼠.gif,,,
-漂漂水藍鼠,野獸系,52,17,17,17,17,10,120,地5水5,,,,/img/專屬寵物/漂漂水藍鼠.gif,,,
+漂漂水藍鼠,野獸系,52,17,17,17,17,10,120,地5水5,,2026-07-29,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17584.html),/img/專屬寵物/漂漂水藍鼠.gif,,,
 月獅,野獸系,30,32,13,26,22,8,123,風10,,2022-12-08,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_8814.html),/img/專屬寵物/月獅.gif,,,
 雪獅,野獸系,36,32,18,24,13,8,123,水10,,2022-12-08,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_8814.html),/img/專屬寵物/雪獅.gif,,,
 純金豬王,野獸系,48,33,23,15,6,8,125,風10,,2022-01-27,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_6943.html),/img/專屬寵物/純金豬王.gif,,,
@@ -1068,3 +1068,10 @@
 變異龍祖,龍系,26,46,13,33,7,7,125,地5風5,,2023-06-21,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_9754.html),/img/專屬寵物/變異龍祖.gif,,,
 小白龍,龍系,20,36,9,42,16,9,123,水10,,,,/img/專屬寵物/小白龍.gif,,,
 改造陰影,特殊系,29,25,23,23,25,6,125,地10,,,,/img/專屬寵物/奪魂陰影.gif,,,
+25週年慶寶石鼠,野獸系,41,12,12,12,43,8,120,風10,混亂衝擊波LV10,2026-07-29,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17584.html),/img/專屬寵物/25週年慶寶石鼠.gif,,《魔力寶貝》25週年誕生慶典 正式開啟！,活動
+白依,人形系,45,45,4,27,4,8,125,水10,裂空斬LV10、乾坤一擲LV13、連擊LV13、補血魔法LV10,2026-07-29,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17584.html),/img/專屬寵物/白依.gif,,《魔力寶貝》25週年誕生慶典 正式開啟！,活動
+25週年慶水藍鼠,野獸系,41,10,10,21,43,8,125,水10,混亂衝擊波LV10、海洋的祈禱LV10、超強酒醉魔法LV10,2026-07-29,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17584.html),/img/專屬寵物/25週年慶水藍鼠.gif,,《魔力寶貝》25週年誕生慶典 正式開啟！,活動
+永恆蛋糕,特殊系,27,9,27,16,46,8,125,地10,強力中毒魔法LV10、混亂衝擊波LV10,2026-07-29,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17584.html),/img/專屬寵物/永恆蛋糕.gif,,《魔力寶貝》25週年誕生慶典 正式開啟！,活動
+25週年慶地龍蜥,龍系,34,34,34,15,8,9,125,地10,裂空斬LV10、潛龍殺LV11、攻擊無效LV3,2026-07-29,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17584.html),/img/專屬寵物/25週年慶地龍蜥.gif,,《魔力寶貝》25週年誕生慶典 正式開啟！,活動
+白依試做體,人形系,47,47,8,15,8,8,125,水10,裂空斬LV10、乾坤一擲LV11、連擊LV11,2026-07-29,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17584.html),/img/專屬寵物/白依試做體.gif,,《魔力寶貝》25週年誕生慶典 正式開啟！,活動
+25週年慶熊熊,特殊系,33,38,23,16,10,8,120,水9火1,飛刃亂舞LV7,2026-07-29,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17584.html),/img/專屬寵物/25週年慶熊熊.gif,,《魔力寶貝》25週年誕生慶典 正式開啟！,活動

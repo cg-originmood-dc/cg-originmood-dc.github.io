@@ -44,7 +44,8 @@ DATE_TEXT = (
     r"(?:\s*\d{1,2}[:：]\d{2}(?::\d{2})?)?"
 )
 RANGE_SEP = r"(?:--+|－+|—+|~|～|至)"
-REQUIRED_PET_HEADERS = ("所需寵物", "需求寵物")
+# 歷年欄名：多數為「所需寵物」；25 週年等活動表寫「所需名稱」（如 Lv1 的白依試做體）
+REQUIRED_PET_HEADERS = ("所需寵物", "需求寵物", "所需名稱")
 REQUIRED_ITEM_HEADERS = (
     "所需道具",
     "所需材料",

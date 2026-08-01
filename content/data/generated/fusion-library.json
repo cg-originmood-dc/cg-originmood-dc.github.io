@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-31T18:18:17.736Z",
+  "generatedAt": "2026-07-31T19:13:55.045Z",
   "sources": {
     "csv": 290,
     "handwritten": 1,
@@ -80,6 +80,47 @@
         }
       ],
       "npc": "NPC: 愛卡勒恩 @ 寵物研究所 (15，8)"
+    },
+    {
+      "id": "csv:52a3a095e6f4",
+      "source": "csv",
+      "materials": [
+        {
+          "symbol": "白依試做體",
+          "kind": "pet",
+          "minLevel": 1
+        },
+        {
+          "symbol": "白依變身卡",
+          "kind": "item",
+          "qty": 1
+        },
+        {
+          "symbol": "閃耀變異之源",
+          "kind": "item",
+          "qty": 10
+        },
+        {
+          "symbol": "50,000 G",
+          "kind": "gold"
+        }
+      ],
+      "products": [
+        {
+          "symbol": "白依",
+          "kind": "pet",
+          "prob": "5%"
+        },
+        {
+          "symbol": "白依試做體",
+          "kind": "pet",
+          "prob": "95%"
+        }
+      ],
+      "npc": "大法師安蕾雅（艾爾瑪城元素師家 216.188）",
+      "meta": {
+        "activityId": "act-2026-07-29-a6a88c65e4"
+      }
     },
     {
       "id": "csv:deda199704c0",
@@ -9107,15 +9148,19 @@
       }
     },
     {
-      "id": "csv:c8adb693d517",
+      "id": "csv:9ae62b0c97bf",
       "source": "csv",
       "materials": [
         {
-          "symbol": "酒仙歐茲那克",
+          "symbol": "歐茲尼克",
           "kind": "pet"
         },
         {
-          "symbol": "羅剎歐茲那克",
+          "symbol": "歐茲尼克",
+          "kind": "pet"
+        },
+        {
+          "symbol": "羅剎",
           "kind": "pet"
         },
         {
@@ -9136,7 +9181,7 @@
       }
     },
     {
-      "id": "csv:4cf67e4a1463",
+      "id": "csv:3c8bbeb5781c",
       "source": "csv",
       "materials": [
         {
@@ -9157,14 +9202,14 @@
           "prob": "90%"
         },
         {
-          "symbol": "羅剎歐茲那克",
+          "symbol": "歐茲尼克",
           "kind": "pet",
           "prob": "8%"
         },
         {
-          "symbol": "酒仙歐茲那克",
+          "symbol": "羅剎",
           "kind": "pet",
-          "prob": "2%"
+          "prob": "8%"
         }
       ],
       "npc": "青仙人（軍方研究所 6.3）",
@@ -10253,51 +10298,6 @@
       "npc": "",
       "meta": {
         "activityId": "act-2022-03-03-1f5784c058"
-      }
-    },
-    {
-      "id": "csv:10e766b3f604",
-      "source": "csv",
-      "materials": [
-        {
-          "symbol": "歐茲那克",
-          "kind": "pet"
-        },
-        {
-          "symbol": "熊霸歐茲那克設計圖A",
-          "kind": "item",
-          "qty": 1
-        },
-        {
-          "symbol": "熊霸歐茲那克設計圖B",
-          "kind": "item",
-          "qty": 1
-        },
-        {
-          "symbol": "熊霸歐茲那克設計圖C",
-          "kind": "item",
-          "qty": 1
-        },
-        {
-          "symbol": "熊霸歐茲那克設計圖D",
-          "kind": "item",
-          "qty": 1
-        },
-        {
-          "symbol": "熊霸歐茲那克設計圖E",
-          "kind": "item",
-          "qty": 1
-        }
-      ],
-      "products": [
-        {
-          "symbol": "熊霸歐茲那克",
-          "kind": "pet"
-        }
-      ],
-      "npc": "",
-      "meta": {
-        "activityId": "act-2022-01-28-0c36838211"
       }
     },
     {
@@ -12629,6 +12629,11 @@
       "recipeId": "csv:d6e605a83504"
     },
     {
+      "from": "白依試做體",
+      "to": "白依",
+      "recipeId": "csv:52a3a095e6f4"
+    },
+    {
       "from": "白銀格鬥士",
       "to": "白銀聖鬥士",
       "recipeId": "csv:7f80bada74b8"
@@ -13202,11 +13207,6 @@
       "from": "迷你龍",
       "to": "小白龍",
       "recipeId": "military:8b231fd3a8da"
-    },
-    {
-      "from": "酒仙歐茲那克",
-      "to": "熊霸歐茲那克",
-      "recipeId": "csv:c8adb693d517"
     },
     {
       "from": "閃光地雷",
@@ -13864,9 +13864,9 @@
       "recipeId": "csv:0ecd8956e0b9"
     },
     {
-      "from": "歐茲那克",
+      "from": "歐茲尼克",
       "to": "熊霸歐茲那克",
-      "recipeId": "csv:10e766b3f604"
+      "recipeId": "csv:9ae62b0c97bf"
     },
     {
       "from": "魅之惡魔",
@@ -14014,9 +14014,9 @@
       "recipeId": "csv:c3f04e8e9751"
     },
     {
-      "from": "羅剎歐茲那克",
+      "from": "羅剎",
       "to": "熊霸歐茲那克",
-      "recipeId": "csv:c8adb693d517"
+      "recipeId": "csv:9ae62b0c97bf"
     },
     {
       "from": "霧雨劍",
@@ -14095,6 +14095,26 @@
     }
   ],
   "activitiesByPet": {
+    "白依": [
+      {
+        "id": "act-2026-07-29-a6a88c65e4",
+        "title": "《魔力寶貝》25週年誕生慶典 正式開啟！",
+        "period": "2026-08-06～2026-08-27",
+        "announcementDate": "2026-07-29",
+        "url": "https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17584.html",
+        "year": "2026"
+      }
+    ],
+    "白依試做體": [
+      {
+        "id": "act-2026-07-29-a6a88c65e4",
+        "title": "《魔力寶貝》25週年誕生慶典 正式開啟！",
+        "period": "2026-08-06～2026-08-27",
+        "announcementDate": "2026-07-29",
+        "url": "https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17584.html",
+        "year": "2026"
+      }
+    ],
     "太晶龍蝦霸王": [
       {
         "id": "act-2026-07-09-f179c560e8",
@@ -18661,6 +18681,16 @@
         "announcementDate": "2023-02-02",
         "url": "https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_9024.html",
         "year": "2023"
+      }
+    ],
+    "歐茲尼克": [
+      {
+        "id": "act-2023-02-02-4ef8d8de87",
+        "title": "兄弟羈絆 一念仙魔",
+        "period": "未載明（公告日 2023-02-02）",
+        "announcementDate": "2023-02-02",
+        "url": "https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_9024.html",
+        "year": "2023"
       },
       {
         "id": "act-2022-01-28-0c36838211",
@@ -18671,17 +18701,7 @@
         "year": "2022"
       }
     ],
-    "酒仙歐茲那克": [
-      {
-        "id": "act-2023-02-02-4ef8d8de87",
-        "title": "兄弟羈絆 一念仙魔",
-        "period": "未載明（公告日 2023-02-02）",
-        "announcementDate": "2023-02-02",
-        "url": "https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_9024.html",
-        "year": "2023"
-      }
-    ],
-    "羅剎歐茲那克": [
+    "羅剎": [
       {
         "id": "act-2023-02-02-4ef8d8de87",
         "title": "兄弟羈絆 一念仙魔",
@@ -19118,26 +19138,6 @@
         "period": "未載明（公告日 2022-03-03）",
         "announcementDate": "2022-03-03",
         "url": "https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_7123.html",
-        "year": "2022"
-      }
-    ],
-    "歐茲那克": [
-      {
-        "id": "act-2022-01-28-0c36838211",
-        "title": "一生的羈絆 打虎兄弟來拜年",
-        "period": "未載明（公告日 2022-01-28）",
-        "announcementDate": "2022-01-28",
-        "url": "https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_6963.html",
-        "year": "2022"
-      }
-    ],
-    "歐茲尼克": [
-      {
-        "id": "act-2022-01-28-0c36838211",
-        "title": "一生的羈絆 打虎兄弟來拜年",
-        "period": "未載明（公告日 2022-01-28）",
-        "announcementDate": "2022-01-28",
-        "url": "https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_6963.html",
         "year": "2022"
       }
     ],
