@@ -1,0 +1,228 @@
+---
+/**
+ * 全站右下角「回報錯誤」按鈕。
+ *
+ * 後端在 DC bot 主機（cg-help repo 的 discord/report-server.mjs）：
+ * 靜態站沒有後端，借本來就 24 小時在線的 bot 主機收表單，
+ * 由 bot 轉發到 DC 回報頻道。
+ *
+ * REPORT_ENDPOINT 留空＝後端還沒上線：對話框退成「複製本頁網址、
+ * 到 DC 群回報」的引導，不會出現送不出去的表單。端點上線後把
+ * https 網址填進來（例 https://cg-report.example.org/report）即為站內表單。
+ */
+const REPORT_ENDPOINT = '';
+const DC_INVITE = 'https://discord.gg/F5gqG8Grk9';
+---
+
+<button class="report-fab" type="button" aria-haspopup="dialog">🐞 回報錯誤</button>
+
+<dialog class="report-dlg" data-endpoint={REPORT_ENDPOINT}>
+  <h2>回報網頁錯誤</h2>
+  <p class="report-dlg__page">頁面：<span data-page></span></p>
+
+  {
+    REPORT_ENDPOINT ? (
+      <form class="report-form" novalidate>
+        <label>
+          哪裡有問題？
+          <textarea
+            name="message"
+            required
+            rows="4"
+            maxlength="2000"
+            placeholder="例：這頁的材料清單跟遊戲內不一樣"
+          />
+        </label>
+        <label>
+          聯絡方式（選填）
+          <input name="contact" maxlength="100" placeholder="DC 暱稱，方便有疑問時追問" />
+        </label>
+        {/* 蜜罐：真人看不到也不會填，機器人填了就會被後端打發掉 */}
+        <input class="report-form__hp" name="hp" tabindex="-1" autocomplete="off" aria-hidden="true" />
+        <p class="report-form__status" role="status"></p>
+        <div class="report-dlg__acts">
+          <button class="report-dlg__primary" type="submit">送出</button>
+          <button type="button" data-close>取消</button>
+        </div>
+      </form>
+    ) : (
+      <div class="report-alt">
+        <p>發現資料錯誤或壞掉的頁面，請到 DC 群的回報頻道貼上本頁網址，說明哪裡不對即可。</p>
+        <div class="report-dlg__acts">
+          <button class="report-dlg__primary" type="button" data-copy>複製本頁網址</button>
+          <a class="report-alt__dc" href={DC_INVITE} target="_blank" rel="noopener noreferrer">開啟 DC 群 ↗</a>
+          <button type="button" data-close>關閉</button>
+        </div>
+      </div>
+    )
+  }
+</dialog>
+
+<script>
+  const fab = document.querySelector<HTMLButtonElement>('.report-fab');
+  const dlg = document.querySelector<HTMLDialogElement>('.report-dlg');
+
+  if (fab && dlg) {
+    fab.addEventListener('click', () => {
+      const page = dlg.querySelector('[data-page]');
+      if (page) page.textContent = location.href;
+      dlg.showModal();
+    });
+
+    dlg.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => dlg.close()));
+
+    const copyBtn = dlg.querySelector<HTMLButtonElement>('[data-copy]');
+    copyBtn?.addEventListener('click', async () => {
+      await navigator.clipboard.writeText(location.href);
+      copyBtn.textContent = '已複製 ✓';
+      setTimeout(() => (copyBtn.textContent = '複製本頁網址'), 1500);
+    });
+
+    const form = dlg.querySelector<HTMLFormElement>('.report-form');
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const status = form.querySelector<HTMLElement>('.report-form__status')!;
+      const data = new FormData(form);
+      const message = String(data.get('message') ?? '').trim();
+      if (!message) {
+        status.classList.add('is-err');
+        status.textContent = '請先描述哪裡有問題';
+        return;
+      }
+      status.classList.remove('is-err');
+      status.textContent = '送出中…';
+      try {
+        const res = await fetch(dlg.dataset.endpoint!, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            page: location.href,
+            title: document.title,
+            message,
+            contact: String(data.get('contact') ?? '').trim(),
+            hp: String(data.get('hp') ?? ''),
+          }),
+        });
+        const body = await res.json().catch(() => ({ ok: false }));
+        if (res.ok && body.ok) {
+          status.textContent = '已送出，感謝回報！';
+          form.reset();
+          setTimeout(() => dlg.close(), 1200);
+        } else if (res.status === 429) {
+          status.classList.add('is-err');
+          status.textContent = '回報太頻繁，請稍後再試';
+        } else {
+          throw new Error(body.error ?? String(res.status));
+        }
+      } catch {
+        status.classList.add('is-err');
+        status.textContent = '送出失敗，請稍後再試，或到 DC 群回報（連結在頁尾）';
+      }
+    });
+  }
+</script>
+
+<style>
+  .report-fab {
+    position: fixed;
+    right: 14px;
+    bottom: 14px;
+    z-index: 40;
+    background: #fff;
+    border: 1px solid #dadce0;
+    border-radius: 999px;
+    padding: 7px 13px;
+    font-size: 13px;
+    color: #3c4043;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  }
+  .report-fab:hover {
+    border-color: #1155cc;
+    color: #1155cc;
+  }
+
+  .report-dlg {
+    border: 1px solid #dadce0;
+    border-radius: 8px;
+    padding: 18px 20px;
+    max-width: 420px;
+    width: calc(100vw - 48px);
+  }
+  .report-dlg::backdrop {
+    background: rgba(0, 0, 0, 0.35);
+  }
+  .report-dlg h2 {
+    margin: 0 0 10px;
+    font-size: 1.05rem;
+  }
+  .report-dlg__page {
+    font-size: 12px;
+    color: #5f6368;
+    word-break: break-all;
+    margin: 0 0 12px;
+  }
+
+  .report-form label {
+    display: block;
+    font-size: 13px;
+    color: #3c4043;
+    margin-bottom: 10px;
+  }
+  .report-form textarea,
+  .report-form input:not(.report-form__hp) {
+    display: block;
+    width: 100%;
+    margin-top: 4px;
+    padding: 6px 8px;
+    border: 1px solid #dadce0;
+    border-radius: 4px;
+    font: inherit;
+    font-size: 13px;
+    box-sizing: border-box;
+  }
+  .report-form__hp {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+  }
+  .report-form__status {
+    font-size: 13px;
+    color: #1155cc;
+    min-height: 1.2em;
+    margin: 2px 0 8px;
+  }
+  .report-form__status.is-err {
+    color: #c5221f;
+  }
+
+  .report-alt p {
+    font-size: 14px;
+    margin: 0 0 12px;
+  }
+  .report-alt__dc {
+    font-size: 13px;
+  }
+
+  .report-dlg__acts {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .report-dlg__acts button {
+    border: 1px solid #dadce0;
+    border-radius: 4px;
+    background: #fff;
+    padding: 6px 14px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .report-dlg__primary {
+    background: #1155cc !important;
+    border-color: #1155cc !important;
+    color: #fff;
+  }
+</style>

@@ -1,6 +1,7 @@
 ---
 import { buildNav } from '../lib/nav';
 import NavTree from '../components/NavTree.astro';
+import ReportIssue from '../components/ReportIssue.astro';
 import '../styles/global.css';
 
 interface Props {
@@ -96,6 +97,8 @@ const here = decodeURIComponent(Astro.url.pathname).replace(/\/$/, '');
         </footer>
       </main>
     </div>
+
+    <ReportIssue />
 
     <script>
       const btn = document.querySelector<HTMLButtonElement>('.navtoggle');
