@@ -226,8 +226,8 @@ export function getPetCatalog(name: string): PetCatalog | null {
 }
 
 export function petCatalogLabel(catalog?: PetCatalog | null): string {
-  if (catalog === 'native') return '原生寵物';
-  if (catalog === 'exclusive') return '專屬寵物';
+  if (catalog === 'native') return '一般寵物';
+  if (catalog === 'exclusive') return '永恆初心專屬';
   return '寵物';
 }
 

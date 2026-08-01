@@ -32,6 +32,7 @@ import {
   clientFormulaPayload,
 } from '../../lib/petStats';
 import { renderCell } from '../../lib/richtext';
+import { getSkill } from '../../lib/skillData';
 
 export function getStaticPaths() {
   return listPetsForDetailPaths().map((p) => ({ params: { name: p.名稱 } }));
@@ -41,8 +42,6 @@ const { name } = Astro.params;
 const pet = name ? getPet(name) : null;
 const catalog = pet?._catalog ?? null;
 const catalogLabel = petCatalogLabel(catalog);
-const listHref =
-  catalog === 'native' ? '/原生寵物' : '/專屬寵物';
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const src = (v: string) => (v.startsWith('/') ? base + v : v);
 
@@ -124,8 +123,11 @@ function fmtGrade(v: string): string {
   return /D$/i.test(v) ? v : `${v}D`;
 }
 
-function skillHref(sk: string): string {
-  return `${base}/技能總覽/${encodeURIComponent(skillBaseName(sk))}`;
+function skillHref(sk: string): string | null {
+  const skillName = skillBaseName(sk);
+  return skillName && getSkill(skillName)
+    ? `${base}/技能總覽/${encodeURIComponent(skillName)}`
+    : null;
 }
 
 const cardLabel = (pet?.卡片 ?? '').trim() || '未知';
@@ -147,16 +149,14 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
       <h1 class="page-title">找不到寵物</h1>
       <p>資料庫中沒有「{name}」的紀錄。</p>
       <p>
-        <a href={`${base}/專屬寵物`}>← 返回專屬寵物</a>
-        {' · '}
-        <a href={`${base}/原生寵物`}>原生寵物</a>
+        <a href={`${base}/寵物清單`}>← 返回寵物清單</a>
       </p>
     </Base>
   ) : (
     <Base title={`${pet.名稱} - 寵物資料`} dbEmbed>
       <div class="pet-page">
-        <a class="pet-page__back" href={`${base}${listHref}`}>
-          ← 返回{catalogLabel}
+        <a class="pet-page__back" href={`${base}/寵物清單`}>
+          ← 返回寵物清單
         </a>
 
         {/* 1. 大圖 */}
@@ -269,13 +269,20 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
                   <span class="muted">尚無技能資料</span>
                 ) : (
                   <div class="skill-list">
-                    {skills.map((sk) => (
-                      <div class="skill-chip">
-                        <a class="skill-link" href={skillHref(sk)}>
-                          {sk}
-                        </a>
-                      </div>
-                    ))}
+                    {skills.map((sk) => {
+                      const href = skillHref(sk);
+                      return (
+                        <div class="skill-chip">
+                          {href ? (
+                            <a class="skill-link" href={href}>
+                              {sk}
+                            </a>
+                          ) : (
+                            <span class="skill-link skill-link--plain">{sk}</span>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )
               }
