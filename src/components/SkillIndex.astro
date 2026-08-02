@@ -10,7 +10,7 @@ import { craftSkillHref } from '../lib/craftSkills';
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 
-/** 分類按鈕順序照舊站 */
+/** 分類按鈕順序照舊站；技能項目本身另依名稱排序。 */
 const CHAR_CATS = [
   '戰鬥攻擊技能',
   '戰鬥防禦技能',
@@ -21,7 +21,7 @@ const CHAR_CATS = [
   '其他特殊技能',
   '生產製作技能',
 ];
-const PET_CATS = ['寵物一般技能', '寵物戰鬥技能', '寵物魔法技能', '狀態攻擊技能', '狀態抵抗技能'];
+const PET_CATS = ['寵物一般技能', '寵物戰鬥技能', '寵物魔法技能', '狀態變化魔法', '狀態攻擊技能', '狀態抵抗技能'];
 
 interface CardRow {
   lv: string;
@@ -85,15 +85,18 @@ for (const s of listSkills()) {
   if (s.pet) petCards.push(make(s.pet));
 }
 
-/** 卡片依分類順序分組（同分類內照 CSV 順序）；沒對上分類表的排最後 */
-const orderCards = (cards: Card[], cats: string[]) => [
-  ...cats.flatMap((c) => cards.filter((card) => card.side.分類 === c)),
-  ...cards.filter((card) => !cats.includes(card.side.分類)),
-];
+/** 技能列表排序：先字數短→長，同字數再按繁中排序。 */
+const orderCards = (cards: Card[]) =>
+  [...cards].sort((a, b) => {
+    const na = (a.name || '').length;
+    const nb = (b.name || '').length;
+    if (na !== nb) return na - nb;
+    return a.name.localeCompare(b.name, 'zh-Hant');
+  });
 
 const sections = [
-  { scope: 'char', label: '人物技能列表', cards: orderCards(charCards, CHAR_CATS), pet: false },
-  { scope: 'pet', label: '寵物技能列表', cards: orderCards(petCards, PET_CATS), pet: true },
+  { scope: 'char', label: '人物技能列表', cards: orderCards(charCards), pet: false },
+  { scope: 'pet', label: '寵物技能列表', cards: orderCards(petCards), pet: true },
 ];
 
 /** 每格先露出的寵物 chip 數，其餘折疊 */
@@ -286,7 +289,10 @@ const PET_PREVIEW = 5;
         seen.add(n);
         names.push(n);
       }
-      names.sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+      names.sort((a, b) => {
+        if (a.length !== b.length) return a.length - b.length;
+        return a.localeCompare(b, 'zh-Hant');
+      });
       nameButtons.innerHTML = '';
       const mk = (label: string, value: string) => {
         const b = document.createElement('button');
