@@ -3,12 +3,12 @@
  * 推薦練功攻略頁的內容，分兩塊：
  *
  * 1. 推薦路線 —— 路線名稱由 content/data/練功路線.csv 定義，
- *    地點屬於哪些路線寫在地點列表的「標籤」欄（一列可屬多條路線）。
+ *    地點屬於哪些路線寫在地點列表的「路線」欄（一列可屬多條路線）。
  *    選一條路線就把下方列表篩成該路線的點。
  * 2. 練功地圖列表 —— 全部地點，另有分區按鈕。兩組篩選可同時作用。
  *
  * 地點只有一份定義（練功地點列表.csv），路線不複製地點資料，只用標籤關聯；
- * 之後新增路線就加一列 練功路線.csv、在地點的標籤欄補上名稱，畫面不用改。
+ * 之後新增路線就加一列 練功路線.csv、在地點的「路線」欄補上名稱，畫面不用改。
  */
 import { LIST_SEP, loadDataset } from '../lib/datasets';
 import { renderCell } from '../lib/richtext';
@@ -34,7 +34,7 @@ const spots = rows.map((r) => {
   const get = (k: string) => (r[k] ?? '').trim();
   return {
     zone: get('分區'),
-    routes: split(get('標籤')),
+    routes: split(get('路線')),
     fitLv: get('適合等級'),
     mark: get('標記'),
     place: get('地點'),
@@ -62,7 +62,7 @@ const spots = rows.map((r) => {
   };
 });
 
-/** 路線：名稱與順序由 練功路線.csv 決定；有無地點由標籤算出來 */
+/** 路線：名稱與順序由 練功路線.csv 決定；有無地點由各地點的「路線」欄算出來 */
 const routes = routeRows
   .map((r) => ({
     name: (r['路線'] ?? '').trim(),
@@ -142,7 +142,7 @@ const zones = ZONE_ORDER.filter((z) => spots.some((s) => s.zone === z)).map((z) 
       {spots
         .filter((s) => s.zone === zone.name)
         .map((spot) => (
-          // 標籤只作為篩選用的資料屬性（data-routes），不顯示在列上
+          // 所屬路線只作為篩選用的資料屬性（data-routes），不顯示在列上
           <div class="lv__row" data-routes={spot.routes.join(',')} data-row-zone={spot.zone}>
             {/* 左欄是「玩家適合練的等級」，怪物等級屬於明細 */}
             <span class:list={['lv__lv', { 'lv__lv--todo': !spot.fitLv }]}>
