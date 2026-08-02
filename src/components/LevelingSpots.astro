@@ -1,0 +1,613 @@
+---
+/**
+ * 推薦練功攻略頁的內容，分兩塊：
+ *
+ * 1. 推薦路線 —— 路線名稱由 content/data/練功路線.csv 定義，
+ *    地點屬於哪些路線寫在地點列表的「路線」欄（一列可屬多條路線）。
+ *    選一條路線就把下方列表篩成該路線的點。
+ * 2. 練功地圖列表 —— 全部地點，另有分區按鈕。兩組篩選可同時作用。
+ *
+ * 地點只有一份定義（練功地點列表.csv），路線不複製地點資料，只用標籤關聯；
+ * 之後新增路線就加一列 練功路線.csv、在地點的「路線」欄補上名稱，畫面不用改。
+ */
+import { LIST_SEP, loadDataset } from '../lib/datasets';
+import { renderCell } from '../lib/richtext';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const rows = loadDataset('練功地點列表')?.rows ?? [];
+const routeRows = loadDataset('練功路線')?.rows ?? [];
+
+const COND_KINDS: Record<string, string> = {
+  任務: 'quest',
+  物品: 'item',
+  稱號: 'title',
+  等級: 'level',
+  費用: 'fee',
+  密語: 'pass',
+  隊伍: 'party',
+  時段: 'time',
+};
+
+const split = (v: string) => v.split(LIST_SEP).map((s) => s.trim()).filter(Boolean);
+
+const spots = rows.map((r) => {
+  const get = (k: string) => (r[k] ?? '').trim();
+  return {
+    zone: get('分區'),
+    routes: split(get('路線')),
+    fitLv: get('適合等級'),
+    mark: get('標記'),
+    place: get('地點'),
+    sub: get('副標'),
+    abbr: get('簡稱'),
+    mobs: get('怪物'),
+    mobLv: get('怪物等級'),
+    mobCount: get('一次幾隻'),
+    crystals: split(get('建議水晶')),
+    notes: split(get('註')),
+    route: get('怎麼去'),
+    conds: get('進入條件')
+      .split(/；|;/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((part) => {
+        const m = part.match(/^([^：]{1,3})：(.+)$/);
+        const label = m && COND_KINDS[m[1]] ? m[1] : '';
+        return {
+          kind: label ? COND_KINDS[label] : 'other',
+          label,
+          html: renderCell(label ? m![2].trim() : part, base),
+        };
+      }),
+  };
+});
+
+/** 路線：名稱與順序由 練功路線.csv 決定；有無地點由各地點的「路線」欄算出來 */
+const routes = routeRows
+  .map((r) => ({
+    name: (r['路線'] ?? '').trim(),
+    note: (r['說明'] ?? '').trim(),
+  }))
+  .filter((r) => r.name)
+  .map((r) => ({ ...r, empty: !spots.some((s) => s.routes.includes(r.name)) }));
+
+/**
+ * 分區：順序固定，五區各用不同色系（綠→青→藍→紫→棕）。
+ * 每個色都做過白字對比檢查（全部 ≥5:1），徽章用實心色配白字。
+ *
+ * 注意：綠↔青、藍↔紫這兩組在這個明度下先天接近（色盲模擬 ΔE 6–8），
+ * 單靠顏色不足以辨識。所以每一區都必須保留文字標題（新手區／低等區…），
+ * 徽章本身也帶等級數字——顏色只是輔助，不是唯一線索。要拿掉標題前請三思。
+ */
+const ZONE_ORDER = ['新手區', '低等區', '中等區', '高等區', '高手區'];
+const ZONE_META: Record<string, { range: string; deep: string; tint: string; ink: string }> = {
+  新手區: { range: '1–20', deep: '#2e7d32', tint: '#f7f8f7', ink: '#2e7d32' },
+  低等區: { range: '20–50', deep: '#00796b', tint: '#f6f8f8', ink: '#00695c' },
+  中等區: { range: '50–70', deep: '#1565c0', tint: '#f6f8fa', ink: '#1565c0' },
+  高等區: { range: '70–90', deep: '#7b1fa2', tint: '#f9f7fa', ink: '#7b1fa2' },
+  高手區: { range: '90 以上', deep: '#8d4a26', tint: '#faf8f6', ink: '#8d4a26' },
+};
+const zones = ZONE_ORDER.filter((z) => spots.some((s) => s.zone === z)).map((z) => ({
+  name: z,
+  ...ZONE_META[z],
+}));
+---
+
+<div class="lv" data-lv-root>
+  <!-- 第一塊：推薦路線 -->
+  <div class="lv__routes" role="group" aria-label="選擇推薦路線">
+    <button type="button" class="lv__route is-active" data-route="">全部路線</button>
+    {routes.map((r) => (
+      <button
+        type="button"
+        class:list={['lv__route', { 'is-empty': r.empty }]}
+        data-route={r.name}
+        title={r.note || undefined}
+      >
+        {r.name}
+        {r.empty && <small>待補</small>}
+      </button>
+    ))}
+  </div>
+
+  <!-- 第二塊：練功地圖列表 -->
+  <h2 class="lv__heading">練功地圖列表</h2>
+
+  {/* 分區按鈕會依上面選的路線收起沒東西的區 */}
+  <div class="lv__zones" role="group" aria-label="依分區篩選">
+    <button type="button" class="lv__zone is-active" data-zone="">全部</button>
+    {zones.map((z) => (
+      <button type="button" class="lv__zone" data-zone={z.name} style={`--zone-deep:${z.deep}`}>
+        {z.name}
+        <small>{z.range}</small>
+      </button>
+    ))}
+  </div>
+
+  <p class="lv__count" data-lv-count>{spots.length} 處</p>
+
+  {/* 篩到沒東西時要說明原因，不然畫面整片空白會被當成壞掉 */}
+  <p class="lv__none" data-lv-none hidden></p>
+
+  {zones.map((zone) => (
+    <section
+      class="lv__section"
+      data-zone-section={zone.name}
+      style={`--zone-deep:${zone.deep};--zone-tint:${zone.tint};--zone-ink:${zone.ink}`}
+    >
+      <h3 class="lv__zonehead">
+        {zone.name} <span>Lv {zone.range}</span>
+      </h3>
+
+      {spots
+        .filter((s) => s.zone === zone.name)
+        .map((spot) => (
+          // 所屬路線只作為篩選用的資料屬性（data-routes），不顯示在列上
+          <div class="lv__row" data-routes={spot.routes.join(',')} data-row-zone={spot.zone}>
+            {/* 左欄是「玩家適合練的等級」，怪物等級屬於明細 */}
+            <span class:list={['lv__lv', { 'lv__lv--todo': !spot.fitLv }]}>
+              {spot.fitLv || '待補'}
+            </span>
+
+            <div class="lv__name">
+              <span class="lv__place">{spot.place}</span>
+              {spot.sub && <span class="lv__sub">（{spot.sub}）</span>}
+              {spot.abbr && <span class="lv__abbr">{spot.abbr}</span>}
+              {spot.mark && <span class="lv__mark">{spot.mark}</span>}
+            </div>
+
+            <div class="lv__detail">
+              {spot.mobs && <p class="lv__mobs">{spot.mobs}</p>}
+              {(spot.mobLv || spot.mobCount) && (
+                <p class="lv__line">
+                  {spot.mobLv && <span>怪 {spot.mobLv} 等</span>}
+                  {spot.mobCount && <span>一次 {spot.mobCount} 隻</span>}
+                </p>
+              )}
+              {spot.notes.map((n) => (
+                <p class="lv__note">
+                  <span class="lv__notekey">註</span>
+                  <span set:html={renderCell(n, base)} />
+                </p>
+              ))}
+            </div>
+
+            <div class="lv__crystals">
+              {spot.crystals.length ? (
+                spot.crystals.map((c) => <span class="lv__crystal">{c}</span>)
+              ) : (
+                <span class="lv__blank">—</span>
+              )}
+            </div>
+
+            <div class="lv__side">
+              <p class="lv__line">
+                <span class="lv__key">怎麼去</span>
+                {spot.route === '待補' || !spot.route ? (
+                  <span class="lv__todo">待補</span>
+                ) : (
+                  <span set:html={renderCell(spot.route, base)} />
+                )}
+              </p>
+              {spot.conds.map((cond) => (
+                <p class="lv__cond">
+                  <span class:list={['lv__badge', `lv__badge--${cond.kind}`]}>
+                    {cond.label || '條件'}
+                  </span>
+                  <span set:html={cond.html} />
+                </p>
+              ))}
+            </div>
+          </div>
+        ))}
+    </section>
+  ))}
+</div>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-lv-root]').forEach((root) => {
+    const routeBtns = [...root.querySelectorAll<HTMLButtonElement>('[data-route]')];
+    // 只抓分區列上的按鈕；列本身用 data-row-zone，不能被這個選擇器掃到
+    const zoneBtns = [...root.querySelectorAll<HTMLButtonElement>('.lv__zones [data-zone]')];
+    const sections = [...root.querySelectorAll<HTMLElement>('[data-zone-section]')];
+    const allRows = [...root.querySelectorAll<HTMLElement>('[data-routes]')];
+    const count = root.querySelector<HTMLElement>('[data-lv-count]');
+    const none = root.querySelector<HTMLElement>('[data-lv-none]');
+    const total = allRows.length;
+
+    let route = '';
+    let zone = '';
+
+    /** 這一列是否屬於目前選的路線 */
+    const inRoute = (row: HTMLElement) =>
+      !route || (row.dataset.routes ?? '').split(',').filter(Boolean).includes(route);
+
+    const apply = () => {
+      // 1) 分區按鈕：先算每區在目前路線下還剩幾處，沒有的就收起來
+      for (const btn of zoneBtns) {
+        const z = btn.dataset.zone ?? '';
+        if (!z) continue; // 「全部」永遠留著
+        const n = allRows.filter((r) => r.dataset.rowZone === z && inRoute(r)).length;
+        btn.hidden = n === 0;
+      }
+
+      // 2) 選中的分區若被收起來，退回「全部」
+      const active = zoneBtns.find((b) => b.dataset.zone === zone);
+      if (zone && active?.hidden) {
+        zone = '';
+        for (const b of zoneBtns) b.classList.toggle('is-active', b.dataset.zone === '');
+      }
+
+      // 3) 列與分區段落
+      let shown = 0;
+      for (const row of allRows) {
+        const hit = inRoute(row) && (!zone || row.dataset.rowZone === zone);
+        row.hidden = !hit;
+        if (hit) shown++;
+      }
+      for (const s of sections) {
+        s.hidden = !s.querySelector('[data-routes]:not([hidden])');
+      }
+
+      if (count) count.textContent = shown === total ? `${total} 處` : `${shown} / ${total} 處`;
+
+      if (none) {
+        none.hidden = shown > 0;
+        none.textContent = route
+          ? `「${route}」還沒有標記任何地點，資料補上後就會出現在這裡。`
+          : '目前的篩選沒有符合的地點。';
+      }
+    };
+
+    for (const btn of routeBtns) {
+      btn.addEventListener('click', () => {
+        route = btn.dataset.route ?? '';
+        for (const b of routeBtns) b.classList.toggle('is-active', b === btn);
+        apply();
+      });
+    }
+    for (const btn of zoneBtns) {
+      btn.addEventListener('click', () => {
+        zone = btn.dataset.zone ?? '';
+        for (const b of zoneBtns) b.classList.toggle('is-active', b === btn);
+        apply();
+      });
+    }
+
+    apply();
+  });
+</script>
+
+<style>
+  .lv {
+    margin: 1rem 0 2rem;
+  }
+
+  /*
+   * 列與按鈕都設了 display（grid / inline-flex），作者樣式會蓋掉瀏覽器內建的
+   * [hidden]{display:none}，導致 JS 設了 hidden 卻還看得到。這條把它蓋回來。
+   */
+  .lv [hidden] {
+    display: none !important;
+  }
+
+  /* ── 第一塊：路線按鈕 ── */
+  .lv__routes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .lv__route {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    padding: 0.4rem 0.9rem;
+    border: 1px solid #cfd8cf;
+    border-radius: 999px;
+    background: #fff;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .lv__route small {
+    color: var(--text-3);
+    font-size: 0.78rem;
+  }
+
+  .lv__route.is-active {
+    background: #2e7d32;
+    border-color: #2e7d32;
+    color: #fff;
+  }
+
+  .lv__route.is-active small {
+    color: #cde3cd;
+  }
+
+  .lv__route.is-empty {
+    color: var(--text-3);
+    border-style: dashed;
+  }
+
+  .lv__heading {
+    margin: 2rem 0 0.35rem;
+    font-size: 1.5rem;
+    line-height: 1.4;
+  }
+
+  /* ── 第二塊：分區按鈕（小顆、清楚就好） ── */
+  .lv__zones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin: 0.6rem 0 0.5rem;
+  }
+
+  .lv__zone {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.3rem;
+    padding: 0.2rem 0.65rem;
+    border: 1px solid #d8d8d8;
+    border-left: 4px solid var(--zone-deep, #d8d8d8);
+    border-radius: 5px;
+    background: #fff;
+    font: inherit;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+
+  .lv__zone small {
+    color: var(--text-3);
+    font-size: 0.75rem;
+  }
+
+  .lv__zone.is-active {
+    background: #212121;
+    border-color: #212121;
+    border-left-color: var(--zone-deep, #212121);
+    color: #fff;
+  }
+
+  .lv__zone.is-active small {
+    color: #cfcfcf;
+  }
+
+  .lv__count {
+    margin: 0 0 0.8rem;
+    color: var(--text-3);
+    font-size: 0.85rem;
+  }
+
+  .lv__none {
+    margin: 0 0 1.5rem;
+    padding: 1rem 1.1rem;
+    border: 1px dashed #d8d8d8;
+    border-radius: 8px;
+    background: #fafafa;
+    color: var(--text-2);
+  }
+
+  /* ── 列表 ── */
+  .lv__section {
+    margin-bottom: 1.5rem;
+    border-top: 4px solid var(--zone-deep, #2e7d32);
+    border-bottom: 1px solid #e4e4e4;
+  }
+
+  .lv__zonehead {
+    margin: 0;
+    padding: 0.55rem 0.9rem;
+    background: var(--zone-tint, #f7f9f7);
+    border-bottom: 1px solid #e4e4e4;
+    color: var(--zone-ink, #1b5e20);
+    font-size: 1rem;
+  }
+
+  .lv__zonehead span {
+    margin-left: 0.4rem;
+    color: var(--text-3);
+    font-weight: 400;
+    font-size: 0.9rem;
+  }
+
+  .lv__row {
+    display: grid;
+    grid-template-columns: 5.2rem minmax(10rem, 14rem) minmax(0, 1fr) 7.5rem 12rem;
+    gap: 0.9rem;
+    align-items: start;
+    padding: 0.9rem;
+  }
+
+  .lv__row + .lv__row {
+    border-top: 1px solid #ececec;
+  }
+
+  .lv__row:hover {
+    background: #fafafa;
+  }
+
+  .lv__lv {
+    justify-self: start;
+    padding: 0.2rem 0.8rem;
+    border-radius: 999px;
+    background: var(--zone-deep, #2e7d32);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.95rem;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .lv__lv--todo {
+    background: #f5f5f5;
+    color: var(--text-3);
+    font-weight: 400;
+  }
+
+  .lv__name {
+    line-height: 1.7;
+  }
+
+  .lv__mark {
+    margin-left: 0.4rem;
+    padding: 0 0.55em;
+    border: 1px dashed #ef9a9a;
+    border-radius: 999px;
+    background: #fdeaea;
+    color: #a52222;
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+
+  .lv__place {
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+
+  .lv__sub,
+  .lv__abbr {
+    margin-left: 0.25rem;
+    color: var(--text-3);
+    font-size: 0.9rem;
+  }
+
+  .lv__detail > p,
+  .lv__side > p {
+    margin: 0;
+  }
+
+  .lv__mobs {
+    line-height: 1.7;
+  }
+
+  .lv__line {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.2rem 1rem;
+    margin-top: 0.2rem !important;
+    color: var(--text-2);
+    line-height: 1.7;
+  }
+
+  .lv__key {
+    color: var(--text-3);
+  }
+
+  .lv__note {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.3rem !important;
+    color: var(--text-2);
+    line-height: 1.7;
+  }
+
+  .lv__notekey {
+    flex: none;
+    color: #8d6e00;
+    font-size: 0.85rem;
+  }
+
+  .lv__crystals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    line-height: 1.7;
+  }
+
+  .lv__crystal {
+    padding: 0 0.5em;
+    border: 1px solid #d7d7d7;
+    border-radius: 5px;
+    background: #fff;
+    white-space: nowrap;
+  }
+
+  .lv__blank {
+    color: var(--text-3);
+  }
+
+  .lv__todo {
+    color: #b71c1c;
+  }
+
+  .lv__side .lv__line {
+    margin-top: 0 !important;
+  }
+
+  .lv__cond {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    margin-top: 0.35rem !important;
+    line-height: 1.7;
+  }
+
+  .lv__badge {
+    flex: none;
+    padding: 0 0.45em;
+    border: 1px solid #ddd;
+    border-radius: 999px;
+    background: #f5f5f5;
+    color: #555;
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+
+  .lv__badge--quest {
+    border-color: #90caf9;
+    background: #e3f2fd;
+    color: #0d47a1;
+  }
+
+  .lv__badge--item {
+    border-color: #a5d6a7;
+    background: #e8f5e9;
+    color: #1b5e20;
+  }
+
+  .lv__badge--title {
+    border-color: #ce93d8;
+    background: #f3e5f5;
+    color: #6a1b9a;
+  }
+
+  .lv__badge--fee,
+  .lv__badge--time {
+    border-color: #ecdf9a;
+    background: #fffbe8;
+    color: #8d6e00;
+  }
+
+  .lv__badge--pass {
+    border-color: #80cbc4;
+    background: #e0f2f1;
+    color: #00695c;
+  }
+
+  @media (max-width: 900px) {
+    .lv__row {
+      grid-template-columns: 5.2rem minmax(0, 1fr);
+      gap: 0.5rem 0.9rem;
+    }
+
+    .lv__detail,
+    .lv__crystals,
+    .lv__side {
+      grid-column: 2 / -1;
+    }
+
+    .lv__crystals::before {
+      content: '水晶';
+      color: var(--text-3);
+      margin-right: 0.15rem;
+    }
+
+    .lv__side {
+      padding-top: 0.3rem;
+      border-top: 1px dashed #ececec;
+    }
+  }
+</style>
