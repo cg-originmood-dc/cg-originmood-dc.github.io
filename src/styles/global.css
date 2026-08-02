@@ -382,6 +382,16 @@ main {
 
 /* ---------------------------------------------------------------- 資料表 */
 
+.dataset__title {
+  margin: 1.75rem 0 0.6rem;
+  font-size: 1.5rem;
+  line-height: 1.4;
+}
+
+.dataset__title + .dataset {
+  margin-top: 0.6rem;
+}
+
 .dataset {
   margin: 1.5rem 0;
 }

@@ -8,6 +8,7 @@ import PetIslandTabs from '../components/PetIslandTabs.astro';
 import PetSynthesisTables from '../components/PetSynthesisTables.astro';
 import SkillIndex from '../components/SkillIndex.astro';
 import SourceNote from '../components/SourceNote.astro';
+import { datasetHeading } from '../lib/dataset-headings';
 import { HOME_ID } from '../lib/nav';
 
 export async function getStaticPaths() {
@@ -42,7 +43,15 @@ const hasProse = entry.body != null && entry.body.trim().length > 0;
   ) : entry.data.title === '專屬技能' ? (
     <ExclusiveSkills />
   ) : (
-    entry.data.datasets.map((name) => <DataTable name={name} />)
+    entry.data.datasets.map((name) => {
+      const heading = datasetHeading(entry.id, name, entry.data.datasets.length);
+      return (
+        <>
+          {heading && <h2 class="dataset__title">{heading}</h2>}
+          <DataTable name={name} />
+        </>
+      );
+    })
   )}
 
   <SourceNote sourceUrl={entry.data.sourceUrl} />
