@@ -55,7 +55,7 @@ function dedupeReactions(raw: FusionReaction[]): FusionReaction[] {
  * 邊適合作「上級」的分數（愈高愈像取得／升級線）。
  * 重抽（材料自己也是產物）分數低；單一產物升級線分數高。
  */
-function parentEdgeScore(r: FusionReaction, from: string, to: string): number {
+function parentEdgeScore(r: FusionReaction, from: string): number {
   const prods = petSymbols(r.products);
   const selfFeed = prods.includes(from) ? 1 : 0;
   const multi = prods.length > 1 ? 1 : 0;
@@ -79,7 +79,7 @@ function deriveParentEdges(reactions: FusionReaction[]): ParentEdge[] {
       for (const to of prods) {
         if (!from || !to || from === to) continue;
         const pair = `${from}\0${to}`;
-        const score = parentEdgeScore(r, from, to);
+        const score = parentEdgeScore(r, from);
         const prev = best.get(pair);
         if (!prev || score > prev.score) {
           best.set(pair, { from, to, recipeId: r.id, score });
