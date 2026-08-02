@@ -44,7 +44,7 @@ DATE_TEXT = (
     r"(?:\s*\d{1,2}[:：]\d{2}(?::\d{2})?)?"
 )
 RANGE_SEP = r"(?:--+|－+|—+|~|～|至)"
-REQUIRED_PET_HEADERS = ("所需寵物", "需求寵物")
+REQUIRED_PET_HEADERS = ("所需寵物", "需求寵物", "所需名稱")
 REQUIRED_ITEM_HEADERS = (
     "所需道具",
     "所需材料",
@@ -637,7 +637,7 @@ def source_tables(soup: BeautifulSoup) -> list[Source]:
             item_name = next(
                 (
                     name
-                    for name in ("物品名稱", "道具名稱", "名字", "獎品名稱", "獎品")
+                    for name in ("物品名稱", "道具名稱", "名稱", "名字", "獎品名稱", "獎品")
                     if name in header
                 ),
                 None,
