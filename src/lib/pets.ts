@@ -212,7 +212,7 @@ export function petListDataset(): Dataset {
     name: '寵物清單',
     columns: [...columns, 'image'],
     rows,
-    imageColumn: 'image',
+    imageColumns: ['image'],
     filterColumn: { name: '來源', values: SOURCES.map((s) => s.來源) },
     wrapColumns: pickWrapColumns(columns, rows),
     noteColumn: '任務用途',

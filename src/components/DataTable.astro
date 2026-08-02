@@ -39,7 +39,9 @@ const { name, dataset: given, filterTabs = false } = Astro.props as Props;
 const dataset = given ?? (name ? loadDataset(name) : null);
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const src = (v: string) => (v.startsWith('/') ? base + v : v);
-const cols = dataset?.columns.filter((c) => c !== dataset.imageColumn) ?? [];
+const cols = dataset?.columns.filter((c) => !dataset.imageColumns.includes(c)) ?? [];
+/** 圖欄的表頭：image 沿用原站的「圖」，額外的圖欄（材料圖）直接用欄名 */
+const imgLabel = (c: string) => (c === 'image' ? '圖' : c);
 
 /**
  * 名稱欄可點進寵物詳情頁的資料集。
@@ -108,7 +110,7 @@ const imageFirst = dataset ? PET_NAME_DATASETS.has(dataset.name) : false;
         <table>
           <thead>
             <tr>
-              {dataset.imageColumn && imageFirst && <th scope="col" class="col-img">圖</th>}
+              {imageFirst && dataset.imageColumns.map((c) => <th scope="col" class="col-img">{imgLabel(c)}</th>)}
               {dataset.action && <th scope="col" class="col-act">工具</th>}
               {cols.map((c, i) => (
                 <th
@@ -127,32 +129,32 @@ const imageFirst = dataset ? PET_NAME_DATASETS.has(dataset.name) : false;
                   {c}
                 </th>
               ))}
-              {dataset.imageColumn && !imageFirst && <th scope="col" class="col-img">圖</th>}
+              {!imageFirst && dataset.imageColumns.map((c) => <th scope="col" class="col-img">{imgLabel(c)}</th>)}
             </tr>
           </thead>
           <tbody>
             {dataset.rows.map((row) => {
               const petName = linkNameCol ? (row[linkNameCol] ?? '').trim() : '';
               const detail = petName ? petDetailHref(petName) : null;
-              const imgCell = dataset.imageColumn ? (
+              const imgCells = dataset.imageColumns.map((col) => (
                 <td class="col-img">
-                  {row[dataset.imageColumn] ? (
+                  {row[col] ? (
                     detail ? (
                       <a class="dataset__img-link" href={detail}>
                         <span class="hoverpic">
-                          <img src={src(thumbOf(row[dataset.imageColumn]))} alt={petName} loading="lazy" decoding="async" />
-                          <img class="hoverpic__big" src={src(row[dataset.imageColumn])} alt="" loading="lazy" decoding="async" />
+                          <img src={src(thumbOf(row[col]))} alt={petName} loading="lazy" decoding="async" />
+                          <img class="hoverpic__big" src={src(row[col])} alt="" loading="lazy" decoding="async" />
                         </span>
                       </a>
                     ) : (
                       <span class="hoverpic">
-                        <img src={src(thumbOf(row[dataset.imageColumn]))} alt="" loading="lazy" decoding="async" />
-                        <img class="hoverpic__big" src={src(row[dataset.imageColumn])} alt="" loading="lazy" decoding="async" />
+                        <img src={src(thumbOf(row[col]))} alt="" loading="lazy" decoding="async" />
+                        <img class="hoverpic__big" src={src(row[col])} alt="" loading="lazy" decoding="async" />
                       </span>
                     )
                   ) : null}
                 </td>
-              ) : null;
+              ));
               return (
                 <tr
                   class={detail ? 'dataset__row--link' : undefined}
@@ -161,7 +163,7 @@ const imageFirst = dataset ? PET_NAME_DATASETS.has(dataset.name) : false;
                     dataset.filterColumn ? (row[dataset.filterColumn.name] ?? '').trim() : undefined
                   }
                 >
-                  {imageFirst && imgCell}
+                  {imageFirst && imgCells}
                   {dataset.action && (
                     <td class="col-act">
                       {row[dataset.action.column] ? (
@@ -215,7 +217,7 @@ const imageFirst = dataset ? PET_NAME_DATASETS.has(dataset.name) : false;
                       <td class={classes || undefined}>{value}</td>
                     );
                   })}
-                  {!imageFirst && imgCell}
+                  {!imageFirst && imgCells}
                 </tr>
               );
             })}

@@ -9,8 +9,12 @@ export interface Dataset {
   name: string;
   columns: string[];
   rows: Record<string, string>[];
-  /** 有 image 欄位時，表格會渲染縮圖而不是印出路徑 */
-  imageColumn: string | null;
+  /**
+   * 會渲染成縮圖（滑過放大）而不是印出路徑的欄位。
+   * `image` 欄一定算；其他欄看內容——整欄非空值都是 /img/ 路徑就算
+   * （武器表的「材料圖」），編輯者要加第二個圖欄不必動程式。
+   */
+  imageColumns: string[];
   /** 適合做下拉篩選的欄位（原站寵物表就有「篩選類別」），沒有就是 null */
   filterColumn: { name: string; values: string[] } | null;
   /** 內容偏長、需要換行的欄位。其餘欄位不換行，免得「人形系」被擠成直書 */
@@ -111,12 +115,12 @@ const ACTIONS: Record<string, NonNullable<Dataset['action']>> = {};
 function pickFilterColumn(
   columns: string[],
   rows: Record<string, string>[],
-  skip: string | null,
+  skip: string[],
 ): Dataset['filterColumn'] {
   if (rows.length < 12) return null;
   let best: { name: string; values: string[]; ratio: number } | null = null;
   for (const col of columns) {
-    if (col === skip) continue;
+    if (skip.includes(col)) continue;
     const seen = new Map<string, number>();
     for (const r of rows) {
       const v = (r[col] ?? '').trim();
@@ -171,12 +175,18 @@ export function loadDataset(name: string): Dataset | null {
   }) as Record<string, string>[];
 
   const columns = records.length ? Object.keys(records[0]) : [];
-  const imageColumn = columns.includes('image') ? 'image' : null;
+  // image 欄照名字認（全空也算，像太刀還沒有產品圖）；其他欄照內容認，
+  // 免得「改造圖」那種裝代號不裝路徑的欄被名字騙到。
+  const isImagePaths = (c: string) => {
+    const filled = records.map((r) => (r[c] ?? '').trim()).filter(Boolean);
+    return filled.length > 0 && filled.every((v) => v.startsWith('/img/'));
+  };
+  const imageColumns = columns.filter((c) => c === 'image' || isImagePaths(c));
   const dataset: Dataset = {
     name,
     columns,
     rows: records,
-    imageColumn,
+    imageColumns,
     // 可能同時有「公告連結」與稀疏的「任務用途」；勾選器應選最稀疏、
     // 最像補充註記的連結欄，而不是第一個碰到的連結欄。
     noteColumn:
@@ -189,9 +199,9 @@ export function loadDataset(name: string): Dataset | null {
         .sort((a, b) => a.linked - b.linked)[0]?.name ?? null,
     action: ACTIONS[name] && columns.includes(ACTIONS[name].column) ? ACTIONS[name] : null,
     defaultSort: pickDefaultSort(columns, records),
-    filterColumn: pickFilterColumn(columns, records, imageColumn),
+    filterColumn: pickFilterColumn(columns, records, imageColumns),
     wrapColumns: pickWrapColumns(
-      columns.filter((c) => c !== imageColumn),
+      columns.filter((c) => !imageColumns.includes(c)),
       records,
       WRAP_AT[name] ?? WRAP_AT_DEFAULT,
     ),
