@@ -55,4 +55,12 @@ const hasProse = entry.body != null && entry.body.trim().length > 0;
   )}
 
   <SourceNote sourceUrl={entry.data.sourceUrl} />
+  {
+    entry.data.title === '寵物清單' && (
+      <SourceNote
+        sourceUrl="https://cg.skyey.tw/pet/petbook.html"
+        label="蔚藍幻境"
+      />
+    )
+  }
 </Base>
