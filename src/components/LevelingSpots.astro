@@ -145,7 +145,7 @@ const zones = ZONE_ORDER.filter((z) => spots.some((s) => s.zone === z)).map((z) 
           // 所屬路線只作為篩選用的資料屬性（data-routes），不顯示在列上
           <div class="lv__row" data-routes={spot.routes.join(',')} data-row-zone={spot.zone}>
             {/* 左欄是「玩家適合練的等級」，怪物等級屬於明細 */}
-            <span class:list={['lv__lv', { 'lv__lv--todo': !spot.fitLv }]}>
+            <span class:list={['lv__lv', { 'lv__lv--todo': !spot.fitLv || spot.fitLv === '-' }]}>
               {spot.fitLv || '待補'}
             </span>
 
@@ -172,31 +172,33 @@ const zones = ZONE_ORDER.filter((z) => spots.some((s) => s.zone === z)).map((z) 
               ))}
             </div>
 
-            <div class="lv__crystals">
-              {spot.crystals.length ? (
-                spot.crystals.map((c) => <span class="lv__crystal">{c}</span>)
-              ) : (
-                <span class="lv__blank">—</span>
-              )}
-            </div>
-
-            <div class="lv__side">
-              <p class="lv__line">
-                <span class="lv__key">怎麼去</span>
-                {spot.route === '待補' || !spot.route ? (
-                  <span class="lv__todo">待補</span>
+            <div class="lv__extra">
+              <div class="lv__crystals">
+                {spot.crystals.length ? (
+                  spot.crystals.map((c) => <span class="lv__crystal">{c}</span>)
                 ) : (
-                  <span set:html={renderCell(spot.route, base)} />
+                  <span class="lv__blank">—</span>
                 )}
-              </p>
-              {spot.conds.map((cond) => (
-                <p class="lv__cond">
-                  <span class:list={['lv__badge', `lv__badge--${cond.kind}`]}>
-                    {cond.label || '條件'}
-                  </span>
-                  <span set:html={cond.html} />
+              </div>
+
+              <div class="lv__side">
+                <p class="lv__line">
+                  <span class="lv__key">怎麼去</span>
+                  {spot.route === '待補' || !spot.route ? (
+                    <span class="lv__todo">待補</span>
+                  ) : (
+                    <span set:html={renderCell(spot.route, base)} />
+                  )}
                 </p>
-              ))}
+                {spot.conds.map((cond) => (
+                  <p class="lv__cond">
+                    <span class:list={['lv__badge', `lv__badge--${cond.kind}`]}>
+                      {cond.label || '條件'}
+                    </span>
+                    <span set:html={cond.html} />
+                  </p>
+                ))}
+              </div>
             </div>
           </div>
         ))}
@@ -415,10 +417,16 @@ const zones = ZONE_ORDER.filter((z) => spots.some((s) => s.zone === z)).map((z) 
 
   .lv__row {
     display: grid;
-    grid-template-columns: 5.2rem minmax(10rem, 14rem) minmax(0, 1fr) 7.5rem 12rem;
+    grid-template-columns: 5.2rem minmax(10rem, 14rem) minmax(0, 1fr) minmax(14rem, 19rem);
     gap: 0.9rem;
     align-items: start;
     padding: 0.9rem;
+  }
+
+  .lv__extra {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
   }
 
   .lv__row + .lv__row {
@@ -442,7 +450,7 @@ const zones = ZONE_ORDER.filter((z) => spots.some((s) => s.zone === z)).map((z) 
   }
 
   .lv__lv--todo {
-    background: #f5f5f5;
+    background: none;
     color: var(--text-3);
     font-weight: 400;
   }
@@ -594,8 +602,7 @@ const zones = ZONE_ORDER.filter((z) => spots.some((s) => s.zone === z)).map((z) 
     }
 
     .lv__detail,
-    .lv__crystals,
-    .lv__side {
+    .lv__extra {
       grid-column: 2 / -1;
     }
 
