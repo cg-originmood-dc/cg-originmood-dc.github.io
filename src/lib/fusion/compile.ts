@@ -1,45 +1,24 @@
 /**
- * 編譯器：各來源 Reaction[] → CompiledFusionGraph
- * 之後只加 adapter + 在此註冊即可。
+ * 編譯器：正規化合成途徑 → CompiledFusionGraph
  */
 import type {
   CompiledFusionGraph,
+  FusionCycleGroup,
   FusionReaction,
   ParentEdge,
 } from './types';
 import { edgeKey, petSymbols, reactionSignature } from './types';
-import { adaptCsvReactions } from './adapters/csv';
-import { adaptMilitaryReactions } from './adapters/military';
-import { adaptRemodelReactions } from './adapters/remodel';
-import {
-  adaptHandwrittenReactions,
-  type HandwrittenTreeProvider,
-} from './adapters/handwritten';
+import { adaptPathwayReactions } from './adapters/pathways';
 
-let handwrittenProvider: HandwrittenTreeProvider | null = null;
 let cached: CompiledFusionGraph | null = null;
-
-/** pets extras 注入（避免 fusion → pets 循環） */
-export function setHandwrittenFusionTrees(provider: HandwrittenTreeProvider): void {
-  handwrittenProvider = provider;
-  cached = null;
-}
 
 export function resetFusionGraph(): void {
   cached = null;
 }
 
-/**
- * 註冊表：新來源在此加一行 adapter。
- * 順序僅影響同簽名去重時「先到先贏」的 id／source 標籤，不影響分析結果。
- */
+/** 唯一資料入口；同公式去重不改變寵物連線與循環結果。 */
 function collectAllReactions(): FusionReaction[] {
-  return [
-    ...adaptHandwrittenReactions(handwrittenProvider),
-    ...adaptCsvReactions(),
-    ...adaptMilitaryReactions(),
-    ...adaptRemodelReactions(),
-  ];
+  return adaptPathwayReactions();
 }
 
 function dedupeReactions(raw: FusionReaction[]): FusionReaction[] {
@@ -111,6 +90,91 @@ function deriveParentEdges(reactions: FusionReaction[]): ParentEdge[] {
   return edges;
 }
 
+/**
+ * 只依明確的材料寵 → 產物寵連線找強連通分量。
+ * 至少兩隻寵物互相可達才是循環；自我投入不單獨列群組。
+ */
+function deriveCycleGroups(reactions: FusionReaction[]): FusionCycleGroup[] {
+  const adjacency = new Map<string, Set<string>>();
+  const nodes = new Set<string>();
+  for (const reaction of reactions) {
+    const materials = petSymbols(reaction.materials);
+    const products = petSymbols(reaction.products);
+    for (const material of materials) {
+      nodes.add(material);
+      const next = adjacency.get(material) ?? new Set<string>();
+      for (const product of products) {
+        nodes.add(product);
+        if (material !== product) next.add(product);
+      }
+      adjacency.set(material, next);
+    }
+    for (const product of products) nodes.add(product);
+  }
+
+  let nextIndex = 0;
+  const index = new Map<string, number>();
+  const lowLink = new Map<string, number>();
+  const stack: string[] = [];
+  const onStack = new Set<string>();
+  const components: string[][] = [];
+
+  const visit = (node: string): void => {
+    index.set(node, nextIndex);
+    lowLink.set(node, nextIndex);
+    nextIndex += 1;
+    stack.push(node);
+    onStack.add(node);
+
+    for (const target of adjacency.get(node) ?? []) {
+      if (!index.has(target)) {
+        visit(target);
+        lowLink.set(node, Math.min(lowLink.get(node)!, lowLink.get(target)!));
+      } else if (onStack.has(target)) {
+        lowLink.set(node, Math.min(lowLink.get(node)!, index.get(target)!));
+      }
+    }
+
+    if (lowLink.get(node) !== index.get(node)) return;
+    const component: string[] = [];
+    while (stack.length) {
+      const current = stack.pop()!;
+      onStack.delete(current);
+      component.push(current);
+      if (current === node) break;
+    }
+    if (component.length >= 2) components.push(component);
+  };
+
+  for (const node of [...nodes].sort((a, b) => a.localeCompare(b, 'zh-Hant'))) {
+    if (!index.has(node)) visit(node);
+  }
+
+  const groups = components.map((members) => {
+    members.sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+    const memberSet = new Set(members);
+    const reactionIds = reactions
+      .filter((reaction) => {
+        const materials = petSymbols(reaction.materials);
+        const products = petSymbols(reaction.products);
+        return materials.some((material) =>
+          memberSet.has(material) &&
+          products.some((product) => memberSet.has(product) && product !== material),
+        );
+      })
+      .map((reaction) => reaction.id)
+      .sort();
+    return { id: '', members, reactionIds };
+  });
+  groups.sort((a, b) =>
+    a.members.join('\0').localeCompare(b.members.join('\0'), 'zh-Hant'),
+  );
+  return groups.map((group, index) => ({
+    ...group,
+    id: `cycle-${String(index + 1).padStart(3, '0')}`,
+  }));
+}
+
 export function compileFusionGraph(): CompiledFusionGraph {
   if (cached) return cached;
 
@@ -121,6 +185,11 @@ export function compileFusionGraph(): CompiledFusionGraph {
   const edgeReactions = new Map<string, FusionReaction[]>();
   const petNodes = new Set<string>();
   const byId = new Map(reactions.map((r) => [r.id, r]));
+  const cycleGroups = deriveCycleGroups(reactions);
+  const petToCycleGroup = new Map<string, FusionCycleGroup>();
+  for (const group of cycleGroups) {
+    for (const member of group.members) petToCycleGroup.set(member, group);
+  }
 
   for (const r of reactions) {
     for (const p of petSymbols(r.products)) {
@@ -171,6 +240,8 @@ export function compileFusionGraph(): CompiledFusionGraph {
     parents,
     edgeReactions,
     petNodes,
+    cycleGroups,
+    petToCycleGroup,
   };
   return cached;
 }
@@ -179,6 +250,8 @@ export function fusionGraphStats(): {
   products: number;
   recipes: number;
   reverseEdges: number;
+  cycleGroups: number;
+  cyclePets: number;
   sources: Record<string, number>;
 } {
   const g = compileFusionGraph();
@@ -192,6 +265,8 @@ export function fusionGraphStats(): {
     products: g.byProduct.size,
     recipes: g.reactions.length,
     reverseEdges,
+    cycleGroups: g.cycleGroups.length,
+    cyclePets: g.petToCycleGroup.size,
     sources,
   };
 }

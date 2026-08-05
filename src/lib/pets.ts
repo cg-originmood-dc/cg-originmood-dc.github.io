@@ -3,7 +3,6 @@ import { join } from 'node:path';
 import { parse } from 'csv-parse/sync';
 import {
   buildFusionTreeFromGraph,
-  setHandwrittenFusionTrees,
 } from './fusionGraph';
 import { itemImagePath } from './items';
 import { pickWrapColumns, type Dataset } from './datasets';
@@ -425,39 +424,19 @@ export function applyPetImagesFromSsot(node: FusionNode): FusionNode {
  * 取得要顯示的「完整」合成樹。
  *
  * 統一圖管線（見 src/lib/fusion/）：
- * - 各來源 adapter → FusionReaction → compile 成圖
+ * - 正規化合成途徑三表 → FusionReaction → compile 成圖
  * - 顯示：反向找全部根 → 各根向下完整展開（不挑主配方）
- * - 手寫 extras 的 fusionTree 拆成反應邊入圖，不再整棵覆蓋
+ * - 手寫補充也已納入同一組合成途徑資料，不在執行期注入
  */
 function treeHasBody(node: FusionNode | null | undefined): boolean {
   if (!node) return false;
   return Boolean(node.children?.length || node.heads?.length);
 }
 
-let fusionHandwrittenHooked = false;
-
-/** 把 extras 手寫樹注入合成圖（整站建置期間只掛一次） */
-function ensureFusionGraphHandwritten(): void {
-  if (fusionHandwrittenHooked) return;
-  fusionHandwrittenHooked = true;
-  setHandwrittenFusionTrees(() => {
-    const extras = loadExtras();
-    const trees: FusionNode[] = [];
-    for (const extra of extras.values()) {
-      if (extra.fusionTree && treeHasBody(extra.fusionTree)) {
-        trees.push(extra.fusionTree);
-      }
-    }
-    return trees;
-  });
-}
-
 export function resolveFusionTree(
   petName: string,
   image: string,
 ): { tree: FusionNode; hasFullData: boolean } {
-  ensureFusionGraphHandwritten();
-
   const fromGraph = buildFusionTreeFromGraph(petName);
   if (fromGraph && treeHasBody(fromGraph)) {
     return { tree: applyPetImagesFromSsot(fromGraph), hasFullData: true };

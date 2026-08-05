@@ -1,0 +1,215 @@
+---
+import type {
+  FusionCycleGroup,
+  FusionReaction,
+  FusionSlot,
+} from '../lib/fusion';
+import { hasPet } from '../lib/pets';
+
+interface Props {
+  group: FusionCycleGroup;
+  reactions: FusionReaction[];
+  currentName: string;
+  base?: string;
+}
+
+const { group, reactions, currentName, base = '' } = Astro.props;
+
+function levelPrefix(slot: FusionSlot): string {
+  if (slot.levelCondition === 'any') return '任意等級的';
+  if (slot.levelCondition === 'exact') return `Lv${slot.level}的`;
+  if (slot.levelCondition === 'minimum') return `Lv${slot.level}以上的`;
+  if (slot.levelCondition === 'source') return '等級條件待確認的';
+  return '';
+}
+
+function quantity(slot: FusionSlot): string {
+  if (slot.qty == null) return '';
+  if (slot.kind === 'gold') return `${slot.qty.toLocaleString('zh-TW')}G`;
+  return `×${slot.qty}`;
+}
+
+function slotText(slot: FusionSlot): string {
+  const name = slot.kind === 'gold' ? '' : `${levelPrefix(slot)}${slot.symbol}`;
+  const note = slot.conditionNote ? `（${slot.conditionNote}）` : '';
+  return `${name}${note}${quantity(slot)}` || slot.symbol;
+}
+
+function petHref(slot: FusionSlot): string | null {
+  if (slot.kind !== 'pet' || !hasPet(slot.symbol)) return null;
+  return `${base}/寵物資料/${encodeURIComponent(slot.symbol)}`;
+}
+
+function sourceLabel(reaction: FusionReaction): string {
+  return reaction.meta?.activityId || reaction.meta?.sourceRef || reaction.id;
+}
+---
+
+<div class="cycle-note">
+  這些寵物只因明確配方連線而互相可達；不據此推定重抽、進化、別名或主配方。
+</div>
+
+<div class="cycle-members" aria-label="循環群組成員">
+  {
+    group.members.map((member) =>
+      member === currentName ? (
+        <span class="cycle-member cycle-member--current">{member}（目前）</span>
+      ) : hasPet(member) ? (
+        <a class="cycle-member" href={`${base}/寵物資料/${encodeURIComponent(member)}`}>
+          {member}
+        </a>
+      ) : (
+        <span class="cycle-member">{member}</span>
+      ),
+    )
+  }
+</div>
+
+<div class="cycle-recipes">
+  {
+    reactions.map((reaction) => (
+      <article class="cycle-recipe" id={reaction.id}>
+        <div class="cycle-formula">
+          <div class="cycle-inputs">
+            {reaction.materials.map((slot, index) => {
+              const href = petHref(slot);
+              return (
+                <span class="cycle-input">
+                  {index > 0 && <span class="operator">＋</span>}
+                  {href ? <a href={href}>{slotText(slot)}</a> : <span>{slotText(slot)}</span>}
+                </span>
+              );
+            })}
+            <span class="equals">＝</span>
+          </div>
+          <div class="cycle-outcomes">
+            {reaction.products.map((slot, outcomeIndex) => {
+              const href = petHref(slot);
+              return (
+                <div class="cycle-outcome">
+                  <span class="branch">
+                    {reaction.products.length > 1
+                      ? outcomeIndex === reaction.products.length - 1
+                        ? '└'
+                        : '├'
+                      : '→'}
+                  </span>
+                  {href ? <a href={href}>{slotText(slot)}</a> : <span>{slotText(slot)}</span>}
+                  {slot.prob && <span class="probability">（機率 {slot.prob}）</span>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div class="cycle-meta">
+          {reaction.npc && <span>{reaction.npc}</span>}
+          {reaction.meta?.sourceUrl ? (
+            <a href={reaction.meta.sourceUrl} target="_blank" rel="noopener noreferrer">
+              {sourceLabel(reaction)}
+            </a>
+          ) : (
+            <span>{sourceLabel(reaction)}</span>
+          )}
+          <code>{reaction.id}</code>
+        </div>
+      </article>
+    ))
+  }
+</div>
+
+<style>
+  .cycle-note {
+    margin-bottom: 0.8rem;
+    color: var(--muted, #68737d);
+    line-height: 1.65;
+  }
+
+  .cycle-members {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-bottom: 1rem;
+  }
+
+  .cycle-member {
+    border: 1px solid #b7c4d0;
+    border-radius: 999px;
+    padding: 0.25rem 0.65rem;
+    background: #f7fafc;
+  }
+
+  .cycle-member--current {
+    border-color: #3273b9;
+    background: #e8f3ff;
+    font-weight: 700;
+  }
+
+  .cycle-recipes {
+    display: grid;
+    gap: 0.7rem;
+  }
+
+  .cycle-recipe {
+    overflow: hidden;
+    border: 1px solid #c8ced4;
+    border-radius: 6px;
+    background: #fff;
+  }
+
+  .cycle-formula {
+    display: grid;
+    grid-template-columns: minmax(16rem, 1fr) minmax(14rem, 1fr);
+    gap: 0.7rem;
+    padding: 0.75rem;
+    line-height: 1.7;
+  }
+
+  .cycle-inputs {
+    display: flex;
+    flex-wrap: wrap;
+    align-content: start;
+    gap: 0.25rem;
+  }
+
+  .operator,
+  .equals,
+  .branch {
+    color: #66717c;
+    padding: 0 0.2rem;
+  }
+
+  .cycle-outcome + .cycle-outcome {
+    margin-top: 0.15rem;
+  }
+
+  .probability {
+    color: #825b13;
+    margin-left: 0.25rem;
+  }
+
+  .cycle-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.9rem;
+    border-top: 1px solid #dde2e6;
+    padding: 0.45rem 0.75rem;
+    background: #f6f8fa;
+    color: #66717c;
+    font-size: 0.9rem;
+  }
+
+  .cycle-meta code {
+    margin-left: auto;
+  }
+
+  @media (max-width: 760px) {
+    .cycle-formula {
+      grid-template-columns: 1fr;
+    }
+
+    .cycle-meta code {
+      width: 100%;
+      margin-left: 0;
+    }
+  }
+</style>

@@ -8,6 +8,7 @@ import { normalizePetName } from './names';
 import type {
   CompiledFusionGraph,
   FusionReaction,
+  FusionCycleGroup,
   FusionRootPath,
   FusionSlot,
 } from './types';
@@ -21,15 +22,38 @@ function graph(): CompiledFusionGraph {
   return compileFusionGraph();
 }
 
+/** 精確名稱優先；只有圖上沒有原名時才使用已確認的舊寫法對照。 */
+function graphPetName(name: string): string {
+  const exact = name.trim();
+  if (graph().petNodes.has(exact)) return exact;
+  return normalizePetName(exact) || exact;
+}
+
 export function getReactionsForProduct(productPet: string): FusionReaction[] {
   const g = graph();
-  const name = normalizePetName(productPet);
+  const name = graphPetName(productPet);
   return (g.byProduct.get(name) ?? g.byProduct.get(productPet) ?? []).slice();
+}
+
+export function getFusionCycleGroupForPet(
+  petName: string,
+): { group: FusionCycleGroup; reactions: FusionReaction[] } | null {
+  const g = graph();
+  const name = graphPetName(petName);
+  const group = g.petToCycleGroup.get(name);
+  if (!group) return null;
+  const byId = new Map(g.reactions.map((reaction) => [reaction.id, reaction]));
+  return {
+    group,
+    reactions: group.reactionIds
+      .map((id) => byId.get(id))
+      .filter((reaction): reaction is FusionReaction => Boolean(reaction)),
+  };
 }
 
 export function listFusionParents(materialPet: string): string[] {
   const g = graph();
-  const name = normalizePetName(materialPet);
+  const name = graphPetName(materialPet);
   const edges = g.parents.get(name) ?? g.parents.get(materialPet) ?? [];
   const set = new Set(edges.map((e) => e.to));
   return [...set].sort((a, b) => a.localeCompare(b, 'zh-Hant'));
@@ -45,7 +69,7 @@ export function findFusionRoots(startPet: string): string[] {
  */
 export function findFusionRootPaths(startPet: string): FusionRootPath[] {
   const g = graph();
-  const start = normalizePetName(startPet) || startPet;
+  const start = graphPetName(startPet);
   if (!start) return [];
 
   const anc = new Set<string>([start]);
@@ -270,7 +294,7 @@ export function expandFusionDown(
     isRoot?: boolean;
   } = {},
 ): FusionNode {
-  const name = normalizePetName(productPet) || productPet;
+  const name = graphPetName(productPet);
   const maxDepth = opts.maxDepth ?? 10;
   const depth = opts.depth ?? 0;
   const stack = opts.stack ?? new Set<string>();
@@ -332,7 +356,7 @@ export function buildFusionTreeFromGraph(
   petName: string,
   opts: { maxDepth?: number } = {},
 ): FusionNode | null {
-  const name = normalizePetName(petName) || petName;
+  const name = graphPetName(petName);
   if (!name || !inGraph(name)) return null;
 
   // 只取根名；via 不參與展開裁剪
