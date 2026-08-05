@@ -14,6 +14,7 @@ on:
 concurrency:
   group: pages
   cancel-in-progress: false
+  queue: max
 
 jobs:
   build:
@@ -177,7 +178,7 @@ jobs:
           body="${marker}
           🔎 PR Preview：${PREVIEW_URL}
 
-          每次更新 PR 都會重新部署；PR 關閉或正式站部署後，此預覽會被清除。"
+          每次更新 PR 都會重新部署；PR 關閉後，此預覽會被清除。"
           comment_id="$(gh api "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" \
             --paginate --jq '.[] | select(.body | contains("<!-- cg-pr-preview -->")) | .id' | head -n 1)"
           payload="$(jq -n --arg body "$body" '{body: $body}')"

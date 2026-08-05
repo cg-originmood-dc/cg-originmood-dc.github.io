@@ -14,6 +14,7 @@ permissions:
 concurrency:
   group: pages
   cancel-in-progress: false
+  queue: max
 
 jobs:
   build:
@@ -37,7 +38,7 @@ jobs:
         run: npm run build
 
       # gh-pages 只保留一個無歷史快照，作為正式站與 PR preview 的共同內容倉庫。
-      # 第一次執行時先建立分支；後續正式部署會用 dist 完整覆蓋，順便清掉所有 preview。
+      # 第一次執行時先建立分支；後續正式部署更新根目錄，但保留仍開啟的 PR preview。
       - name: Ensure gh-pages branch exists
         env:
           GH_TOKEN: ${{ github.token }}
@@ -56,14 +57,27 @@ jobs:
 
       - name: Replace published snapshot
         run: |
-          git -C _site switch --orphan publish-snapshot
-          rsync -a --delete --exclude='.git/' dist/ _site/
+          # 首次由 main 建出的暫時 gh-pages 還帶著 main 歷史，轉成無 parent 的單快照。
+          first_snapshot=false
+          if [[ ! -f _site/.nojekyll ]]; then
+            git -C _site switch --orphan publish-snapshot
+            first_snapshot=true
+          fi
+          rsync -a --delete --exclude='.git/' --exclude='/pr-preview/' dist/ _site/
           touch _site/.nojekyll
           git -C _site add -A
-          git -C _site -c user.name='github-actions[bot]' \
-            -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
-            commit -m "Deploy ${GITHUB_SHA}"
-          git -C _site push --force origin HEAD:gh-pages
+          if ! git -C _site diff --cached --quiet; then
+            if [[ "$first_snapshot" == true ]]; then
+              git -C _site -c user.name='github-actions[bot]' \
+                -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+                commit -m "Deploy ${GITHUB_SHA}"
+            else
+              git -C _site -c user.name='github-actions[bot]' \
+                -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+                commit --amend -m "Deploy ${GITHUB_SHA} with active PR previews"
+            fi
+            git -C _site push --force-with-lease origin HEAD:gh-pages
+          fi
           rm -rf -- _site/.git
 
       - uses: actions/upload-pages-artifact@v3
