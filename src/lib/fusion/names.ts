@@ -19,8 +19,13 @@ const ALIASES: Record<string, string> = {
   '兔耳嚇人箱(改造陰影)': '改造陰影',
 };
 
+/** 公告產物常寫「OO召喚書」，合成圖索引時與寵物「OO」共用同一名稱。 */
+const SUMMON_BOOK_SUFFIX = /召喚書$/u;
+
 export function normalizePetName(name: string): string {
   const n = (name ?? '').trim();
   if (!n) return n;
-  return ALIASES[n] ?? n;
+  const withoutSummonBook = n.replace(SUMMON_BOOK_SUFFIX, '').trim();
+  if (!withoutSummonBook) return ALIASES[n] ?? n;
+  return ALIASES[n] ?? ALIASES[withoutSummonBook] ?? withoutSummonBook;
 }
