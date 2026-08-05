@@ -32,6 +32,13 @@ jobs:
           # workflow_dispatch 可替已存在、但尚未觸發過 workflow 的 PR 手動補 preview。
           ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/pull/{0}/merge', inputs.pr_number) || '' }}
 
+      # PR 的 merge ref 可能還沒含有最新 workflow helper；而且 SEO 防護不能讓 PR 自己改寫。
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: _workflow
+          sparse-checkout: .github/scripts
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -77,7 +84,7 @@ jobs:
           BASE_PATH: ${{ steps.config.outputs.preview_base }}
         run: |
           npm run build
-          node .github/scripts/mark-preview-noindex.mjs dist "$BASE_PATH"
+          node _workflow/.github/scripts/mark-preview-noindex.mjs dist "$BASE_PATH"
 
       # build job 只拿唯讀 token；有寫入權限的 publish job 不會執行 PR 裡的程式。
       - uses: actions/upload-artifact@v4
