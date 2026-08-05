@@ -7,6 +7,7 @@ import {
 } from './fusionGraph';
 import { itemImagePath } from './items';
 import { pickWrapColumns, type Dataset } from './datasets';
+import { resolveSkillToken } from './skillLevelNames';
 
 export interface PetRecord {
   名稱: string;
@@ -241,44 +242,14 @@ export function splitSkills(raw: string): string[] {
     .filter((s) => !/^(並|傷害|最大|沒有|第三|轉換|隨機|捕捉|Lv1點)/.test(s));
 }
 
-/** 從「連擊LV11」取出技能名「連擊」供連結 */
-export function skillBaseName(skill: string): string {
-  return (
-    skill
-      .replace(/[（(][^）)]*[）)]/g, '') // 去掉括註
-      .replace(/LV\s*\d+.*$/i, '')
-      .replace(/Lv\s*\d+.*$/i, '')
-      .replace(/；.*$/, '') // 複合技能取前半
-      .trim() || skill
-  );
-}
-
-/** 去掉尾端羅馬數字／純數字後綴（氣功彈I → 氣功彈） */
-function stripSkillSuffix(name: string): string {
-  return name.replace(/[IVX]+$/i, '').replace(/\d+$/, '').trim() || name;
-}
-
 /**
- * 判斷寵物技能字串是否對應某個技能頁名稱
- * 例：頁「諸刃」↔「諸刃LV13」；頁「氣功彈」↔「氣功彈I」「氣功彈LV4」
+ * 判斷寵物技能原文是否對應某個技能頁名稱。
+ * 關係來自「技能＋等級＋顯示名稱／別名」，不猜測羅馬數字後綴。
  */
 export function skillMatchesPage(skillToken: string, pageName: string): boolean {
-  const token = skillToken.trim();
   const page = pageName.trim();
-  if (!token || !page) return false;
-  if (token === page) return true;
-
-  const base = skillBaseName(token);
-  if (base === page) return true;
-
-  const pageBase = skillBaseName(page);
-  if (base === pageBase) return true;
-
-  const core = stripSkillSuffix(base);
-  const pageCore = stripSkillSuffix(pageBase);
-  if (core.length >= 2 && core === pageCore) return true;
-
-  return false;
+  if (!page) return false;
+  return resolveSkillToken(skillToken, '寵物')?.skill === page;
 }
 
 export interface PetSkillHolder {
@@ -290,12 +261,9 @@ export interface PetSkillHolder {
   level: number | null;
 }
 
-/** 從「連擊LV11」「昏睡攻擊Lv12」取出等級數字 */
+/** 從明確的 LV 格式、顯示名稱或別名取得技能等級 */
 export function parseSkillLevel(skillLabel: string): number | null {
-  const m = skillLabel.match(/(?:LV|Lv)\s*(\d+)/i);
-  if (!m) return null;
-  const n = Number(m[1]);
-  return Number.isFinite(n) ? n : null;
+  return resolveSkillToken(skillLabel, '寵物')?.level ?? null;
 }
 
 /**

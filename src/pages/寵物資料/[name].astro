@@ -12,7 +12,6 @@ import {
   getPet,
   getPetExtra,
   splitSkills,
-  skillBaseName,
   gradePct,
   petImagePath,
   resolveFusionTree,
@@ -37,6 +36,7 @@ import {
   clientFormulaPayload,
 } from '../../lib/petStats';
 import { skillPath } from '../../lib/skills';
+import { resolveSkillToken } from '../../lib/skillLevelNames';
 import { renderCell } from '../../lib/richtext';
 
 export function getStaticPaths() {
@@ -125,12 +125,14 @@ function fmtGrade(v: string): string {
 // CSV 的技能欄偶爾放的不是技能（有幾隻寫的是出沒地點、有一隻寫整段技能說明），
 // 那些名字沒有對應的技能頁。查得到才給連結，查不到就只印字。
 function skillHref(sk: string): string | null {
-  const path = skillPath(skillBaseName(sk));
+  const resolved = resolveSkillToken(sk, '寵物');
+  const path = resolved ? skillPath(resolved.skill) : null;
   return path ? `${base}${path}` : null;
 }
 
 function skillNote(sk: string): string {
-  return extra.skillNotes?.[sk] ?? extra.skillNotes?.[skillBaseName(sk)] ?? '';
+  const resolved = resolveSkillToken(sk, '寵物');
+  return extra.skillNotes?.[sk] ?? (resolved ? extra.skillNotes?.[resolved.skill] : '') ?? '';
 }
 
 const cardLabel = extra.cardLevel?.trim() || '未知';
