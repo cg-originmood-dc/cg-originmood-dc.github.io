@@ -105,6 +105,7 @@ jobs:
       pages: write
       id-token: write
       issues: write
+      pull-requests: write
     environment:
       name: github-pages
       url: ${{ needs.build.outputs.preview_url }}
@@ -166,6 +167,7 @@ jobs:
         uses: actions/deploy-pages@v4
 
       - name: Add preview link to PR
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ needs.build.outputs.pr_number }}
@@ -198,6 +200,7 @@ jobs:
       pages: write
       id-token: write
       issues: write
+      pull-requests: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -234,6 +237,7 @@ jobs:
         uses: actions/deploy-pages@v4
 
       - name: Remove preview comment
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
