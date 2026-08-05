@@ -1,6 +1,6 @@
 ---
 /**
- * 技能詳情：資料來自 content/data/技能總覽.csv + 技能等級效果.csv（SSOT）。
+ * 技能詳情：資料來自技能總覽、技能等級效果、技能等級別名三張 CSV（SSOT）。
  * 網址三分：/skill/char/（人專屬）、/skill/pet/（寵專屬）、/skill/shared/（共用）；
  * scope 由資料決定（skillScope），每個技能只產一頁。
  * 同名技能人寵是兩回事，共用頁兩側各自一張表；持有寵物由 專屬寵物.csv 技能欄推導。
@@ -48,8 +48,8 @@ for (const h of holders) {
 
 const craftHref = craftSkillHref(name);
 
-/** 持有寵物欄掛哪一側：有人物側掛人物側，純寵技才掛寵物側（共用技能不重複兩欄） */
-const holderKey: 'char' | 'pet' = skill?.char ? 'char' : 'pet';
+/** 持有寵物欄掛寵物側；尚無寵物側等級資料時才暫掛人物側，且不重複兩欄。 */
+const holderKey: 'char' | 'pet' = skill?.pet ? 'pet' : 'char';
 /** 寵物實際持有、但等級表沒有的高等級（舊站 lv-high 列）——從寵物資料推導，不進 CSV */
 const holderLevels = [...holdersByLevel.keys()].filter((lv) => lv > 0);
 
@@ -61,7 +61,7 @@ function levelRows(side: SkillSide, extraLevels: number[] = []) {
   const byLv = new Map(side.levels.map((l) => [l.等級, l]));
   const max = Number(side.最高等級);
   if (!Number.isFinite(max) || max <= 0)
-    return side.levels.map((l) => ({ lv: '', row: l as typeof l | null, derived: false }));
+    return side.levels.map((l) => ({ lv: l.等級, row: l as typeof l | null, derived: false }));
   const top = Math.max(max, ...extraLevels);
   const rows: Array<{ lv: string; row: (typeof side.levels)[number] | null; derived: boolean }> = [];
   for (let i = 1; i <= top; i++) {
@@ -74,6 +74,8 @@ function levelRows(side: SkillSide, extraLevels: number[] = []) {
 
 const hasRate = (side: SkillSide) => side.levels.some((l) => l.成功率倍率 || l.作用範圍);
 const hasLearn = (side: SkillSide) => side.levels.some((l) => l.學習資訊);
+const hasLevelNames = (side: SkillSide) => side.levels.some((l) => l.顯示名稱 || l.別名.length);
+const hasRecordedLevels = (side: SkillSide) => side.levels.some((l) => l.等級);
 
 const sides: Array<{ key: 'char' | 'pet'; label: string; side: SkillSide }> = [];
 if (skill?.char) sides.push({ key: 'char', label: '人物技能', side: skill.char });
@@ -135,7 +137,13 @@ if (skill?.pet) sides.push({ key: 'pet', label: '寵物技能', side: skill.pet 
               <td style="width: 230px">{side.分類 || '—'}</td>
               <td style="width: 120px"><b>最高等級</b></td>
               <td style="width: 230px">
-                {side.最高等級 ? `LV ${side.最高等級}` : '無等級'}
+                {
+                  side.最高等級
+                    ? `LV ${side.最高等級}`
+                    : hasRecordedLevels(side)
+                      ? '已登錄個別等級'
+                      : '無等級'
+                }
                 {side.備註 && <span class="note">（{side.備註}）</span>}
               </td>
             </tr>
@@ -144,7 +152,8 @@ if (skill?.pet) sides.push({ key: 'pet', label: '寵物技能', side: skill.pet 
           <table class="level-table">
             <thead>
               <tr>
-                {side.最高等級 && <th>等級</th>}
+                {(side.最高等級 || hasRecordedLevels(side)) && <th>等級</th>}
+                {hasLevelNames(side) && <th>遊戲內名稱／別名</th>}
                 <th>魔力消耗</th>
                 {hasRate(side) && <th>成功率 / 倍率</th>}
                 {hasRate(side) && <th>作用範圍</th>}
@@ -156,7 +165,17 @@ if (skill?.pet) sides.push({ key: 'pet', label: '寵物技能', side: skill.pet 
             <tbody>
               {levelRows(side, key === holderKey ? holderLevels : []).map(({ lv, row, derived }) => (
                 <tr class:list={[derived && 'lv-high']}>
-                  {side.最高等級 && <td class="lv">LV {lv}</td>}
+                  {(side.最高等級 || hasRecordedLevels(side)) && <td class="lv">LV {lv}</td>}
+                  {hasLevelNames(side) && (
+                    <td class="level-name">
+                      {row?.顯示名稱 ? (
+                        <strong>{row.顯示名稱}</strong>
+                      ) : (
+                        <span class="pending">—</span>
+                      )}
+                      {row?.別名.map((alias) => <span>別名：{alias}</span>)}
+                    </td>
+                  )}
                   <td class="mp">{mpLabel(row?.魔力消耗 ?? '')}</td>
                   {hasRate(side) && <td>{row?.成功率倍率 || '—'}</td>}
                   {hasRate(side) && <td>{row?.作用範圍 || '—'}</td>}
@@ -269,6 +288,10 @@ if (skill?.pet) sides.push({ key: 'pet', label: '寵物技能', side: skill.pet 
   }
   .level-table tr.lv-high td { background-color: #fff8e1; }
   .level-table .lv { font-weight: 700; color: #008be3; white-space: nowrap; }
+  .level-table .level-name { min-width: 130px; text-align: left; }
+  .level-table .level-name strong,
+  .level-table .level-name span { display: block; }
+  .level-table .level-name span:not(.pending) { margin-top: 2px; color: #5f6368; font-size: 12px; }
   .level-table .mp { color: #e65100; font-weight: 700; white-space: nowrap; }
   .level-table .eff { text-align: left; }
   .level-table .pending { color: #9e9e9e; }
