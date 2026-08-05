@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -36,9 +36,39 @@ jobs:
           BASE_PATH: ${{ vars.BASE_PATH || (github.event.repository.name == format('{0}.github.io', github.repository_owner) && '/' || format('/{0}', github.event.repository.name)) }}
         run: npm run build
 
+      # gh-pages 只保留一個無歷史快照，作為正式站與 PR preview 的共同內容倉庫。
+      # 第一次執行時先建立分支；後續正式部署會用 dist 完整覆蓋，順便清掉所有 preview。
+      - name: Ensure gh-pages branch exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! git ls-remote --exit-code --heads origin gh-pages >/dev/null 2>&1; then
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" \
+              -f ref='refs/heads/gh-pages' \
+              -f sha="$GITHUB_SHA"
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: _site
+          fetch-depth: 1
+
+      - name: Replace published snapshot
+        run: |
+          git -C _site switch --orphan publish-snapshot
+          rsync -a --delete --exclude='.git/' dist/ _site/
+          touch _site/.nojekyll
+          git -C _site add -A
+          git -C _site -c user.name='github-actions[bot]' \
+            -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -m "Deploy ${GITHUB_SHA}"
+          git -C _site push --force origin HEAD:gh-pages
+          rm -rf -- _site/.git
+
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: _site
 
   deploy:
     needs: build

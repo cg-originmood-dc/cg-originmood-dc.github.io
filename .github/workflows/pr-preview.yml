@@ -1,0 +1,239 @@
+name: PR Preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Existing PR number to build
+        required: true
+        type: number
+
+# 正式部署、不同 PR 的 preview、關閉後清理都必須排隊，否則 gh-pages 快照會互相覆蓋。
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.event_name == 'workflow_dispatch' || github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      pr_number: ${{ steps.config.outputs.pr_number }}
+      preview_base: ${{ steps.config.outputs.preview_base }}
+      preview_root: ${{ steps.config.outputs.preview_root }}
+      preview_url: ${{ steps.config.outputs.preview_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # workflow_dispatch 可替已存在、但尚未觸發過 workflow 的 PR 手動補 preview。
+          ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/pull/{0}/merge', inputs.pr_number) || '' }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - id: config
+        name: Configure preview URL
+        env:
+          EVENT_PR_NUMBER: ${{ github.event.pull_request.number }}
+          INPUT_PR_NUMBER: ${{ inputs.pr_number }}
+          CONFIGURED_SITE_URL: ${{ vars.SITE_URL }}
+          CONFIGURED_BASE_PATH: ${{ vars.BASE_PATH }}
+        run: |
+          pr_number="${EVENT_PR_NUMBER:-$INPUT_PR_NUMBER}"
+          if [[ ! "$pr_number" =~ ^[0-9]+$ ]]; then
+            echo "Invalid PR number: $pr_number" >&2
+            exit 1
+          fi
+
+          repo_name="${GITHUB_REPOSITORY#*/}"
+          site_url="${CONFIGURED_SITE_URL:-https://${GITHUB_REPOSITORY_OWNER}.github.io}"
+          if [[ -n "$CONFIGURED_BASE_PATH" ]]; then
+            production_base="$CONFIGURED_BASE_PATH"
+          elif [[ "$repo_name" == "${GITHUB_REPOSITORY_OWNER}.github.io" ]]; then
+            production_base='/';
+          else
+            production_base="/$repo_name"
+          fi
+
+          preview_root="${production_base%/}/pr-preview/"
+          preview_base="${preview_root%/}/pr-${pr_number}"
+          preview_url="${site_url%/}${preview_base}/"
+          echo "pr_number=$pr_number" >> "$GITHUB_OUTPUT"
+          echo "preview_base=$preview_base" >> "$GITHUB_OUTPUT"
+          echo "preview_root=$preview_root" >> "$GITHUB_OUTPUT"
+          echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
+
+      - name: Build preview
+        env:
+          SITE_URL: ${{ vars.SITE_URL || format('https://{0}.github.io', github.repository_owner) }}
+          BASE_PATH: ${{ steps.config.outputs.preview_base }}
+        run: |
+          npm run build
+          node .github/scripts/mark-preview-noindex.mjs dist "$BASE_PATH"
+
+      # build job 只拿唯讀 token；有寫入權限的 publish job 不會執行 PR 裡的程式。
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pr-preview-build
+          path: dist
+          include-hidden-files: true
+          retention-days: 1
+
+  publish:
+    needs: build
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+      issues: write
+    environment:
+      name: github-pages
+      url: ${{ needs.build.outputs.preview_url }}
+    steps:
+      - name: Require initialized gh-pages branch
+        run: |
+          git ls-remote --exit-code --heads \
+            "https://github.com/${GITHUB_REPOSITORY}.git" gh-pages >/dev/null || {
+              echo 'gh-pages 尚未初始化，請先讓 main 的正式部署完成一次。' >&2
+              exit 1
+            }
+
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: _site
+          fetch-depth: 1
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: pr-preview-build
+          path: _preview
+
+      - name: Update PR preview snapshot
+        env:
+          PR_NUMBER: ${{ needs.build.outputs.pr_number }}
+          PREVIEW_ROOT: ${{ needs.build.outputs.preview_root }}
+        run: |
+          if [[ ! "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
+            echo "Invalid PR number: $PR_NUMBER" >&2
+            exit 1
+          fi
+          target="_site/pr-preview/pr-${PR_NUMBER}"
+          rm -rf -- "$target"
+          mkdir -p -- "$target"
+          cp -a _preview/. "$target/"
+          touch _site/.nojekyll
+
+          # robots.txt 只有放在站點根目錄才有效；meta robots 則覆蓋所有 preview HTML。
+          touch _site/robots.txt
+          if ! grep -Fqx "Disallow: ${PREVIEW_ROOT}" _site/robots.txt; then
+            printf '\nUser-agent: *\nDisallow: %s\n' "$PREVIEW_ROOT" >> _site/robots.txt
+          fi
+
+          git -C _site add -A
+          if ! git -C _site diff --cached --quiet; then
+            git -C _site -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit --amend -m "Deploy snapshot with PR #${PR_NUMBER} preview"
+            git -C _site push --force-with-lease origin HEAD:gh-pages
+          fi
+          rm -rf -- _site/.git
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Add preview link to PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ needs.build.outputs.pr_number }}
+          PREVIEW_URL: ${{ needs.build.outputs.preview_url }}
+        run: |
+          marker='<!-- cg-pr-preview -->'
+          body="${marker}
+          🔎 PR Preview：${PREVIEW_URL}
+
+          每次更新 PR 都會重新部署；PR 關閉或正式站部署後，此預覽會被清除。"
+          comment_id="$(gh api "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" \
+            --paginate --jq '.[] | select(.body | contains("<!-- cg-pr-preview -->")) | .id' | head -n 1)"
+          payload="$(jq -n --arg body "$body" '{body: $body}')"
+          if [[ -n "$comment_id" ]]; then
+            gh api --method PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${comment_id}" \
+              --input - <<<"$payload"
+          else
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" \
+              --input - <<<"$payload"
+          fi
+
+  cleanup:
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action == 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+      issues: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: _site
+          fetch-depth: 1
+
+      - name: Remove closed PR preview
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if [[ ! "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
+            echo "Invalid PR number: $PR_NUMBER" >&2
+            exit 1
+          fi
+          rm -rf -- "_site/pr-preview/pr-${PR_NUMBER}"
+          git -C _site add -A
+          if ! git -C _site diff --cached --quiet; then
+            git -C _site -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit --amend -m "Remove PR #${PR_NUMBER} preview"
+            git -C _site push --force-with-lease origin HEAD:gh-pages
+          fi
+          rm -rf -- _site/.git
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Remove preview comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" \
+            --paginate --jq '.[] | select(.body | contains("<!-- cg-pr-preview -->")) | .id' |
+          while read -r comment_id; do
+            [[ -z "$comment_id" ]] || \
+              gh api --method DELETE "repos/${GITHUB_REPOSITORY}/issues/comments/${comment_id}"
+          done
