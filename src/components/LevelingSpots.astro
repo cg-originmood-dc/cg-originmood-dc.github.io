@@ -17,6 +17,19 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const rows = loadDataset('練功地點列表')?.rows ?? [];
 const routeRows = loadDataset('練功路線')?.rows ?? [];
 
+/**
+ * 有玩家指出資料需要修正時（例如怪物名稱、建議水晶），直接改掉表格內容，
+ * 但改了什麼、誰提供的，記在這份獨立的更新記錄裡，列在頁尾——
+ * 修正不會憑空消失在 git log 裡，讀者也看得到是誰幫忙校正的。
+ */
+const changelog = (loadDataset('練功地點列表-更新記錄')?.rows ?? []).map((r) => ({
+  date: (r['日期'] ?? '').trim(),
+  place: (r['地點'] ?? '').trim(),
+  field: (r['欄位'] ?? '').trim(),
+  change: (r['異動'] ?? '').trim(),
+  by: (r['提供者'] ?? '').trim(),
+}));
+
 const COND_KINDS: Record<string, string> = {
   任務: 'quest',
   物品: 'item',
@@ -91,6 +104,21 @@ const zones = ZONE_ORDER.filter((z) => spots.some((s) => s.zone === z)).map((z) 
   name: z,
   ...ZONE_META[z],
 }));
+
+/**
+ * 各地點的「來源」欄記著這筆資料抄自哪篇文章／wiki 頁（Markdown 連結，多筆用
+ * LIST_SEP 分隔）。這裡把全表的連結收集起來去重，整理成頁尾的來源清單，
+ * 不用每一列都重複列一次出處。
+ */
+const MD_LINK = /^\[([^\]]+)\]\(([^)\s]+)\)$/;
+const sourceLinks = new Map<string, string>();
+for (const r of rows) {
+  for (const part of split((r['來源'] ?? '').trim())) {
+    const m = part.match(MD_LINK);
+    if (m && !sourceLinks.has(m[2])) sourceLinks.set(m[2], m[1]);
+  }
+}
+const sources = [...sourceLinks].map(([href, text]) => ({ href, text }));
 ---
 
 <div class="lv" data-lv-root>
@@ -204,6 +232,39 @@ const zones = ZONE_ORDER.filter((z) => spots.some((s) => s.zone === z)).map((z) 
         ))}
     </section>
   ))}
+
+  {sources.length > 0 && (
+    <aside class="lv__sources">
+      <span class="lv__sources-label">資料來源</span>
+      <ul class="lv__sources-list">
+        {sources.map((s) => (
+          <li>
+            <a href={s.href} target="_blank" rel="noopener noreferrer">
+              {s.text}
+            </a>
+          </li>
+        ))}
+      </ul>
+      <span class="lv__sources-hint">部分地點資料整理自外部文章／wiki，與永恆初心現況可能有出入</span>
+    </aside>
+  )}
+
+  {changelog.length > 0 && (
+    <aside class="lv__changelog">
+      <span class="lv__changelog-label">歷史更新</span>
+      <ul class="lv__changelog-list">
+        {changelog.map((c) => (
+          <li>
+            <span class="lv__changelog-date">{c.date}</span>
+            <span class="lv__changelog-place">{c.place}</span>
+            <span class="lv__changelog-field">{c.field}</span>
+            <span class="lv__changelog-change">{c.change}</span>
+            {c.by && <span class="lv__changelog-by">— {c.by} 提供</span>}
+          </li>
+        ))}
+      </ul>
+    </aside>
+  )}
 </div>
 
 <script>
@@ -593,6 +654,109 @@ const zones = ZONE_ORDER.filter((z) => spots.some((s) => s.zone === z)).map((z) 
     border-color: #80cbc4;
     background: #e0f2f1;
     color: #00695c;
+  }
+
+  /* ── 頁尾：來源清單 ── */
+  .lv__sources {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.3rem 0.75rem;
+    margin-block: 2.5rem 0;
+    padding: 0.75rem 1rem;
+    border-left: 3px solid var(--accent);
+    background: var(--surface-2);
+    border-radius: 0 6px 6px 0;
+    font-size: 0.875rem;
+  }
+
+  .lv__sources-label {
+    flex: none;
+    font-weight: 700;
+    color: var(--text-2);
+  }
+
+  .lv__sources-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem 0.9rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .lv__sources-list a {
+    color: var(--accent);
+    word-break: break-all;
+  }
+
+  .lv__sources-hint {
+    flex-basis: 100%;
+    color: var(--text-3);
+    font-size: 0.8125rem;
+  }
+
+  /* ── 頁尾：歷史更新記錄 ── */
+  .lv__changelog {
+    margin-block: 1rem 0;
+    padding: 0.75rem 1rem;
+    border-left: 3px solid #bdbdbd;
+    background: var(--surface-2);
+    border-radius: 0 6px 6px 0;
+    font-size: 0.85rem;
+  }
+
+  .lv__changelog-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+    color: var(--text-2);
+  }
+
+  .lv__changelog-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .lv__changelog-list li {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 0.5rem;
+    line-height: 1.6;
+  }
+
+  .lv__changelog-date {
+    flex: none;
+    color: var(--text-3);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .lv__changelog-place {
+    flex: none;
+    font-weight: 700;
+  }
+
+  .lv__changelog-field {
+    flex: none;
+    padding: 0 0.5em;
+    border: 1px solid #ddd;
+    border-radius: 999px;
+    background: #f5f5f5;
+    color: #555;
+    font-size: 0.78rem;
+  }
+
+  .lv__changelog-change {
+    color: var(--text-2);
+  }
+
+  .lv__changelog-by {
+    color: var(--text-3);
+    font-size: 0.8rem;
   }
 
   @media (max-width: 900px) {
