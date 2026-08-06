@@ -3,12 +3,14 @@
  *
  * - Reaction：一級公民（多材料 → 多產物，超邊）
  * - ParentEdge：由 Reaction 衍生（材料寵 → 產物寵，不含自環）
- * - 新來源：加 adapter 吐出 FusionReaction[] 即可
+ * - 資料來源：正規化合成途徑三表
  */
 
 export type FusionSource = 'csv' | 'military' | 'remodel' | 'handwritten';
 
 export type SymbolKind = 'pet' | 'item' | 'gold';
+
+export type FusionLevelCondition = 'any' | 'exact' | 'minimum' | 'source';
 
 /** 反應式一端的槽位（材料或產物） */
 export interface FusionSlot {
@@ -17,6 +19,13 @@ export interface FusionSlot {
   qty?: number;
   /** 產物機率，如 "80%" */
   prob?: string;
+  /** 等級條件的語意已由資料層確認，不在 UI 猜測。 */
+  levelCondition?: FusionLevelCondition;
+  level?: number;
+  conditionNote?: string;
+  /** 保留來源寫法，供待確認資料與人工核對。 */
+  raw?: string;
+  nameStatus?: string;
 }
 
 /**
@@ -34,7 +43,20 @@ export interface FusionReaction {
     activityId?: string;
     grades?: string;
     quest?: string;
+    pathwayId?: string;
+    materialRule?: string;
+    productRule?: string;
+    ruleNote?: string;
+    sourceRef?: string;
+    sourceUrl?: string;
   };
+}
+
+/** 明確材料寵 → 產物寵連線上的強連通群組；不代表任何遊戲語意。 */
+export interface FusionCycleGroup {
+  id: string;
+  members: string[];
+  reactionIds: string[];
 }
 
 /** 材料寵 → 產物寵（上級方向）；自環不建 */
@@ -57,6 +79,9 @@ export interface CompiledFusionGraph {
   edgeReactions: Map<string, FusionReaction[]>;
   /** 圖上出現過的寵物名 */
   petNodes: Set<string>;
+  /** 至少兩隻寵物互相可達的明確循環。 */
+  cycleGroups: FusionCycleGroup[];
+  petToCycleGroup: Map<string, FusionCycleGroup>;
 }
 
 export interface FusionRootPath {
@@ -71,12 +96,22 @@ export function edgeKey(materialPet: string, productPet: string): string {
 
 /** 反應內容簽名（去重用；不含 id／source） */
 export function reactionSignature(r: Pick<FusionReaction, 'materials' | 'products' | 'npc'>): string {
+  const slotSignature = (s: FusionSlot): string =>
+    [
+      s.kind,
+      s.symbol,
+      s.qty ?? '',
+      s.prob ?? '',
+      s.levelCondition ?? '',
+      s.level ?? '',
+      s.conditionNote ?? '',
+    ].join('\t');
   const mats = r.materials
-    .map((m) => `${m.kind}\t${m.symbol}\t${m.qty ?? ''}`)
+    .map(slotSignature)
     .sort()
     .join('|');
   const prods = r.products
-    .map((p) => `${p.kind}\t${p.symbol}\t${p.qty ?? ''}\t${p.prob ?? ''}`)
+    .map(slotSignature)
     .sort()
     .join('|');
   return `${mats}#${prods}#${r.npc}`;

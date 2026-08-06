@@ -5,10 +5,10 @@
  * 本檔 re-export 舊名稱，避免外部 import 大改。
  *
  * 架構（務必遵守）：
- * 1. 多來源 adapter 各自 lower 成 FusionReaction
+ * 1. 正規化合成途徑三表 lower 成 FusionReaction
  * 2. compile 去重、建 byProduct / parents / edgeReactions
  * 3. query 只讀編譯圖：全部根 + 完整向下展開（不挑主配方）
- * 4. 新來源：加 adapter + compile 註冊，勿在此旁路塞邏輯
+ * 4. 新配方加入資料三表，勿在此旁路塞邏輯
  */
 export {
   buildFusionTreeFromGraph,
@@ -16,15 +16,15 @@ export {
   findFusionRoots,
   findFusionRootPaths,
   listFusionParents,
-  setHandwrittenFusionTrees,
   resetFusionGraph,
   fusionGraphStats,
   getReactionsForProduct,
+  getFusionCycleGroupForPet,
   compileFusionGraph,
   normalizePetName,
   type FusionReaction,
   type FusionRootPath,
-  type HandwrittenTreeProvider,
+  type FusionCycleGroup,
   type CompiledFusionGraph,
 } from './fusion';
 

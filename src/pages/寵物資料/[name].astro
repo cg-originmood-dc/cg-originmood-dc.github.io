@@ -6,6 +6,7 @@
  */
 import Base from '../../layouts/Base.astro';
 import FusionTree from '../../components/FusionTree.astro';
+import FusionCycleGroup from '../../components/FusionCycleGroup.astro';
 import PetElementDisplay from '../../components/PetElementDisplay.astro';
 import {
   listPets,
@@ -38,6 +39,7 @@ import {
 import { skillPath } from '../../lib/skills';
 import { resolveSkillToken } from '../../lib/skillLevelNames';
 import { renderCell } from '../../lib/richtext';
+import { getFusionCycleGroupForPet } from '../../lib/fusion';
 
 export function getStaticPaths() {
   return listPets().map((p) => ({ params: { name: p.名稱 } }));
@@ -78,6 +80,7 @@ const growJson = grow ? JSON.stringify(grow) : 'null';
 const { tree: fusionRoot, hasFullData: hasFusionData } = pet
   ? resolveFusionTree(pet.名稱, img)
   : { tree: null as any, hasFullData: false };
+const fusionCycle = pet ? getFusionCycleGroupForPet(pet.名稱) : null;
 
 /** 相關合成活動（活動表錨點／常態改造／購買 NPC 等，不區分資料來源標籤） */
 const synthesisActivities = pet ? listActivitiesForPet(pet.名稱) : [];
@@ -502,6 +505,26 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
             </td>
           </tr>
         </table>
+
+        {
+          fusionCycle && (
+            <table class="info-table info-table--fusion-cycle">
+              <tr class="head">
+                <td>明確配方循環</td>
+              </tr>
+              <tr>
+                <td>
+                  <FusionCycleGroup
+                    group={fusionCycle.group}
+                    reactions={fusionCycle.reactions}
+                    currentName={pet.名稱}
+                    base={base}
+                  />
+                </td>
+              </tr>
+            </table>
+          )
+        }
 
         {/* 9. 相關合成活動 */}
         {
