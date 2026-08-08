@@ -30,16 +30,53 @@ const changelog = (loadDataset('練功地點列表-更新記錄')?.rows ?? []).m
   by: (r['提供者'] ?? '').trim(),
 }));
 
-const COND_KINDS: Record<string, string> = {
-  任務: 'quest',
-  物品: 'item',
-  稱號: 'title',
-  等級: 'level',
-  費用: 'fee',
-  密語: 'pass',
-  隊伍: 'party',
-  時段: 'time',
+/**
+ * 進入條件的類型表：一種條件一筆設定，畫面需要知道的事都在這裡。
+ *
+ * 這張表是「錦上添花」用的，不是規格檢查：
+ * 進入條件欄本來就允許直接寫白話（「需 S 階且角色滿 100 級」「A 或 B 擇一」），
+ * 那些照樣會完整顯示，只是沒有句型、沒有顏色、排在有登記的條件後面。
+ * 補資料的玩家不需要知道有類型這回事，寫得出來就會出現在頁面上。
+ *
+ * 有登記的類型多做三件事：值只存純值（任務欄寫「二等勳章」不是「解完二等
+ * 勳章」、時段欄寫「夜間」不是「僅限夜間」），由 phrase 統一套句型、給顏色、
+ * 給固定排序——好處是同類條件全站講法一致，改講法也只改這裡一處。
+ *
+ * 要讓某種條件享有這些待遇，在這裡加一筆即可（例如
+ * `隊伍: { order: 5, phrase: (v) => `隊伍 ${v}`, color: '#00838f' }`），
+ * 句型、顏色、排序、標籤長度上限會同時生效，不必再去別處補登記。
+ *
+ * order 的邏輯：角色自身條件（等級→階級→稱號）→ 事前準備（任務→物品）
+ * → 到場相關（時段→傳送限制→費用→密語）。資料層不用管儲存順序，這裡排。
+ * color 留空＝用預設文字色；等級／階級因為最常出現，用低飽和色不搶戲。
+ */
+interface CondType {
+  order: number;
+  phrase: (value: string) => string;
+  color: string;
+}
+
+const COND_TYPES: Record<string, CondType> = {
+  等級: { order: 0, phrase: (v) => `等級 ${v}`, color: '#9d5c5c' },
+  階級: { order: 1, phrase: (v) => `${v} 階級`, color: '#5c6494' },
+  稱號: { order: 2, phrase: (v) => `擁有 ${v} 稱號`, color: '#6a1b9a' },
+  任務: { order: 3, phrase: (v) => `需完成 ${v}`, color: '#0d47a1' },
+  物品: { order: 4, phrase: (v) => `持有 ${v}`, color: '#1b5e20' },
+  時段: { order: 5, phrase: (v) => `${v}時段`, color: '#8d6e00' },
+  傳送限制: { order: 6, phrase: (v) => `傳送限制 ${v}`, color: '' },
+  費用: { order: 7, phrase: (v) => v, color: '#8d6e00' },
+  密語: { order: 8, phrase: (v) => `密語「${v}」`, color: '#00695c' },
+  職業: { order: 9, phrase: (v) => `${v} 職業`, color: '' },
 };
+
+/**
+ * 沒登記在上表的條件（白話敘述、擇一條件、還沒登記的新標籤）共用這組：
+ * 原樣完整顯示、排在最後、不上色。資料一定看得到，只是少了那三項加工。
+ */
+const COND_FALLBACK: CondType = { order: 99, phrase: (v) => v, color: '' };
+
+/** 標籤最長幾個字——由表上最長的 key 決定，加新標籤不用回頭改這裡 */
+const COND_LABEL_MAX = Math.max(...Object.keys(COND_TYPES).map((k) => k.length));
 
 const split = (v: string) => v.split(LIST_SEP).map((s) => s.trim()).filter(Boolean);
 
@@ -55,6 +92,9 @@ const spots = rows.map((r) => {
     abbr: get('簡稱'),
     mobs: get('怪物'),
     mobLv: get('怪物等級'),
+    // 練技點是拿來練技能熟練度的，不是練經驗——這欄放的是「帶去練技的角色等級」，
+    // 跟左側徽章的「適合等級」（練經驗用）意義不同，只有練技點才有值，其餘留空。
+    skillLv: get('練技等級'),
     mobCount: get('一次幾隻'),
     crystals: split(get('建議水晶')),
     notes: split(get('註')),
@@ -64,14 +104,13 @@ const spots = rows.map((r) => {
       .map((s) => s.trim())
       .filter(Boolean)
       .map((part) => {
-        const m = part.match(/^([^：]{1,3})：(.+)$/);
-        const label = m && COND_KINDS[m[1]] ? m[1] : '';
-        return {
-          kind: label ? COND_KINDS[label] : 'other',
-          label,
-          html: renderCell(label ? m![2].trim() : part, base),
-        };
-      }),
+        const m = part.match(new RegExp(`^([^：]{1,${COND_LABEL_MAX}})：(.+)$`));
+        const type = m ? COND_TYPES[m[1]] : undefined;
+        // 認得的標籤才拆掉冒號套句型；認不得就整段原樣顯示
+        const text = type ? type.phrase(m![2].trim()) : COND_FALLBACK.phrase(part);
+        return { ...(type ?? COND_FALLBACK), html: renderCell(text, base) };
+      })
+      .sort((a, b) => a.order - b.order),
   };
 });
 
@@ -85,20 +124,35 @@ const routes = routeRows
   .map((r) => ({ ...r, empty: !spots.some((s) => s.routes.includes(r.name)) }));
 
 /**
- * 分區：順序固定，五區各用不同色系（綠→青→藍→紫→棕）。
+ * 分區：順序固定，六區各用不同色系（綠→青→藍→紫→棕→桃）。
  * 每個色都做過白字對比檢查（全部 ≥5:1），徽章用實心色配白字。
  *
  * 注意：綠↔青、藍↔紫這兩組在這個明度下先天接近（色盲模擬 ΔE 6–8），
  * 單靠顏色不足以辨識。所以每一區都必須保留文字標題（新手區／低等區…），
  * 徽章本身也帶等級數字——顏色只是輔助，不是唯一線索。要拿掉標題前請三思。
+ *
+ * 練技區是特例：不是照等級分層，是「練技能熟練度」這個用途獨立成一區，
+ * 放在最後——裡面每筆地點的等級徽章是各自的技能經驗上限，差距很大
+ * （≤40 到 ≤98 都有），所以標題不寫等級區間，而是解釋徽章代表什麼。
+ *
+ * range 是篩選按鈕上的短標（空間小），caption 是分區標題的說明（可長一點）；
+ * 一般分區的 caption 就是「Lv ＋ 區間」，練技區則是講技能經驗的規則。
  */
-const ZONE_ORDER = ['新手區', '低等區', '中等區', '高等區', '高手區'];
-const ZONE_META: Record<string, { range: string; deep: string; tint: string; ink: string }> = {
-  新手區: { range: '1–20', deep: '#2e7d32', tint: '#f7f8f7', ink: '#2e7d32' },
-  低等區: { range: '20–50', deep: '#00796b', tint: '#f6f8f8', ink: '#00695c' },
-  中等區: { range: '50–70', deep: '#1565c0', tint: '#f6f8fa', ink: '#1565c0' },
-  高等區: { range: '70–90', deep: '#7b1fa2', tint: '#f9f7fa', ink: '#7b1fa2' },
-  高手區: { range: '90 以上', deep: '#8d4a26', tint: '#faf8f6', ink: '#8d4a26' },
+const ZONE_ORDER = ['新手區', '低等區', '中等區', '高等區', '高手區', '練技區'];
+type ZoneMeta = { range: string; caption: string; deep: string; tint: string; ink: string };
+const ZONE_META: Record<string, ZoneMeta> = {
+  新手區: { range: '1–20', caption: 'Lv 1–20', deep: '#2e7d32', tint: '#f7f8f7', ink: '#2e7d32' },
+  低等區: { range: '20–50', caption: 'Lv 20–50', deep: '#00796b', tint: '#f6f8f8', ink: '#00695c' },
+  中等區: { range: '50–70', caption: 'Lv 50–70', deep: '#1565c0', tint: '#f6f8fa', ink: '#1565c0' },
+  高等區: { range: '70–90', caption: 'Lv 70–90', deep: '#7b1fa2', tint: '#f9f7fa', ink: '#7b1fa2' },
+  高手區: { range: '90 以上', caption: 'Lv 90 以上', deep: '#8d4a26', tint: '#faf8f6', ink: '#8d4a26' },
+  練技區: {
+    range: '練技',
+    caption: '角色等級在標示值以內才有技能經驗（怪物等級 = 角色等級 ÷ 2 − 3）',
+    deep: '#ad1457',
+    tint: '#fdf6f9',
+    ink: '#ad1457',
+  },
 };
 const zones = ZONE_ORDER.filter((z) => spots.some((s) => s.zone === z)).map((z) => ({
   name: z,
@@ -164,7 +218,7 @@ const sources = [...sourceLinks].map(([href, text]) => ({ href, text }));
       style={`--zone-deep:${zone.deep};--zone-tint:${zone.tint};--zone-ink:${zone.ink}`}
     >
       <h3 class="lv__zonehead">
-        {zone.name} <span>Lv {zone.range}</span>
+        {zone.name} <span>{zone.caption}</span>
       </h3>
 
       {spots
@@ -172,10 +226,18 @@ const sources = [...sourceLinks].map(([href, text]) => ({ href, text }));
         .map((spot) => (
           // 所屬路線只作為篩選用的資料屬性（data-routes），不顯示在列上
           <div class="lv__row" data-routes={spot.routes.join(',')} data-row-zone={spot.zone}>
-            {/* 左欄是「玩家適合練的等級」，怪物等級屬於明細 */}
-            <span class:list={['lv__lv', { 'lv__lv--todo': !spot.fitLv || spot.fitLv === '-' }]}>
-              {spot.fitLv || '待補'}
-            </span>
+            {/* 左欄的等級徽章：練功點顯示「適合等級」，練技點顯示「練技等級」
+                （兩欄互斥、永遠只有一欄有值），都沒有就維持 -。
+                練技等級存的是保守上限（=(最低怪+3)×2，在此等級內每隻怪都給
+                技能經驗），顯示成 ≤ N；再往上會逐隻失效，細節寫在明細行。 */}
+            {spot.skillLv ? (
+              // 徽章底色吃所在分區的 --zone-deep（練技區是桃紅），不必另設樣式
+              <span class="lv__lv">≤ {spot.skillLv}</span>
+            ) : (
+              <span class:list={['lv__lv', { 'lv__lv--todo': !spot.fitLv || spot.fitLv === '-' }]}>
+                {spot.fitLv || '待補'}
+              </span>
+            )}
 
             <div class="lv__name">
               <span class="lv__place">{spot.place}</span>
@@ -186,10 +248,18 @@ const sources = [...sourceLinks].map(([href, text]) => ({ href, text }));
 
             <div class="lv__detail">
               {spot.mobs && <p class="lv__mobs">{spot.mobs}</p>}
+              {/* 缺值填「待補」的欄位不能硬套「怪 ＿ 等」「一次 ＿ 隻」句型，
+                  會渲染成「一次 待補 隻」這種怪句，改寫成「數量待補」等文案 */}
               {(spot.mobLv || spot.mobCount) && (
                 <p class="lv__line">
-                  {spot.mobLv && <span>怪 {spot.mobLv} 等</span>}
-                  {spot.mobCount && <span>一次 {spot.mobCount} 隻</span>}
+                  {spot.mobLv &&
+                    (spot.mobLv === '待補' ? <span>等級待補</span> : <span>怪 {spot.mobLv} 等</span>)}
+                  {spot.mobCount &&
+                    (spot.mobCount === '待補' ? (
+                      <span>數量待補</span>
+                    ) : (
+                      <span>一次 {spot.mobCount} 隻</span>
+                    ))}
                 </p>
               )}
               {spot.notes.map((n) => (
@@ -202,10 +272,13 @@ const sources = [...sourceLinks].map(([href, text]) => ({ href, text }));
 
             <div class="lv__extra">
               <div class="lv__crystals">
-                {spot.crystals.length ? (
-                  spot.crystals.map((c) => <span class="lv__crystal">{c}</span>)
-                ) : (
+                {/* 「待補」不是一種水晶，不能渲染成水晶 chip，用灰字顯示 */}
+                {spot.crystals.length === 0 ? (
                   <span class="lv__blank">—</span>
+                ) : spot.crystals.length === 1 && spot.crystals[0] === '待補' ? (
+                  <span class="lv__blank">待補</span>
+                ) : (
+                  spot.crystals.map((c) => <span class="lv__crystal">{c}</span>)
                 )}
               </div>
 
@@ -218,12 +291,15 @@ const sources = [...sourceLinks].map(([href, text]) => ({ href, text }));
                     <span set:html={renderCell(spot.route, base)} />
                   )}
                 </p>
+                {/* 條件用句子呈現，不用「標籤＋徽章」；顏色由 COND_TYPES 決定，
+                    留空就吃 .lv__condtext 的預設文字色 */}
                 {spot.conds.map((cond) => (
                   <p class="lv__cond">
-                    <span class:list={['lv__badge', `lv__badge--${cond.kind}`]}>
-                      {cond.label || '條件'}
-                    </span>
-                    <span set:html={cond.html} />
+                    <span
+                      class="lv__condtext"
+                      style={cond.color ? `color:${cond.color}` : undefined}
+                      set:html={cond.html}
+                    />
                   </p>
                 ))}
               </div>
@@ -598,8 +674,9 @@ const sources = [...sourceLinks].map(([href, text]) => ({ href, text }));
     color: var(--text-3);
   }
 
+  /* 待補是缺資料的中性狀態，不是警告，用灰字就好 */
   .lv__todo {
-    color: #b71c1c;
+    color: var(--text-3);
   }
 
   .lv__side .lv__line {
@@ -614,46 +691,10 @@ const sources = [...sourceLinks].map(([href, text]) => ({ href, text }));
     line-height: 1.7;
   }
 
-  .lv__badge {
-    flex: none;
-    padding: 0 0.45em;
-    border: 1px solid #ddd;
-    border-radius: 999px;
-    background: #f5f5f5;
-    color: #555;
-    font-size: 0.78rem;
-    white-space: nowrap;
-  }
-
-  .lv__badge--quest {
-    border-color: #90caf9;
-    background: #e3f2fd;
-    color: #0d47a1;
-  }
-
-  .lv__badge--item {
-    border-color: #a5d6a7;
-    background: #e8f5e9;
-    color: #1b5e20;
-  }
-
-  .lv__badge--title {
-    border-color: #ce93d8;
-    background: #f3e5f5;
-    color: #6a1b9a;
-  }
-
-  .lv__badge--fee,
-  .lv__badge--time {
-    border-color: #ecdf9a;
-    background: #fffbe8;
-    color: #8d6e00;
-  }
-
-  .lv__badge--pass {
-    border-color: #80cbc4;
-    background: #e0f2f1;
-    color: #00695c;
+  /* 條件句的預設色；各類型的顏色寫在 COND_TYPES，由 inline style 覆蓋。
+     那些顏色白底上對比都 ≥5:1，改色時請一併確認。 */
+  .lv__condtext {
+    color: var(--text-2);
   }
 
   /* ── 頁尾：來源清單 ── */
