@@ -605,6 +605,39 @@ main {
   color: var(--text-2);
 }
 
+/* 產品名稱下方的材料等級小字（頁面 frontmatter 開 materialLevels 才有）。
+   依採集技能分組（狩獵：蔥2、醬油3…），材料名連到道具頁 */
+.dataset__mat-lv {
+  display: block;
+  /* 名稱都很短，欄寬會縮到讓標注折成三四行；撐一個下限讓它兩行內讀完 */
+  min-width: 12em;
+  max-width: 18em;
+  margin-top: 2px;
+  margin-inline: auto;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--text-3);
+  white-space: normal;
+}
+
+.dataset__mat-lv-group {
+  display: inline-block;
+}
+
+.dataset__mat-lv-group + .dataset__mat-lv-group {
+  margin-left: 0.75em;
+}
+
+.dataset__mat-lv a {
+  color: var(--text-2);
+  text-decoration: none;
+}
+
+.dataset__mat-lv a:hover {
+  color: var(--link);
+  text-decoration: underline;
+}
+
 /* 第一欄通常是名稱，靠左比較好讀 */
 .dataset tbody td:first-child {
   text-align: left;

@@ -51,7 +51,7 @@ const hasProse = entry.body != null && entry.body.trim().length > 0;
       return (
         <>
           {heading && <h2 class="dataset__title">{heading}</h2>}
-          <DataTable name={name} />
+          <DataTable name={name} materialLevels={entry.data.materialLevels} />
         </>
       );
     })

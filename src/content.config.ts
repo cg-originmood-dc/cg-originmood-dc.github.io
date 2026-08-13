@@ -19,6 +19,11 @@ const pages = defineCollection({
     breadcrumb: z.array(z.string()).default([]),
     /** 這頁要渲染哪些 content/data/*.csv 資料集 */
     datasets: z.array(z.string()).default([]),
+    /**
+     * 選填：在資料表產品（名稱欄）下方標注材料欄各項的等級。
+     * 等級照名稱查道具庫，介面不寫死任何品名；道具庫查不到或沒等級的材料不標。
+     */
+    materialLevels: z.boolean().default(false),
     /** 選填：手動排序權重，數字小的排前面 */
     order: z.number().optional(),
     /** 選填：從導覽隱藏 */

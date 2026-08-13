@@ -3,6 +3,7 @@ import { loadDataset, LIST_SEP, type Dataset } from '../lib/datasets';
 import { thumbOf } from '../lib/thumbs';
 import { renderCell } from '../lib/richtext';
 import { hasPet } from '../lib/pets';
+import { getItem } from '../lib/items';
 
 /**
  * 把 content/data/<name>.csv 渲染成可搜尋、可篩選、可排序的表格。
@@ -27,6 +28,9 @@ import { hasPet } from '../lib/pets';
  */
 const QUANTITY_LIST = /^[^、]+\(\d+\)(?:、[^、]+\(\d+\))+$/;
 
+/** 同上，但也接受只有一項的格子（水龍料理只有一種材料）。認材料欄用 */
+const MATERIAL_LIST = /^[^、]+\(\d+\)(?:、[^、]+\(\d+\))*$/;
+
 interface Props {
   /** content/data/<name>.csv 檔名；與 dataset 擇一 */
   name?: string;
@@ -34,8 +38,10 @@ interface Props {
   dataset?: Dataset;
   /** 篩選欄改渲染成分頁籤（全部＋各值）取代下拉選單 */
   filterTabs?: boolean;
+  /** 在名稱欄下方標注材料欄各項的等級（查道具庫），由頁面 frontmatter 開啟 */
+  materialLevels?: boolean;
 }
-const { name, dataset: given, filterTabs = false } = Astro.props as Props;
+const { name, dataset: given, filterTabs = false, materialLevels = false } = Astro.props as Props;
 const dataset = given ?? (name ? loadDataset(name) : null);
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const src = (v: string) => (v.startsWith('/') ? base + v : v);
@@ -60,6 +66,41 @@ const petDetailHref = (petName: string) =>
  * 其他表的圖是佐證用的存檔截圖，放最後才不會把名稱、材料往右擠。
  */
 const imageFirst = dataset ? PET_NAME_DATASETS.has(dataset.name) : false;
+
+/**
+ * 材料等級標注（頁面 frontmatter 開 materialLevels 才有）。
+ *
+ * 材料欄照內容認，不寫死欄位名字：整欄非空值都是「名稱(數量)」的串才算。
+ * 等級照名稱查道具庫，依道具的子分類（狩獵／伐木／料理…）分組標示——
+ * 不同技能的等級數字不可比，混在一起會把伐木2的檸檬草讀成狩獵2。
+ * 道具庫查不到或沒等級的材料（瓶子、水龍的鰭…）不標，寧缺勿錯。
+ */
+const matCol =
+  materialLevels && dataset && cols.includes('名稱')
+    ? (cols.find((c) => {
+        const filled = dataset.rows.map((r) => (r[c] ?? '').trim()).filter(Boolean);
+        return filled.length > 0 && filled.every((v) => MATERIAL_LIST.test(v));
+      }) ?? null)
+    : null;
+type MatGroup = { skill: string; items: { name: string; level: string; href: string }[] };
+const matLevels = (materials: string): MatGroup[] => {
+  const groups: MatGroup[] = [];
+  for (const part of materials.split('、')) {
+    const matName = part.replace(/\(\d+\)$/, '').trim();
+    const item = matName ? getItem(matName) : undefined;
+    const level = (item?.等級 ?? '').trim();
+    if (!item || !level) continue;
+    const skill = (item.子分類 || item.分類).trim();
+    let group = groups.find((g) => g.skill === skill);
+    if (!group) groups.push((group = { skill, items: [] }));
+    group.items.push({
+      name: matName,
+      level,
+      href: `${base}/道具總覽/${encodeURIComponent(matName)}`,
+    });
+  }
+  return groups;
+};
 ---
 
 {
@@ -187,6 +228,31 @@ const imageFirst = dataset ? PET_NAME_DATASETS.has(dataset.name) : false;
                         </td>
                       );
                     }
+                    // 產品下方的小字材料等級。data-sort 帶原始名稱，
+                    // 排序與搜尋讀它而不是整格文字，免得標注跟著被比較
+                    if (c === '名稱' && matCol) {
+                      const groups = matLevels(row[matCol] ?? '');
+                      if (groups.length) {
+                        return (
+                          <td data-sort={value}>
+                            {value}
+                            <span class="dataset__mat-lv">
+                              {groups.map((g) => (
+                                <span class="dataset__mat-lv-group">
+                                  {g.skill}：
+                                  {g.items.map((it, i) => (
+                                    <>
+                                      {i > 0 && '、'}
+                                      <a href={it.href}>{it.name}{it.level}</a>
+                                    </>
+                                  ))}
+                                </span>
+                              ))}
+                            </span>
+                          </td>
+                        );
+                      }
+                    }
                     const linked = /\[[^\]]+\]\([^)]+\)/.test(value);
                     // 一格好幾條的欄位（採集地點最多九個點）拆成一行一條。
                     // 串成一行的話括號座標一路接下去，要數到第幾個斜線才知道在看哪一個點。
@@ -262,11 +328,13 @@ const imageFirst = dataset ? PET_NAME_DATASETS.has(dataset.name) : false;
         tr,
         Array.from(tr.cells)
           .filter((td) => !td.classList.contains('col-act'))
-          // 一行一條的欄位要自己補回分隔空白，textContent 會把相鄰兩條黏成一個字串
+          // 一行一條的欄位要自己補回分隔空白，textContent 會把相鄰兩條黏成一個字串。
+          // 帶 data-sort 的格子（名稱下方標了材料等級）只搜原始值，標注是衍生的不入索引
           .map((td) =>
-            td.classList.contains('is-list')
+            td.dataset.sort ??
+            (td.classList.contains('is-list')
               ? Array.from(td.children, (n) => n.textContent).join(' ')
-              : td.textContent,
+              : td.textContent),
           )
           .join(' ')
           .toLowerCase(),
@@ -334,8 +402,9 @@ const imageFirst = dataset ? PET_NAME_DATASETS.has(dataset.name) : false;
 
         const collator = new Intl.Collator('zh-Hant', { numeric: true, sensitivity: 'base' });
         rows.sort((a, b) => {
-          const x = a.cells[cell]?.textContent?.trim() ?? '';
-          const y = b.cells[cell]?.textContent?.trim() ?? '';
+          // 格子有 data-sort（名稱下方帶材料等級標注）就比它，不比整格文字
+          const x = a.cells[cell]?.dataset.sort ?? a.cells[cell]?.textContent?.trim() ?? '';
+          const y = b.cells[cell]?.dataset.sort ?? b.cells[cell]?.textContent?.trim() ?? '';
           return (asc ? 1 : -1) * collator.compare(x, y);
         });
         rows.forEach((r) => tbody.appendChild(r));
