@@ -22,6 +22,22 @@ const routeRows = loadDataset('練功路線')?.rows ?? [];
  * 但改了什麼、誰提供的，記在這份獨立的更新記錄裡，列在頁尾——
  * 修正不會憑空消失在 git log 裡，讀者也看得到是誰幫忙校正的。
  */
+/**
+ * 等級差（玩家 − 怪物）對經驗百分比的對照表。「適合等級」的推算基準
+ * 就是這張表的 ≥80% 區間（-5～+6），放在頁尾供讀者查證與自行推算。
+ * 滿額（100%）與 80% 以上的列由數值推導上色，不另存標記。
+ */
+const expRows = (loadDataset('等級差經驗')?.rows ?? []).map((r) => {
+  const pct = Number((r['經驗百分比'] ?? '').trim());
+  return {
+    diff: (r['等級差'] ?? '').trim(),
+    pct,
+    note: (r['備註'] ?? '').trim(),
+    full: pct === 100,
+    good: pct >= 80 && pct < 100,
+  };
+});
+
 const changelog = (loadDataset('練功地點列表-更新記錄')?.rows ?? []).map((r) => ({
   date: (r['日期'] ?? '').trim(),
   place: (r['地點'] ?? '').trim(),
@@ -309,6 +325,26 @@ const sources = [...sourceLinks].map(([href, text]) => ({ href, text }));
     </section>
   ))}
 
+  {expRows.length > 0 && (
+    <details
+      class="lv__exp"
+      data-exp-root
+      data-exp={JSON.stringify(Object.fromEntries(expRows.map((r) => [r.diff, r.pct])))}
+    >
+      <summary>等級差經驗對照（適合等級的推算基準）</summary>
+      <div class="lv__exp-slider">
+        <label for="lv-exp-level">你的等級</label>
+        <input id="lv-exp-level" type="range" min="5" max="140" value="20" data-exp-slider />
+        <b data-exp-level>Lv.20</b>
+      </div>
+      <p class="lv__exp-note">怪物由強到弱排：</p>
+      <div class="lv__exp-tiers" data-exp-tiers></div>
+      <p class="lv__exp-foot">
+        最佳區永遠是「你的等級 ～ 你的等級＋5」。每差 1 等經驗變動 3.33%，更遠依同規則遞減。
+      </p>
+    </details>
+  )}
+
   {sources.length > 0 && (
     <aside class="lv__sources">
       <span class="lv__sources-label">資料來源</span>
@@ -414,6 +450,107 @@ const sources = [...sourceLinks].map(([href, text]) => ({ href, text }));
     }
 
     apply();
+  });
+</script>
+
+<script>
+  // 等級差經驗對照：滑桿選等級，五個強弱帶即時重算
+  document.querySelectorAll<HTMLElement>('[data-exp-root]').forEach((root) => {
+    const expMap: Record<string, number> = JSON.parse(root.dataset.exp ?? '{}');
+    const slider = root.querySelector<HTMLInputElement>('[data-exp-slider]')!;
+    const levelEl = root.querySelector<HTMLElement>('[data-exp-level]')!;
+    const tiersEl = root.querySelector<HTMLElement>('[data-exp-tiers]')!;
+
+    const range = (from: number, to: number) => {
+      const out: number[] = [];
+      const step = from <= to ? 1 : -1;
+      for (let n = from; step > 0 ? n <= to : n >= to; n += step) if (n >= 1) out.push(n);
+      return out;
+    };
+
+    type Tier = {
+      cls: string;
+      badge: string;
+      pct: string;
+      desc: string;
+      label: (L: number) => string;
+      sub: string;
+      mobs: (L: number) => number[];
+      you?: boolean;
+    };
+    const TIERS: Tier[] = [
+      {
+        cls: 'is-bad',
+        badge: '糟',
+        pct: '≤63%',
+        desc: '打得贏也虧：又危險，經驗又跳水',
+        label: (L) => `Lv.${L + 6} ↑`,
+        sub: '比你強 6 等以上',
+        mobs: (L) => range(L + 6, L + 10),
+      },
+      {
+        cls: 'is-best',
+        badge: '最佳',
+        pct: '100%',
+        desc: '拿滿經驗，就打這一段',
+        label: (L) => `Lv.${L}～${L + 5}`,
+        sub: '跟你同等～強 5 等',
+        mobs: (L) => range(L, L + 5),
+        you: true,
+      },
+      {
+        cls: 'is-good',
+        badge: '佳',
+        pct: '97～83%',
+        desc: '還算划算，打得快就值得',
+        label: (L) => `Lv.${L - 5}～${L - 1}`,
+        sub: '比你弱 1～5 等',
+        mobs: (L) => range(L - 1, L - 5),
+      },
+      {
+        cls: 'is-so',
+        badge: '次佳',
+        pct: '80～70%',
+        desc: '開始虧了，能往上就往上',
+        label: (L) => `Lv.${L - 9}～${L - 6}`,
+        sub: '比你弱 6～9 等',
+        mobs: (L) => range(L - 6, L - 9),
+      },
+      {
+        cls: 'is-bad',
+        badge: '糟',
+        pct: '≤67%',
+        desc: '太弱了，該換地方練',
+        label: (L) => `Lv.${L - 10} ↓`,
+        sub: '比你弱 10 等以上',
+        mobs: (L) => range(L - 10, L - 15),
+      },
+    ];
+
+    const render = () => {
+      const L = Number(slider.value);
+      levelEl.textContent = `Lv.${L}`;
+      tiersEl.innerHTML = '';
+      for (const t of TIERS) {
+        const row = document.createElement('div');
+        row.className = `lv__exp-tier ${t.cls}`;
+        const chips = t.mobs(L)
+          .map((mob) => {
+            const pct = expMap[String(L - mob)];
+            return pct == null ? '' : `<i>Lv.${mob} → ${pct}%</i>`;
+          })
+          .join('');
+        row.innerHTML =
+          `<div class="t-range"><b>${t.label(L)}</b><span>${t.sub}</span></div>` +
+          `<div class="t-rate"><em>${t.badge}</em><b>${t.pct}</b></div>` +
+          `<div class="t-body"><p>${t.desc}</p><div class="t-chips">${chips}</div></div>` +
+          (t.you ? `<span class="t-you">你在 Lv.${L}</span>` : '');
+        tiersEl.append(row);
+      }
+    };
+
+    slider.addEventListener('input', render);
+    render();
   });
 </script>
 
@@ -695,6 +832,233 @@ const sources = [...sourceLinks].map(([href, text]) => ({ href, text }));
      那些顏色白底上對比都 ≥5:1，改色時請一併確認。 */
   .lv__condtext {
     color: var(--text-2);
+  }
+
+  /* ── 頁尾：等級差經驗對照（滑桿＋強弱帶） ── */
+  .lv__exp {
+    margin-block: 2rem 0;
+    font-size: 0.9rem;
+  }
+
+  .lv__exp summary {
+    cursor: pointer;
+    font-weight: 700;
+    color: var(--text-2);
+  }
+
+  .lv__exp-slider {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 0.8rem 0 1rem;
+    padding: 0.8rem 1.1rem;
+    border: 1px solid #c9d8ea;
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  .lv__exp-slider label {
+    flex: none;
+    font-weight: 700;
+  }
+
+  .lv__exp-slider input {
+    flex: 1;
+    accent-color: #1565c0;
+  }
+
+  .lv__exp-slider b {
+    flex: none;
+    min-width: 3.5em;
+    text-align: right;
+    font-size: 1.3rem;
+    color: #1565c0;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .lv__exp-note {
+    margin: 0 0 0.5rem;
+    color: var(--text-3);
+    font-size: 0.85rem;
+  }
+
+  .lv__exp-tiers {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .lv__exp-tier {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(120px, 150px) minmax(80px, 100px) 1fr;
+    gap: 0.4rem 1rem;
+    align-items: center;
+    padding: 0.8rem 1.1rem;
+    border: 1px solid;
+    border-radius: 8px;
+  }
+
+  .lv__exp-tier .t-range b {
+    display: block;
+    font-size: 1.05rem;
+  }
+
+  .lv__exp-tier .t-range span {
+    font-size: 0.8rem;
+    color: var(--text-2);
+  }
+
+  .lv__exp-tier .t-rate {
+    border-left: 1px dashed rgba(0, 0, 0, 0.12);
+    padding-left: 1rem;
+  }
+
+  .lv__exp-tier .t-rate em {
+    display: inline-block;
+    padding: 0 0.6em;
+    border-radius: 999px;
+    font-style: normal;
+    font-size: 0.76rem;
+    font-weight: 700;
+  }
+
+  .lv__exp-tier .t-rate b {
+    display: block;
+    font-size: 1.05rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .lv__exp-tier .t-body p {
+    margin: 0 0 0.35rem;
+    font-weight: 700;
+    font-size: 0.88rem;
+  }
+
+  .lv__exp-tier .t-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .lv__exp-tier .t-chips i {
+    padding: 0.15rem 0.6rem;
+    border: 1px solid;
+    border-radius: 6px;
+    background: #fff;
+    font-style: normal;
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .lv__exp-tier .t-you {
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    padding: 0.15rem 0.7rem;
+    border-radius: 0 8px 0 8px;
+    background: #2c6e49;
+    color: #fff;
+    font-size: 0.76rem;
+    font-weight: 700;
+  }
+
+  /* 各強弱帶配色 */
+  .lv__exp-tier.is-bad {
+    background: #fdf5f3;
+    border-color: #f0d5d0;
+  }
+
+  .lv__exp-tier.is-bad .t-rate em {
+    border: 1px solid #ecc8c0;
+    color: #b0432f;
+    background: #fff;
+  }
+
+  .lv__exp-tier.is-bad .t-rate b {
+    color: #b0432f;
+  }
+
+  .lv__exp-tier.is-bad .t-chips i {
+    border-color: #ecc8c0;
+    color: #b0432f;
+  }
+
+  .lv__exp-tier.is-best {
+    background: #eaf4e6;
+    border: 2px solid #2c6e49;
+  }
+
+  .lv__exp-tier.is-best .t-rate em {
+    background: #2c6e49;
+    color: #fff;
+  }
+
+  .lv__exp-tier.is-best .t-rate b {
+    color: #2c6e49;
+  }
+
+  .lv__exp-tier.is-best .t-chips i {
+    background: #2c6e49;
+    border-color: #2c6e49;
+    color: #fff;
+  }
+
+  .lv__exp-tier.is-good {
+    background: #f4f9f2;
+    border-color: #dfe8db;
+  }
+
+  .lv__exp-tier.is-good .t-rate em {
+    border: 1px solid #dfe8db;
+    color: #2c6e49;
+    background: #fff;
+  }
+
+  .lv__exp-tier.is-good .t-rate b {
+    color: #2c6e49;
+  }
+
+  .lv__exp-tier.is-good .t-chips i {
+    border-color: #dfe8db;
+    color: #2c6e49;
+  }
+
+  .lv__exp-tier.is-so {
+    background: #fff8e9;
+    border-color: #eadfbc;
+  }
+
+  .lv__exp-tier.is-so .t-rate em {
+    border: 1px solid #eadfbc;
+    color: #8d6e00;
+    background: #fff;
+  }
+
+  .lv__exp-tier.is-so .t-rate b {
+    color: #8d6e00;
+  }
+
+  .lv__exp-tier.is-so .t-chips i {
+    border-color: #eadfbc;
+    color: #8d6e00;
+  }
+
+  .lv__exp-foot {
+    margin: 0.8rem 0 0;
+    color: var(--text-3);
+    font-size: 0.85rem;
+  }
+
+  @media (max-width: 700px) {
+    .lv__exp-tier {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .lv__exp-tier .t-body {
+      grid-column: 1 / -1;
+    }
   }
 
   /* ── 頁尾：來源清單 ── */
