@@ -888,178 +888,6 @@ const sources = [...sourceLinks].map(([href, text]) => ({ href, text }));
     gap: 0.5rem;
   }
 
-  .lv__exp-tier {
-    position: relative;
-    display: grid;
-    grid-template-columns: minmax(120px, 150px) minmax(80px, 100px) 1fr;
-    gap: 0.4rem 1rem;
-    align-items: center;
-    padding: 0.8rem 1.1rem;
-    border: 1px solid;
-    border-radius: 8px;
-  }
-
-  .lv__exp-tier .t-range b {
-    display: block;
-    font-size: 1.05rem;
-  }
-
-  .lv__exp-tier .t-range span {
-    font-size: 0.8rem;
-    color: var(--text-2);
-  }
-
-  .lv__exp-tier .t-rate {
-    border-left: 1px dashed rgba(0, 0, 0, 0.12);
-    padding-left: 1rem;
-  }
-
-  .lv__exp-tier .t-rate em {
-    display: inline-block;
-    padding: 0 0.6em;
-    border-radius: 999px;
-    font-style: normal;
-    font-size: 0.76rem;
-    font-weight: 700;
-  }
-
-  .lv__exp-tier .t-rate b {
-    display: block;
-    font-size: 1.05rem;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .lv__exp-tier .t-body p {
-    margin: 0 0 0.35rem;
-    font-weight: 700;
-    font-size: 0.88rem;
-  }
-
-  .lv__exp-tier .t-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem;
-  }
-
-  .lv__exp-tier .t-chips i {
-    padding: 0.15rem 0.6rem;
-    border: 1px solid;
-    border-radius: 6px;
-    background: #fff;
-    font-style: normal;
-    font-size: 0.8rem;
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-  }
-
-  .lv__exp-tier .t-you {
-    position: absolute;
-    top: -1px;
-    right: -1px;
-    padding: 0.15rem 0.7rem;
-    border-radius: 0 8px 0 8px;
-    background: #2c6e49;
-    color: #fff;
-    font-size: 0.76rem;
-    font-weight: 700;
-  }
-
-  /* 各強弱帶配色 */
-  .lv__exp-tier.is-bad {
-    background: #fdf5f3;
-    border-color: #f0d5d0;
-  }
-
-  .lv__exp-tier.is-bad .t-rate em {
-    border: 1px solid #ecc8c0;
-    color: #b0432f;
-    background: #fff;
-  }
-
-  .lv__exp-tier.is-bad .t-rate b {
-    color: #b0432f;
-  }
-
-  .lv__exp-tier.is-bad .t-chips i {
-    border-color: #ecc8c0;
-    color: #b0432f;
-  }
-
-  .lv__exp-tier.is-best {
-    background: #eaf4e6;
-    border: 2px solid #2c6e49;
-  }
-
-  .lv__exp-tier.is-best .t-rate em {
-    background: #2c6e49;
-    color: #fff;
-  }
-
-  .lv__exp-tier.is-best .t-rate b {
-    color: #2c6e49;
-  }
-
-  .lv__exp-tier.is-best .t-chips i {
-    background: #2c6e49;
-    border-color: #2c6e49;
-    color: #fff;
-  }
-
-  .lv__exp-tier.is-good {
-    background: #f4f9f2;
-    border-color: #dfe8db;
-  }
-
-  .lv__exp-tier.is-good .t-rate em {
-    border: 1px solid #dfe8db;
-    color: #2c6e49;
-    background: #fff;
-  }
-
-  .lv__exp-tier.is-good .t-rate b {
-    color: #2c6e49;
-  }
-
-  .lv__exp-tier.is-good .t-chips i {
-    border-color: #dfe8db;
-    color: #2c6e49;
-  }
-
-  .lv__exp-tier.is-so {
-    background: #fff8e9;
-    border-color: #eadfbc;
-  }
-
-  .lv__exp-tier.is-so .t-rate em {
-    border: 1px solid #eadfbc;
-    color: #8d6e00;
-    background: #fff;
-  }
-
-  .lv__exp-tier.is-so .t-rate b {
-    color: #8d6e00;
-  }
-
-  .lv__exp-tier.is-so .t-chips i {
-    border-color: #eadfbc;
-    color: #8d6e00;
-  }
-
-  .lv__exp-foot {
-    margin: 0.8rem 0 0;
-    color: var(--text-3);
-    font-size: 0.85rem;
-  }
-
-  @media (max-width: 700px) {
-    .lv__exp-tier {
-      grid-template-columns: 1fr 1fr;
-    }
-
-    .lv__exp-tier .t-body {
-      grid-column: 1 / -1;
-    }
-  }
 
   /* ── 頁尾：來源清單 ── */
   .lv__sources {
@@ -1187,3 +1015,184 @@ const sources = [...sourceLinks].map(([href, text]) => ({ href, text }));
     }
   }
 </style>
+
+<style is:global>
+  /*
+   * 等級差對照的強弱帶由 client script 動態建立，拿不到 Astro scoped style
+   * 的 hash 屬性，放在 scoped 區塊會完全不生效，所以這段獨立為 global。
+   * 選擇器都掛在 .lv__exp-tier 前綴下，不會外漏影響其他頁面。
+   */
+  .lv__exp-tier {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(120px, 150px) minmax(80px, 100px) 1fr;
+    gap: 0.4rem 1rem;
+    align-items: center;
+    padding: 0.8rem 1.1rem;
+    border: 1px solid;
+    border-radius: 8px;
+  }
+  
+  .lv__exp-tier .t-range b {
+    display: block;
+    font-size: 1.05rem;
+  }
+  
+  .lv__exp-tier .t-range span {
+    font-size: 0.8rem;
+    color: var(--text-2);
+  }
+  
+  .lv__exp-tier .t-rate {
+    border-left: 1px dashed rgba(0, 0, 0, 0.12);
+    padding-left: 1rem;
+  }
+  
+  .lv__exp-tier .t-rate em {
+    display: inline-block;
+    padding: 0 0.6em;
+    border-radius: 999px;
+    font-style: normal;
+    font-size: 0.76rem;
+    font-weight: 700;
+  }
+  
+  .lv__exp-tier .t-rate b {
+    display: block;
+    font-size: 1.05rem;
+    font-variant-numeric: tabular-nums;
+  }
+  
+  .lv__exp-tier .t-body p {
+    margin: 0 0 0.35rem;
+    font-weight: 700;
+    font-size: 0.88rem;
+  }
+  
+  .lv__exp-tier .t-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+  
+  .lv__exp-tier .t-chips i {
+    padding: 0.15rem 0.6rem;
+    border: 1px solid;
+    border-radius: 6px;
+    background: #fff;
+    font-style: normal;
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  
+  .lv__exp-tier .t-you {
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    padding: 0.15rem 0.7rem;
+    border-radius: 0 8px 0 8px;
+    background: #2c6e49;
+    color: #fff;
+    font-size: 0.76rem;
+    font-weight: 700;
+  }
+  
+  /* 各強弱帶配色 */
+  .lv__exp-tier.is-bad {
+    background: #fdf5f3;
+    border-color: #f0d5d0;
+  }
+  
+  .lv__exp-tier.is-bad .t-rate em {
+    border: 1px solid #ecc8c0;
+    color: #b0432f;
+    background: #fff;
+  }
+  
+  .lv__exp-tier.is-bad .t-rate b {
+    color: #b0432f;
+  }
+  
+  .lv__exp-tier.is-bad .t-chips i {
+    border-color: #ecc8c0;
+    color: #b0432f;
+  }
+  
+  .lv__exp-tier.is-best {
+    background: #eaf4e6;
+    border: 2px solid #2c6e49;
+  }
+  
+  .lv__exp-tier.is-best .t-rate em {
+    background: #2c6e49;
+    color: #fff;
+  }
+  
+  .lv__exp-tier.is-best .t-rate b {
+    color: #2c6e49;
+  }
+  
+  .lv__exp-tier.is-best .t-chips i {
+    background: #2c6e49;
+    border-color: #2c6e49;
+    color: #fff;
+  }
+  
+  .lv__exp-tier.is-good {
+    background: #f4f9f2;
+    border-color: #dfe8db;
+  }
+  
+  .lv__exp-tier.is-good .t-rate em {
+    border: 1px solid #dfe8db;
+    color: #2c6e49;
+    background: #fff;
+  }
+  
+  .lv__exp-tier.is-good .t-rate b {
+    color: #2c6e49;
+  }
+  
+  .lv__exp-tier.is-good .t-chips i {
+    border-color: #dfe8db;
+    color: #2c6e49;
+  }
+  
+  .lv__exp-tier.is-so {
+    background: #fff8e9;
+    border-color: #eadfbc;
+  }
+  
+  .lv__exp-tier.is-so .t-rate em {
+    border: 1px solid #eadfbc;
+    color: #8d6e00;
+    background: #fff;
+  }
+  
+  .lv__exp-tier.is-so .t-rate b {
+    color: #8d6e00;
+  }
+  
+  .lv__exp-tier.is-so .t-chips i {
+    border-color: #eadfbc;
+    color: #8d6e00;
+  }
+  
+  .lv__exp-foot {
+    margin: 0.8rem 0 0;
+    color: var(--text-3);
+    font-size: 0.85rem;
+  }
+  
+  @media (max-width: 700px) {
+    .lv__exp-tier {
+      grid-template-columns: 1fr 1fr;
+    }
+  
+    .lv__exp-tier .t-body {
+      grid-column: 1 / -1;
+    }
+  }
+</style>
+
