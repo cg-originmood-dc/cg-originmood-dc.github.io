@@ -38,6 +38,14 @@ const expRows = (loadDataset('等級差經驗')?.rows ?? []).map((r) => {
   };
 });
 
+/**
+ * 給等級差對照用的地點清單：由 spots 推導（篩選＋分組屬於畫面層允許的推導）。
+ * 紀律：怪物等級只認「N」或「N~M」，其他（待補、帶附註的）一律跳過——
+ * 不在畫面層搶救髒格式，不符合就安靜消失，不會錯誤比對。練技區排除
+ * （其怪物等級服務練技邏輯，與練功效率無關）。
+ */
+const MOB_LV = /^(\d+)(?:~(\d+))?$/;
+
 const changelog = (loadDataset('練功地點列表-更新記錄')?.rows ?? []).map((r) => ({
   date: (r['日期'] ?? '').trim(),
   place: (r['地點'] ?? '').trim(),
@@ -189,6 +197,17 @@ for (const r of rows) {
   }
 }
 const sources = [...sourceLinks].map(([href, text]) => ({ href, text }));
+
+const expSpotList = spots
+  .filter((s) => s.zone !== '練技區')
+  .map((s) => {
+    const m = s.mobLv.match(MOB_LV);
+    if (!m) return null;
+    const lo = Number(m[1]);
+    const hi = Number(m[2] ?? m[1]);
+    return { name: s.sub ? `${s.place}·${s.sub}` : s.place, lo, hi };
+  })
+  .filter((s) => s !== null);
 ---
 
 <div class="lv" data-lv-root>
@@ -330,6 +349,7 @@ const sources = [...sourceLinks].map(([href, text]) => ({ href, text }));
       class="lv__exp"
       data-exp-root
       data-exp={JSON.stringify(Object.fromEntries(expRows.map((r) => [r.diff, r.pct])))}
+      data-exp-spots={JSON.stringify(expSpotList)}
     >
       <summary>等級差經驗對照（適合等級的推算基準）</summary>
       <div class="lv__exp-slider">
@@ -337,7 +357,7 @@ const sources = [...sourceLinks].map(([href, text]) => ({ href, text }));
         <input id="lv-exp-level" type="range" min="5" max="140" value="20" data-exp-slider />
         <b data-exp-level>Lv.20</b>
       </div>
-      <p class="lv__exp-note">怪物由強到弱排：</p>
+      <p class="lv__exp-note">由划算到不划算排：</p>
       <div class="lv__exp-tiers" data-exp-tiers></div>
       <p class="lv__exp-foot">
         最佳區永遠是「你的等級 ～ 你的等級＋5」。每差 1 等經驗變動 3.33%，更遠依同規則遞減。
@@ -468,6 +488,9 @@ const sources = [...sourceLinks].map(([href, text]) => ({ href, text }));
       return out;
     };
 
+    type SpotRef = { name: string; lo: number; hi: number };
+    const spots: SpotRef[] = JSON.parse(root.dataset.expSpots ?? '[]');
+
     type Tier = {
       cls: string;
       badge: string;
@@ -476,18 +499,10 @@ const sources = [...sourceLinks].map(([href, text]) => ({ href, text }));
       label: (L: number) => string;
       sub: string;
       mobs: (L: number) => number[];
+      band?: (L: number) => [number, number];
       you?: boolean;
     };
     const TIERS: Tier[] = [
-      {
-        cls: 'is-bad',
-        badge: '糟',
-        pct: '≤63%',
-        desc: '打得贏也虧：又危險，經驗又跳水',
-        label: (L) => `Lv.${L + 6} ↑`,
-        sub: '比你強 6 等以上',
-        mobs: (L) => range(L + 6, L + 10),
-      },
       {
         cls: 'is-best',
         badge: '最佳',
@@ -496,6 +511,7 @@ const sources = [...sourceLinks].map(([href, text]) => ({ href, text }));
         label: (L) => `Lv.${L}～${L + 5}`,
         sub: '跟你同等～強 5 等',
         mobs: (L) => range(L, L + 5),
+        band: (L) => [L, L + 5],
         you: true,
       },
       {
@@ -506,6 +522,7 @@ const sources = [...sourceLinks].map(([href, text]) => ({ href, text }));
         label: (L) => `Lv.${L - 5}～${L - 1}`,
         sub: '比你弱 1～5 等',
         mobs: (L) => range(L - 1, L - 5),
+        band: (L) => [L - 5, L - 1],
       },
       {
         cls: 'is-so',
@@ -515,6 +532,16 @@ const sources = [...sourceLinks].map(([href, text]) => ({ href, text }));
         label: (L) => `Lv.${L - 9}～${L - 6}`,
         sub: '比你弱 6～9 等',
         mobs: (L) => range(L - 6, L - 9),
+        band: (L) => [L - 9, L - 6],
+      },
+      {
+        cls: 'is-bad',
+        badge: '糟',
+        pct: '≤63%',
+        desc: '打得贏也虧：又危險，經驗又跳水',
+        label: (L) => `Lv.${L + 6} ↑`,
+        sub: '比你強 6 等以上',
+        mobs: (L) => range(L + 6, L + 10),
       },
       {
         cls: 'is-bad',
@@ -540,10 +567,15 @@ const sources = [...sourceLinks].map(([href, text]) => ({ href, text }));
             return pct == null ? '' : `<i>Lv.${mob} → ${pct}%</i>`;
           })
           .join('');
+        const band = t.band?.(L);
+        const hit = band ? spots.filter((s) => s.lo <= band[1] && s.hi >= band[0]) : [];
+        const spotLine = hit.length
+          ? `<p class="t-spots">練功點：${hit.map((s) => `${s.name} ${s.lo}${s.lo === s.hi ? '' : `~${s.hi}`}`).join('、')}</p>`
+          : '';
         row.innerHTML =
           `<div class="t-range"><b>${t.label(L)}</b><span>${t.sub}</span></div>` +
           `<div class="t-rate"><em>${t.badge}</em><b>${t.pct}</b></div>` +
-          `<div class="t-body"><p>${t.desc}</p><div class="t-chips">${chips}</div></div>` +
+          `<div class="t-body"><p>${t.desc}</p><div class="t-chips">${chips}</div>${spotLine}</div>` +
           (t.you ? `<span class="t-you">你在 Lv.${L}</span>` : '');
         tiersEl.append(row);
       }
@@ -1073,6 +1105,13 @@ const sources = [...sourceLinks].map(([href, text]) => ({ href, text }));
     display: flex;
     flex-wrap: wrap;
     gap: 0.35rem;
+  }
+  
+  .lv__exp-tier .t-spots {
+    margin: 0.45rem 0 0 !important;
+    font-size: 0.78rem !important;
+    font-weight: 400 !important;
+    color: var(--text-3);
   }
   
   .lv__exp-tier .t-chips i {
