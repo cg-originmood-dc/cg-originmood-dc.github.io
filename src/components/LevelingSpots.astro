@@ -228,7 +228,10 @@ const expSpotList = spots
   </div>
 
   <!-- 第二塊：練功地圖列表 -->
-  <h2 class="lv__heading">練功地圖列表</h2>
+  <h2 class="lv__heading">
+    練功地圖列表
+    <a class="lv__exp-jump" href="#level-exp">查看等級與練功效率 ↓</a>
+  </h2>
 
   {/* 分區按鈕會依上面選的路線收起沒東西的區 */}
   <div class="lv__zones" role="group" aria-label="依分區篩選">
@@ -345,13 +348,14 @@ const expSpotList = spots
   ))}
 
   {expRows.length > 0 && (
-    <details
+    <section
       class="lv__exp"
+      id="level-exp"
       data-exp-root
       data-exp={JSON.stringify(Object.fromEntries(expRows.map((r) => [r.diff, r.pct])))}
       data-exp-spots={JSON.stringify(expSpotList)}
     >
-      <summary>等級差經驗對照（適合等級的推算基準）</summary>
+      <h2 class="lv__heading">等級差經驗對照（適合等級的推算基準）</h2>
       <div class="lv__exp-slider">
         <label for="lv-exp-level">你的等級</label>
         <input id="lv-exp-level" type="range" min="5" max="140" value="20" data-exp-slider />
@@ -362,7 +366,7 @@ const expSpotList = spots
       <p class="lv__exp-foot">
         最佳區永遠是「你的等級 ～ 你的等級＋5」。每差 1 等經驗變動 3.33%，更遠依同規則遞減。
       </p>
-    </details>
+    </section>
   )}
 
   {sources.length > 0 && (
@@ -872,10 +876,11 @@ const expSpotList = spots
     font-size: 0.9rem;
   }
 
-  .lv__exp summary {
-    cursor: pointer;
-    font-weight: 700;
-    color: var(--text-2);
+  .lv__exp-jump {
+    margin-left: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 400;
+    color: var(--accent);
   }
 
   .lv__exp-slider {
