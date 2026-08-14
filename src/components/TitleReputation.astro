@@ -1,0 +1,1243 @@
+---
+/**
+ * 稱號與聲望頁，依 design_handoff_聲望稱號攻略 設計稿實作。
+ * 閱讀動線：核心觀念（時間鎖）→ 通用規則（吉拉算例）→ 各職業日課 →
+ * 刷聲望地點 → 稱號階梯 → 「還要幾天」計算機 → 完整數值表（收合查證用）。
+ *
+ * 資料來源（content/data/）：
+ * - 稱號-戰鬥系.csv  稱號階梯與吉拉場數；「升上此階天數」由差額 ÷ 每日上限算出
+ * - 聲望刷點.csv     競技場六王與里洞的「角色等級區間 → 聲望」對照，
+ *                    「連結」欄有值時地點名稱連到站內頁（里洞連推薦練功攻略）
+ * - 聲望日課.csv     各職業每天做的事（手風琴）
+ * - 聲望行為.csv     完整數值表（共通與各職業系）
+ * - 稱號NPC.csv      領稱號與問進度的 NPC 位置表
+ *
+ * 計算機為純 client state，每日上限固定 1600（初心玩家實測反推）。
+ * 選了目前稱號後，目標稱號若不在其後會自動跳到下一階。
+ */
+import { LIST_SEP, loadDataset } from '../lib/datasets';
+
+const get = (r: Record<string, string>, k: string) => (r[k] ?? '').trim();
+const split = (v: string) => v.split(LIST_SEP).map((s) => s.trim()).filter(Boolean);
+
+const ladderRows = loadDataset('稱號-戰鬥系')?.rows ?? [];
+const spotRows = loadDataset('聲望刷點')?.rows ?? [];
+const dailyRows = loadDataset('聲望日課')?.rows ?? [];
+const actionRows = loadDataset('聲望行為')?.rows ?? [];
+const npcRows = loadDataset('稱號NPC')?.rows ?? [];
+
+const claimNpcs = npcRows.filter((r) => get(r, '用途') === '領稱號');
+const progressNpcs = npcRows.filter((r) => get(r, '用途') === '問進度');
+
+/** 階梯：diff 為數字才能算天數，天數以每日上限 1600 計算 */
+const ladder = ladderRows.map((r) => {
+  const diff = Number(get(r, '與前階差額'));
+  return {
+    title: get(r, '稱號'),
+    total: get(r, '累積聲望'),
+    diff: Number.isFinite(diff) ? diff : null,
+    jira: get(r, '吉拉場數(約)'),
+  };
+});
+const fmt = (n: number) => n.toLocaleString('en-US');
+
+/** 刷點：以（分組, 地點）分組成卡片；聲望最高的區間列是甜蜜區 */
+type Bracket = { range: string; rep: string; dead: boolean };
+type Spot = {
+  group: string;
+  name: string;
+  lv: string;
+  sub: string;
+  note: string;
+  link: string;
+  brackets: Bracket[];
+  sweet: number;
+};
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const spotList: Spot[] = [];
+for (const r of spotRows) {
+  const key = `${get(r, '分組')}|${get(r, '地點')}`;
+  let spot = spotList.find((s) => `${s.group}|${s.name}` === key);
+  if (!spot) {
+    spot = {
+      group: get(r, '分組'),
+      name: get(r, '地點'),
+      lv: get(r, '對象等級'),
+      sub: get(r, '副標'),
+      note: '',
+      link: '',
+      brackets: [],
+      sweet: -1,
+    };
+    spotList.push(spot);
+  }
+  if (get(r, '地點備註')) spot.note = get(r, '地點備註');
+  if (get(r, '連結')) spot.link = get(r, '連結');
+  spot.brackets.push({
+    range: get(r, '角色等級'),
+    rep: get(r, '聲望'),
+    dead: get(r, '聲望') === '無聲望',
+  });
+}
+for (const s of spotList) {
+  // 甜蜜區＝聲望數值最高的那一列
+  let best = -1;
+  s.brackets.forEach((b, i) => {
+    const v = Number(b.rep.replace(/[^0-9]/g, ''));
+    if (!b.dead && v > (best === -1 ? -Infinity : Number(s.brackets[best].rep.replace(/[^0-9]/g, '')))) best = i;
+  });
+  s.sweet = best;
+}
+const spotGroups = ['競技場', '練功地點']
+  .map((g) => ({ name: g, spots: spotList.filter((s) => s.group === g) }))
+  .filter((g) => g.spots.length > 0);
+
+/** 手風琴：細節欄以 LIST_SEP 切成 bullet */
+const daily = dailyRows
+  .sort((a, b) => Number(get(a, '順序')) - Number(get(b, '順序')))
+  .map((r) => ({
+    job: get(r, '職業'),
+    line: get(r, '結論'),
+    value: get(r, '聲望值'),
+    dim: get(r, '聲望值').includes('0.5'),
+    details: split(get(r, '細節')),
+  }));
+
+const commonActions = actionRows.filter((r) => get(r, '職業系') === '共通');
+const typedActions = actionRows.filter((r) => get(r, '職業系') !== '共通');
+
+const NAV = [
+  { href: '#rules', label: '怎麼算' },
+  { href: '#daily', label: '各職業' },
+  { href: '#spots', label: '去哪刷' },
+  { href: '#ladder', label: '稱號階梯' },
+  { href: '#calc', label: '還要幾天', accent: true },
+  { href: '#tables', label: '完整數值' },
+];
+
+const SOURCES = [
+  { text: '巴哈姆特：名聲表實測', href: 'https://forum.gamer.com.tw/C.php?bsn=02577&snA=146166' },
+  { text: '巴哈姆特：稱號聲望需求與吉拉場數', href: 'https://forum.gamer.com.tw/C.php?bsn=02577&snA=141553' },
+  { text: '蔚藍幻境：稱號升降', href: 'https://cg.skyey.tw/part/7/index.htm' },
+  { text: '巴哈姆特：永恆初心轉職聲望討論', href: 'https://forum.gamer.com.tw/C.php?bsn=70151&snA=3381' },
+];
+
+/** 計算機用的階梯資料（無名的旅人累積=0；待補階排除） */
+const calcLadder = ladder.map((l) => ({
+  title: l.title,
+  cum: l.total === '-' ? 0 : Number(l.total.replace(/[^0-9]/g, '')) || null,
+}));
+---
+
+<div class="rt" data-rt data-ladder={JSON.stringify(calcLadder)}>
+  <!-- Sticky 導覽 -->
+  <nav class="rt__nav" aria-label="頁內導覽">
+    {NAV.map((n) => (
+      <a href={n.href} class:list={{ 'is-accent': n.accent }}>
+        {n.label}
+      </a>
+    ))}
+  </nav>
+
+  <!-- 核心觀念：時間鎖 -->
+  <section class="rt__card rt__timelock">
+    <h3>稱號是時間鎖，每天把聲望額度打滿就是最快。</h3>
+    <p>
+      系統每天自動發 <strong>1,600 點</strong>額度，<strong>沒上線也照發</strong>，最多囤
+      6 天。打滿之後再怎麼刷都不會增加。
+    </p>
+    <div class="rt__quota" aria-hidden="true">
+      <div class="rt__quota-cell is-today">
+        <b>1,600</b>
+        <span>今天</span>
+      </div>
+      {[...Array(5)].map(() => (
+        <div class="rt__quota-cell is-bank">
+          <b>+1,600</b>
+          <span>沒上線</span>
+        </div>
+      ))}
+      <div class="rt__quota-eq">=</div>
+      <div class="rt__quota-cell is-full">
+        <b>9,600</b>
+        <span>囤滿上限</span>
+      </div>
+    </div>
+    <p class="rt__timelock-foot">超過 6 天不上線，多的就浪費了。至少每 6 天上線清一次庫存。</p>
+  </section>
+
+  <!-- #rules 通用規則 -->
+  <section id="rules" class="rt__section">
+    <h2>聲望怎麼算？看一場吉拉就懂</h2>
+    <p class="rt__subnote">數值為玩家實測。</p>
+
+    <div class="rt__card">
+      <p class="rt__formula-label">競技場（吉拉）一場</p>
+      <div class="rt__formula">
+        <div class="rt__tile is-green">
+          <b>+10</b>
+          <span>戰鬥勝利</span>
+          <small>沒出手的隊員也有</small>
+        </div>
+        <div class="rt__op">＋</div>
+        <div class="rt__tile is-green">
+          <b>+50</b>
+          <span>王加成</span>
+          <small>尾刀要自己收，合擊不算</small>
+        </div>
+        <div class="rt__op">＋</div>
+        <div class="rt__tile is-gold">
+          <b>+10</b>
+          <span>打死有效怪</span>
+          <small>自己補刀的每一隻</small>
+        </div>
+        <div class="rt__op">＝</div>
+        <div class="rt__tile is-blue">
+          <b>+70</b>
+          <span>一場合計</span>
+          <small>約 23 場打滿一天額度</small>
+        </div>
+      </div>
+      <p class="rt__formula-label">練功（里洞）一場</p>
+      <div class="rt__formula">
+        <div class="rt__tile is-green">
+          <b>+10</b>
+          <span>戰鬥勝利</span>
+          <small>沒出手的隊員也有</small>
+        </div>
+        <div class="rt__op">＋</div>
+        <div class="rt__tile is-gold">
+          <b>+10/隻</b>
+          <span>打死有效怪</span>
+          <small>怪越多越快</small>
+        </div>
+        <div class="rt__op">＝</div>
+        <div class="rt__tile is-blue">
+          <b>+20 起</b>
+          <span>一場合計</span>
+          <small>平均殺 3 隻約 +40</small>
+        </div>
+      </div>
+      <div class="rt__legend">
+        <span><i class="rt__swatch is-green"></i>怪物等級 ≥ 自己等級 ÷ 2 − 3（捨去小數）</span>
+        <span><i class="rt__swatch is-gold"></i>怪物等級 ≥ 自己等級 ÷ 4 − 3（捨去小數）</span>
+      </div>
+      <p class="rt__premise">三份超過門檻即各自消失：吉拉 53 等剩 +20、54 等剩 +10、108 等歸零，各王分段見「去哪刷」。</p>
+    </div>
+
+    <div class="rt__cards2">
+      <div class="rt__card">
+        <h4>其他加分</h4>
+        <ul class="rt__kv">
+          <li><span>每日登入獎勵</span><b class="is-plus">+100</b></li>
+          <li><span>打死怪（每隻，等級範圍內才有）</span><b class="is-plus">+10</b></li>
+        </ul>
+      </div>
+      <div class="rt__card is-red">
+        <h4>扣分與歸零</h4>
+        <ul class="rt__kv">
+          <li><span>戰鬥中逃跑或登出</span><b class="is-minus">−10</b></li>
+          <li><span>戰鬥中死亡</span><b class="is-minus">−10</b></li>
+          <li><span>轉職、回復遊民</span><b class="is-minus">歸零</b></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- #daily 各職業日課 -->
+  <section id="daily" class="rt__section">
+    <h2>再來看細的：你的職業，每天做這件事</h2>
+    <div class="rt__card rt__accordion">
+      {daily.map((d) => (
+        <details>
+          <summary>
+            <span class="rt__badge">{d.job}</span>
+            <span class="rt__line">{d.line}</span>
+            <b class:list={['rt__val', { 'is-dim': d.dim }]}>{d.value}</b>
+            <span class="rt__caret">▾</span>
+          </summary>
+          <ul>
+            {d.details.map((t) => (
+              <li>{t}</li>
+            ))}
+          </ul>
+        </details>
+      ))}
+    </div>
+    <div class="rt__card rt__npc">
+      <h4>聲望到門檻後怎麼領稱號？</h4>
+      <p>戰鬥職業不會自動升，先登出再登入，找 NPC 領取。生產職業自動升，免找 NPC。</p>
+      <div class="rt__tablewrap">
+        <table>
+          <thead>
+            <tr><th>NPC</th><th>位置</th></tr>
+          </thead>
+          <tbody>
+            {claimNpcs.map((r) => (
+              <tr>
+                <td>{get(r, 'NPC')}</td>
+                <td>{get(r, '位置')}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <h4 class="rt__npc-sub">想知道升稱號的進度？找事情通</h4>
+      <div class="rt__tablewrap">
+        <table>
+          <thead>
+            <tr><th>NPC</th><th>位置</th><th>備註</th></tr>
+          </thead>
+          <tbody>
+            {progressNpcs.map((r) => (
+              <tr>
+                <td>{get(r, 'NPC')}</td>
+                <td>{get(r, '位置')}</td>
+                <td class="rt__notecell">{get(r, '備註')}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- #spots 刷聲望地點 -->
+  <section id="spots" class="rt__section">
+    <h2>去哪裡刷？看你的等級</h2>
+    <p class="rt__subnote">同一個王，等級越高聲望越少，超過上限直接沒聲望。綠色是你該去的甜蜜區。</p>
+    {spotGroups.map((group) => (
+      <>
+        <h3 class="rt__grouphead">{group.name}</h3>
+        <div class="rt__spots">
+          {group.spots.map((spot, i) => (
+            <div class:list={['rt__spot', { 'is-first': group.name === '競技場' && i === 0 }]}>
+              <div class="rt__spot-head">
+                <div>
+                  {spot.link ? (
+                    <b><a href={base + spot.link}>{spot.name}</a></b>
+                  ) : (
+                    <b>{spot.name}</b>
+                  )}
+                  {spot.sub && <small>{spot.sub}</small>}
+                </div>
+                <span class="rt__spot-lv">Lv.{spot.lv}</span>
+              </div>
+              <ul class="rt__brackets">
+                {spot.brackets.map((b, bi) => (
+                  <li class:list={{ 'is-sweet': bi === spot.sweet, 'is-dead': b.dead }}>
+                    <span>{b.range}</span>
+                    <b>{b.rep}</b>
+                  </li>
+                ))}
+              </ul>
+              {spot.note && <p class="rt__spot-note">{spot.note}</p>}
+            </div>
+          ))}
+        </div>
+      </>
+    ))}
+  </section>
+
+  <!-- #ladder 稱號階梯 -->
+  <section id="ladder" class="rt__section">
+    <h2>稱號階梯</h2>
+    <p class="rt__subnote">找到你現在的稱號，往右看要幾天。天數＝與前階差額 ÷ 每日上限。</p>
+    <div class="rt__card rt__tablewrap">
+      <table>
+        <thead>
+          <tr>
+            <th>稱號</th>
+            <th class="is-num">累積聲望</th>
+            <th class="is-num">吉拉場數(約)</th>
+            <th class="is-num">升上此階天數</th>
+          </tr>
+        </thead>
+        <tbody>
+          {ladder.map((row) => (
+            <tr>
+              <td>{row.title}</td>
+              <td class="is-num is-blue">{row.total === '-' ? '—' : row.total === '待補' ? '待補' : fmt(Number(row.total))}</td>
+              <td class="is-num">{row.jira === '-' ? '—' : row.jira}</td>
+              <td class="is-num is-green">
+                {row.diff ? `約 ${Math.ceil(row.diff / 1600)} 天` : '—'}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <details class="rt__fineprint">
+      <summary>數值假設與注意事項</summary>
+      <ul>
+        <li>聲望數值為舊正服玩家實測值，永恆初心可能有出入，歡迎實測回報。</li>
+        <li>每日上限 1,600 為初心玩家轉職後實測反推（累積 6 天＝9,600），尚有爭議；舊正服為 800。</li>
+        <li>吉拉一場約 +70，需符合「王的平均等級 ≥ 自己等級 ÷ 2 − 3（捨去小數）」才拿得滿。</li>
+        <li>有效怪判定：怪物等級 ≥ 自己等級 ÷ 4 − 3（捨去小數），不符合則無聲望。換算過來就是「自己等級超過 怪物等級 × 4 ＋ 15 就沒有聲望」，與競技場六王及里洞的實測區間全部吻合。</li>
+        <li>轉職聲望歸零，且永恆初心不保留聲望上限（官方客服回覆）。</li>
+      </ul>
+    </details>
+  </section>
+
+  <!-- #calc 計算機 -->
+  <section id="calc" class="rt__section">
+    <h2>還要幾天？</h2>
+    <div class="rt__card rt__calc">
+      <div class="rt__calc-in">
+        <label>
+          目前稱號
+          <select data-calc-cur></select>
+        </label>
+        <label>
+          目標稱號
+          <select data-calc-target></select>
+        </label>
+        <p class="rt__calc-capnote">以每日上限 1,600 計算。</p>
+      </div>
+      <div class="rt__calc-out">
+        <div data-calc-progress>
+          <p class="rt__calc-remain">
+            還差 <b data-calc-remain>2,000</b> 聲望
+          </p>
+          <p class="rt__calc-daily">每日策略（打滿 1,600 額度）</p>
+          <div class="rt__calc-ways">
+            <div class="rt__calc-way">
+              <span>每日登入獎勵（登出再登入領）</span>
+              <b>+100</b>
+            </div>
+          </div>
+          <p class="rt__calc-pick">剩下 1,500 擇一：</p>
+          <div class="rt__calc-ways">
+            <div class="rt__calc-way">
+              <span>競技場（+70/場）</span>
+              <b>22 場/天</b>
+            </div>
+            <div class="rt__calc-way">
+              <span>里洞（平均一場殺 3 隻，+30/場）</span>
+              <b>50 場/天</b>
+            </div>
+          </div>
+          <p class="rt__calc-daily">累積六天策略（每 6 天上線清 9,600）</p>
+          <div class="rt__calc-ways">
+            <div class="rt__calc-way">
+              <span>競技場（已扣當天登入 +100）</span>
+              <b>約 136 場</b>
+            </div>
+            <div class="rt__calc-way">
+              <span>里洞（同上）</span>
+              <b>約 317 場</b>
+            </div>
+          </div>
+          <hr />
+          <p class="rt__calc-total">
+            總共差 <b data-calc-days>2</b> 天
+          </p>
+          <p class="rt__calc-note">
+            扣掉每天登入的 +100，競技場共 <span data-calc-gira-total>26</span> 場，或里洞共
+            <span data-calc-lidong-total>60</span> 場
+          </p>
+        </div>
+        <div data-calc-done hidden>
+          <p class="rt__calc-donemsg">已達標，去找 NPC 領稱號 🎉</p>
+          <p class="rt__calc-note">先登出再登入，找阿蒙（法蘭城 230.83）、阿姆（73.83）或文太（阿凱魯法村 193.177）。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- #tables 完整數值表 -->
+  <section id="tables" class="rt__section">
+    <h2>完整數值表</h2>
+    <details class="rt__card rt__dtable">
+      <summary>共同的聲望加減</summary>
+      <div class="rt__tablewrap">
+        <table>
+          <thead>
+            <tr><th>行為</th><th class="is-num">聲望</th><th>備註</th></tr>
+          </thead>
+          <tbody>
+            {commonActions.map((r) => (
+              <tr class:list={{ 'is-zero': get(r, '聲望') === '歸零' }}>
+                <td>{get(r, '行為')}</td>
+                <td class="is-num">{get(r, '聲望')}</td>
+                <td class="rt__notecell">{get(r, '備註')}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </details>
+    <details class="rt__card rt__dtable">
+      <summary>各職業系的聲望加減</summary>
+      <div class="rt__tablewrap">
+        <table>
+          <thead>
+            <tr><th>職業系</th><th>行為</th><th class="is-num">聲望</th><th>備註</th></tr>
+          </thead>
+          <tbody>
+            {typedActions.map((r) => (
+              <tr>
+                <td>{get(r, '職業系')}</td>
+                <td>{get(r, '行為')}</td>
+                <td class="is-num">{get(r, '聲望')}</td>
+                <td class="rt__notecell">{get(r, '備註')}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  </section>
+
+  <footer class="rt__footer">
+    資料來源：
+    {SOURCES.map((s, i) => (
+      <>
+        <a href={s.href} target="_blank" rel="noopener noreferrer">{s.text}</a>{i < SOURCES.length - 1 && '、'}
+      </>
+    ))}
+  </footer>
+</div>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-rt]').forEach((root) => {
+    const ladder: { title: string; cum: number | null }[] = JSON.parse(root.dataset.ladder ?? '[]');
+    const fmt = (n: number) => n.toLocaleString('en-US');
+    const CAP = 1600;
+
+    const curSel = root.querySelector<HTMLSelectElement>('[data-calc-cur]')!;
+    const targetSel = root.querySelector<HTMLSelectElement>('[data-calc-target]')!;
+    for (const [i, l] of ladder.entries()) {
+      if (l.cum === null && i > 0) continue; // 待補階（無際的青空）不進計算機
+      const opt = new Option(l.title, String(l.cum ?? 0));
+      curSel.add(opt.cloneNode(true) as HTMLOptionElement);
+      if (i > 0) targetSel.add(opt);
+    }
+    curSel.value = '0';
+    targetSel.value = '2000';
+
+    const update = () => {
+      const cur = Number(curSel.value);
+      const target = Number(targetSel.value);
+      const remain = Math.max(0, target - cur);
+
+      const progress = root.querySelector<HTMLElement>('[data-calc-progress]')!;
+      const done = root.querySelector<HTMLElement>('[data-calc-done]')!;
+      progress.hidden = remain === 0;
+      done.hidden = remain > 0;
+      if (remain > 0) {
+        const days = Math.ceil(remain / CAP);
+        // 每天登入 +100 也算在額度內，總場數把它扣掉
+        const byFight = Math.max(0, remain - days * 100);
+        root.querySelector('[data-calc-remain]')!.textContent = fmt(remain);
+        root.querySelector('[data-calc-days]')!.textContent = String(days);
+        root.querySelector('[data-calc-gira-total]')!.textContent = fmt(Math.ceil(byFight / 70));
+        root.querySelector('[data-calc-lidong-total]')!.textContent = fmt(Math.ceil(byFight / 30));
+      }
+    };
+
+    // 選了目前稱號後，目標若不在其後，自動跳到下一階
+    curSel.addEventListener('change', () => {
+      const cur = Number(curSel.value);
+      if (Number(targetSel.value) <= cur) {
+        const next = [...targetSel.options].find((o) => Number(o.value) > cur);
+        if (next) targetSel.value = next.value;
+      }
+      update();
+    });
+    targetSel.addEventListener('change', update);
+    update();
+  });
+</script>
+
+<style>
+  .rt {
+    margin: 1rem 0 2rem;
+    color: #26241e;
+  }
+
+  .rt__section {
+    margin-top: 44px;
+    scroll-margin-top: 56px;
+  }
+
+  .rt__section h2 {
+    margin: 0 0 4px;
+    font-size: 22px;
+    font-weight: 900;
+    color: #1a1813;
+  }
+
+  .rt__subnote {
+    margin: 0 0 14px;
+    font-size: 13px;
+    color: #8a857a;
+  }
+
+  /* ── sticky 導覽 ── */
+  .rt__nav {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: flex;
+    overflow-x: auto;
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid #e6e3da;
+  }
+
+  .rt__nav a {
+    padding: 13px 12px;
+    font-size: 14px;
+    color: #4a463c;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .rt__nav a:hover {
+    color: #2c5f9e;
+  }
+
+  .rt__nav a.is-accent {
+    color: #2c5f9e;
+    font-weight: 700;
+  }
+
+  /* ── 卡片基底 ── */
+  .rt__card {
+    border: 1px solid #e6e3da;
+    border-radius: 8px;
+    background: #fff;
+    padding: 22px 24px;
+    margin-top: 14px;
+  }
+
+  .rt__card h4 {
+    margin: 0 0 10px;
+    font-size: 15px;
+    color: #1a1813;
+  }
+
+  .rt__card.is-red {
+    border-color: #ecc8c0;
+    background: #fdf5f3;
+  }
+
+  /* ── 時間鎖卡 ── */
+  .rt__timelock {
+    margin-top: 24px;
+    border-color: #d7c9a3;
+    background: #fdf8ec;
+    padding: 18px 22px;
+  }
+
+  .rt__timelock h3 {
+    margin: 0 0 8px;
+    font-size: 17px;
+    font-weight: 900;
+    color: #7a5a15;
+  }
+
+  .rt__timelock p {
+    margin: 0 0 12px;
+    font-size: 14px;
+    color: #6b5c37;
+    line-height: 1.7;
+  }
+
+  .rt__quota {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .rt__quota-cell {
+    flex: 1 1 0;
+    min-width: 64px;
+    padding: 8px 6px;
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    line-height: 1.3;
+    font-size: 12px;
+    color: #fff;
+  }
+
+  .rt__quota-cell b {
+    font-size: 12px;
+  }
+
+  .rt__quota-cell.is-today {
+    background: #b98a2e;
+  }
+
+  .rt__quota-cell.is-bank {
+    background: #d9b96a;
+  }
+
+  .rt__quota-cell.is-full {
+    border: 2px solid #b98a2e;
+    background: #fdf8ec;
+    color: #7a5a15;
+    font-size: 13px;
+  }
+
+  .rt__quota-eq {
+    align-self: center;
+    color: #a08340;
+    font-weight: 700;
+  }
+
+  .rt__timelock-foot {
+    margin: 12px 0 0 !important;
+    font-size: 13px !important;
+    color: #a08340 !important;
+  }
+
+  /* ── 吉拉算式 ── */
+  .rt__formula {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .rt__tile {
+    flex: 1 1 130px;
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+  }
+
+  .rt__tile b {
+    font-size: 26px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .rt__tile span {
+    font-weight: 700;
+    font-size: 14px;
+  }
+
+  .rt__tile small {
+    font-size: 12px;
+    color: #8a857a;
+    line-height: 1.5;
+  }
+
+  .rt__tile.is-green {
+    background: #f4f9f2;
+    border: 1px solid #dfe8db;
+  }
+
+  .rt__tile.is-green b {
+    color: #2c6e49;
+  }
+
+  .rt__tile.is-gold {
+    background: #fdf8ec;
+    border: 1px solid #d7c9a3;
+  }
+
+  .rt__tile.is-gold b {
+    color: #7a5a15;
+  }
+
+  .rt__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    margin-top: 12px;
+    font-size: 13px;
+    color: #6b675c;
+  }
+
+  .rt__legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .rt__swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    display: inline-block;
+  }
+
+  .rt__swatch.is-green {
+    background: #f4f9f2;
+    border: 1px solid #dfe8db;
+  }
+
+  .rt__swatch.is-gold {
+    background: #fdf8ec;
+    border: 1px solid #d7c9a3;
+  }
+
+  .rt__tile.is-blue {
+    background: #f5f8fc;
+    border: 1px solid #c9d8ea;
+  }
+
+  .rt__tile.is-blue b {
+    color: #2c5f9e;
+  }
+
+  .rt__op {
+    align-self: center;
+    font-weight: 900;
+    color: #8a857a;
+  }
+
+  .rt__premise {
+    margin: 12px 0 0;
+    font-size: 13px;
+    color: #8a857a;
+  }
+
+  .rt__formula-label {
+    margin: 14px 0 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #6b675c;
+  }
+
+  .rt__formula-label:first-child {
+    margin-top: 0;
+  }
+
+  /* ── 加分/扣分小卡 ── */
+  .rt__cards2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px;
+  }
+
+  .rt__kv {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .rt__kv li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 7px 0;
+    font-size: 14px;
+    border-bottom: 1px solid #eeece5;
+  }
+
+  .rt__kv li:last-child {
+    border-bottom: 0;
+  }
+
+  .rt__kv .is-plus {
+    color: #2c6e49;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .rt__kv .is-minus {
+    color: #b0432f;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── 手風琴 ── */
+  .rt__accordion {
+    padding: 0;
+  }
+
+  .rt__accordion details + details {
+    border-top: 1px solid #eeece5;
+  }
+
+  .rt__accordion summary {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 20px;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .rt__accordion summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .rt__badge {
+    flex: none;
+    font-size: 13px;
+    font-weight: 700;
+    color: #2c5f9e;
+    background: #eaf1f9;
+    border-radius: 4px;
+    padding: 3px 8px;
+    white-space: nowrap;
+  }
+
+  .rt__line {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 500;
+  }
+
+  .rt__val {
+    flex: none;
+    font-size: 14px;
+    font-weight: 700;
+    color: #2c6e49;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .rt__val.is-dim {
+    color: #8a857a;
+  }
+
+  .rt__caret {
+    color: #b3ae9f;
+    transition: transform 0.15s;
+  }
+
+  .rt__accordion details[open] .rt__caret {
+    transform: rotate(180deg);
+  }
+
+  .rt__accordion details ul {
+    margin: 0;
+    padding: 0 20px 16px 48px;
+    font-size: 14px;
+    line-height: 1.75;
+    color: #5c574b;
+  }
+
+  .rt__npc p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.8;
+    color: #5c574b;
+  }
+
+  /* ── 刷點卡 ── */
+  .rt__grouphead {
+    margin: 18px 0 4px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #6b675c;
+  }
+
+  .rt__spots {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px;
+    margin-top: 10px;
+  }
+
+  .rt__spot {
+    border: 1px solid #e6e3da;
+    border-radius: 8px;
+    background: #fff;
+    overflow: hidden;
+  }
+
+  .rt__spot.is-first {
+    border-color: #c9d8ea;
+  }
+
+  .rt__spot-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #eeece5;
+  }
+
+  .rt__spot.is-first .rt__spot-head {
+    background: #f5f8fc;
+  }
+
+  .rt__spot-head b {
+    font-size: 15px;
+  }
+
+  .rt__spot-head small {
+    margin-left: 6px;
+    font-size: 12px;
+    color: #8a857a;
+  }
+
+  .rt__spot-lv {
+    font-size: 12px;
+    font-weight: 700;
+    color: #2c5f9e;
+    white-space: nowrap;
+  }
+
+  .rt__brackets {
+    margin: 0;
+    padding: 6px 0;
+    list-style: none;
+  }
+
+  .rt__brackets li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 5px 16px;
+    font-size: 13.5px;
+    font-variant-numeric: tabular-nums;
+    color: #6b675c;
+  }
+
+  .rt__brackets li.is-sweet {
+    background: #f4f9f2;
+    color: #2c6e49;
+    font-weight: 700;
+  }
+
+  .rt__brackets li.is-dead b {
+    color: #b0432f;
+    font-weight: 400;
+  }
+
+  .rt__spot-note {
+    margin: 0;
+    padding: 8px 16px 12px;
+    font-size: 12.5px;
+    color: #8a857a;
+    line-height: 1.6;
+  }
+
+  /* ── 階梯表 / 通用表格 ── */
+  .rt__tablewrap {
+    overflow-x: auto;
+    padding: 0;
+  }
+
+  .rt table {
+    width: 100%;
+    min-width: 520px;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+
+  .rt th {
+    background: #f4f3ee;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #6b675c;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  .rt td {
+    padding: 10px 16px;
+    border-top: 1px solid #eeece5;
+    line-height: 1.6;
+  }
+
+  .rt .is-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .rt td.is-blue {
+    color: #2c5f9e;
+  }
+
+  .rt td.is-green {
+    color: #2c6e49;
+  }
+
+
+  .rt tr.is-zero td {
+    background: #fdf5f3;
+  }
+
+  .rt__notecell {
+    color: #8a857a;
+    font-size: 13px;
+  }
+
+  .rt__fineprint {
+    margin-top: 10px;
+    font-size: 13px;
+    color: #8a857a;
+  }
+
+  .rt__fineprint summary {
+    cursor: pointer;
+  }
+
+  .rt__fineprint ul {
+    margin: 8px 0 0;
+    padding-left: 1.3em;
+    line-height: 1.8;
+  }
+
+  /* ── 計算機 ── */
+  .rt__calc {
+    border-color: #c9d8ea;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+  }
+
+  .rt__calc-in {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .rt__calc-in label {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #6b675c;
+  }
+
+  .rt__calc-in select {
+    padding: 9px 10px;
+    border: 1px solid #d8d5cb;
+    border-radius: 6px;
+    background: #fff;
+    font: inherit;
+  }
+
+
+
+
+
+
+  .rt__calc-out {
+    background: #f5f8fc;
+    border-radius: 8px;
+    padding: 18px 20px;
+  }
+
+  .rt__calc-remain {
+    margin: 0 0 12px;
+    font-size: 15px;
+  }
+
+  .rt__calc-remain b {
+    font-size: 30px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .rt__calc-pick {
+    margin: 8px 0 6px;
+    font-size: 13px;
+    color: #6b675c;
+  }
+
+  .rt__calc-daily {
+    margin: 14px 0 8px;
+    font-size: 13px;
+    color: #6b675c;
+  }
+
+  .rt__calc-ways {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .rt__calc-way {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    background: #fff;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+
+  .rt__calc-way b {
+    font-variant-numeric: tabular-nums;
+    color: #2c5f9e;
+  }
+
+  .rt__calc-out hr {
+    margin: 14px 0;
+    border: 0;
+    border-top: 1px solid #c9d8ea;
+  }
+
+  .rt__calc-total {
+    margin: 0;
+    font-size: 15px;
+  }
+
+  .rt__calc-total b {
+    font-size: 30px;
+    font-weight: 900;
+    color: #2c5f9e;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .rt__calc-note {
+    margin: 6px 0 0;
+    font-size: 13px;
+    color: #6b675c;
+  }
+
+  .rt__calc-donemsg {
+    margin: 0 0 8px;
+    font-size: 18px;
+    font-weight: 900;
+    color: #2c6e49;
+  }
+
+  /* ── 完整數值表（收合） ── */
+  .rt__dtable {
+    padding: 0;
+  }
+
+  .rt__dtable summary {
+    padding: 14px 20px;
+    font-weight: 700;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .rt__dtable summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .rt__dtable summary::after {
+    content: ' ▾';
+    color: #b3ae9f;
+  }
+
+  /* ── footer ── */
+  .rt__footer {
+    margin-top: 44px;
+    font-size: 13px;
+    color: #8a857a;
+    line-height: 1.9;
+  }
+
+  .rt__footer a {
+    color: #8a857a;
+  }
+
+  .rt__footer a:hover {
+    color: #2c5f9e;
+  }
+</style>
