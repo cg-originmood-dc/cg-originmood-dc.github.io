@@ -94,7 +94,7 @@ for (const [base, titles] of Object.entries(SPECIAL_HEADINGS)) {
  * 額外長出與頁面 H1 重複的標題。
  */
 export function datasetHeading(pageId: string, dataset: string, datasetCount: number) {
-  if (dataset === '精神衝擊波等級常數') return '各等級常數';
+  if (dataset === '精神衝擊波等級常數') return '各等級的基礎 G';
   if (datasetCount < 2) return undefined;
 
   const special = SPECIAL_TITLE_BY_DATASET.get(dataset);

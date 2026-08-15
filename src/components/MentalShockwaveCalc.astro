@@ -10,8 +10,8 @@ const levels = parseShockwaveLevels(ds?.rows ?? []);
 ---
 
 <section class="sw" data-sw data-levels={JSON.stringify(levels)}>
-  <h2>傷害試算</h2>
-  <p class="sw__lead">數字來自上方公式與本頁等級常數表。低精神（約 348 以下）可能另有門檻罰則，結果僅供對照。</p>
+  <h2>自己填數字試試看</h2>
+  <p class="sw__lead">用上面的算法，代入你的精神、技能等級和對方防禦。精神偏低時，實際常常比這裡低。</p>
   <div class="sw__pick">
     <label>技能等級
       <select data-lv>
@@ -29,12 +29,11 @@ const levels = parseShockwaveLevels(ds?.rows ?? []);
   </div>
   <table class="sw__out">
     <tbody>
-      <tr><th>精神係數</th><td data-coef>—</td></tr>
-      <tr><th>h（工作值）</th><td data-h>—</td></tr>
-      <tr><th>有效攻擊 A</th><td data-a>—</td></tr>
-      <tr><th>中心值 X</th><td data-x>—</td></tr>
-      <tr><th>畫面中心（倍率 1.00）</th><td data-mid>—</td></tr>
-      <tr><th>畫面區間（0.90～1.10）</th><td data-rng>—</td></tr>
+      <tr><th>這級精神倍率</th><td data-coef>—</td></tr>
+      <tr><th>基礎 G</th><td data-g>—</td></tr>
+      <tr><th>有效攻擊</th><td data-a>—</td></tr>
+      <tr><th>傷害中心（還沒隨機）</th><td data-mid>—</td></tr>
+      <tr><th>畫面大概會跳</th><td data-rng>—</td></tr>
     </tbody>
   </table>
   <p class="sw__note" data-note hidden></p>
@@ -57,13 +56,12 @@ const levels = parseShockwaveLevels(ds?.rows ?? []);
     const mindEl = root.querySelector<HTMLInputElement>('[data-mind]');
     const defEl = root.querySelector<HTMLInputElement>('[data-def]');
     const coefEl = root.querySelector('[data-coef]');
-    const hEl = root.querySelector('[data-h]');
+    const gEl = root.querySelector('[data-g]');
     const aEl = root.querySelector('[data-a]');
-    const xEl = root.querySelector('[data-x]');
     const midEl = root.querySelector('[data-mid]');
     const rngEl = root.querySelector('[data-rng]');
     const noteEl = root.querySelector<HTMLElement>('[data-note]');
-    if (!lvEl || !mindEl || !defEl || !coefEl || !hEl || !aEl || !xEl || !midEl || !rngEl || !noteEl) {
+    if (!lvEl || !mindEl || !defEl || !coefEl || !gEl || !aEl || !midEl || !rngEl || !noteEl) {
       return;
     }
 
@@ -72,20 +70,19 @@ const levels = parseShockwaveLevels(ds?.rows ?? []);
       const mind = Number(mindEl.value);
       const def = Number(defEl.value);
       if (!row || !Number.isFinite(mind) || !Number.isFinite(def)) return;
-      const A = shockwaveAttack(mind, row.等級, row.h工作值);
+      const A = shockwaveAttack(mind, row.等級, row.基礎G);
       const X = shockwaveRaw(A, def);
-      coefEl.textContent = `${row.精神係數}%`;
-      hEl.textContent = String(row.h工作值);
+      coefEl.textContent = `${row.精神倍率}%`;
+      gEl.textContent = String(row.基礎G);
       aEl.textContent = String(A);
-      xEl.textContent = Number.isFinite(X) ? X.toFixed(4) : '—';
       midEl.textContent = Number.isFinite(X) ? String(shockwaveDisplay(X, 1)) : '—';
       rngEl.textContent = Number.isFinite(X)
-        ? `${shockwaveDisplay(X, 0.9)} ～ ${shockwaveDisplay(X, 1.1)}`
+        ? `${shockwaveDisplay(X, 0.9)} ～ ${shockwaveDisplay(X, 1.1)}（約九折到十一折）`
         : '—';
       const low = mind < 348;
       noteEl.hidden = !low;
       noteEl.textContent = low
-        ? '此精神可能低於發揮門檻，實測常低於本式，請勿用低精神結果否決高精神公式。'
+        ? '你的精神可能還沒到這級發揮得最好的程度，實際傷害常常比這裡算的低。'
         : '';
     };
 
