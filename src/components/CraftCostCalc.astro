@@ -86,7 +86,7 @@ const mana = (manaDs?.rows ?? []).map((r) =>
   </p>
 
   <div class="cc__pick cc__pick--calc">
-    <label>製作次數
+    <label title="料理、藥水成品 3 個疊一格、帶滿一身 60 個，預設一次做一身">製作次數
       <input type="number" data-times value="1" min="1" step="1" />
     </label>
     <label>擺攤價／個
@@ -163,8 +163,11 @@ const mana = (manaDs?.rows ?? []).map((r) =>
     const STACK = (name: string) => `craftcost:stack:${name}`;
     const SALE = (name: string) => `craftcost:sale:${name}`;
     const SKILL = (cat: string) => `craftcost:skill:${cat}`;
+    const TIMES = (cat: string) => `craftcost:times:${cat}`;
     const FEE = 'craftcost:fee';
     const MANACOST = 'craftcost:manacost';
+    // 料理、藥水成品 3 個疊一格、帶滿一身剛好 60 個，預設一次做一身
+    const defaultTimes = (cat: string) => (cat === '料理' || cat === '藥水' ? 60 : 1);
 
     const fmt = (n: number) => n.toLocaleString('zh-Hant', { maximumFractionDigits: 2 });
     // localStorage 存 1 個的價，組價輸入框換算時避免浮點尾數
@@ -308,9 +311,11 @@ const mana = (manaDs?.rows ?? []).map((r) =>
         tr.append(nameTd, qtyTd, priceTd, subTd, totalTd);
         matsBody.append(tr);
       });
-      // 技能等級選過會記住（每種製作技能分開記）；沒記過才預設為產品階數
+      // 技能等級、製作次數選過會記住（每種製作技能分開記）；沒記過用預設
       const savedSkill = lsGet(SKILL(p.c));
       skillSel.value = savedSkill !== '' ? savedSkill : String(Math.min(Math.max(p.v, 1), 11));
+      const savedTimes = lsGet(TIMES(p.c));
+      timesInput.value = savedTimes !== '' ? savedTimes : String(defaultTimes(p.c));
       saleInput.value = lsGet(SALE(p.n));
       meta.textContent = `${p.c}　${p.l} 階「${p.n}」｜販店價：${p.s || '—'}`;
       recalc();
@@ -338,7 +343,10 @@ const mana = (manaDs?.rows ?? []).map((r) =>
       lsSet(SKILL(catSel.value), skillSel.value);
       recalc();
     });
-    timesInput.addEventListener('input', recalc);
+    timesInput.addEventListener('input', () => {
+      lsSet(TIMES(catSel.value), timesInput.value.trim());
+      recalc();
+    });
     feeInput.addEventListener('input', () => {
       lsSet(FEE, feeInput.value.trim());
       recalc();
