@@ -535,7 +535,7 @@ main {
 .dataset table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.95rem;
+  font-size: 1rem;
   line-height: 1.5;
 }
 
@@ -543,7 +543,7 @@ main {
   position: sticky;
   top: 0;
   z-index: 1;
-  padding: 5px;
+  padding: 6px 9px;
   background: #f0f0f0;
   border: 1px solid #c0c0c0;
   text-align: center;
@@ -567,11 +567,18 @@ main {
 }
 
 .dataset tbody td {
-  padding: 5px;
+  padding: 6px 9px;
   border: 1px solid #c0c0c0;
   text-align: center;
   vertical-align: middle;
   white-space: nowrap;
+}
+
+/* 奇偶列斑馬紋，長表不跳行。編號由 JS 依「目前可見的列」重算（.is-even），
+   篩選、排序後條紋才不會兩深兩淺黏在一起；底色鋪在 tr，
+   hover 藍與寵物清單初心列的黃（都在 td 層）自然蓋過去 */
+.dataset tbody tr.is-even {
+  background-color: #f7f7f7;
 }
 
 /* 只有長文字欄位才換行（見 datasets.ts 的 wrapColumns），表格寬不下時整體橫向捲動 */
@@ -601,7 +608,7 @@ main {
 /* 補充欄位大多數列是空的，有值的才是重點；字小一點免得把本來的欄位擠掉 */
 .dataset tbody td.is-note {
   min-width: 18rem;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   color: var(--text-2);
 }
 

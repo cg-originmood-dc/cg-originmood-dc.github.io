@@ -341,6 +341,17 @@ const matLevels = (materials: string): MatGroup[] => {
       ]),
     );
 
+    // 斑馬紋照「目前看得到的列」重新編號——nth-child 會把篩掉的隱藏列也算進去，
+    // 一過濾條紋就兩深兩淺黏在一起，所以由 JS 標 class
+    const restripe = () => {
+      let i = 0;
+      for (const tr of rows) {
+        if (tr.hidden) continue;
+        tr.classList.toggle('is-even', i % 2 === 1);
+        i++;
+      }
+    };
+
     const apply = () => {
       const q = input?.value.trim().toLowerCase() ?? '';
       const filterEl = select ?? tabs;
@@ -362,6 +373,7 @@ const matLevels = (materials: string): MatGroup[] => {
       // 讓 CSS 知道現在停在哪個篩選值（寵物清單「全部」檢視的列底色靠這個）
       root.dataset.filterActive = want;
       if (count) count.textContent = shown === total ? `${total} 筆` : `${shown} / ${total} 筆`;
+      restripe();
     };
 
     const resetTabs = () => {
@@ -410,6 +422,7 @@ const matLevels = (materials: string): MatGroup[] => {
         rows.forEach((r) => tbody.appendChild(r));
         root.querySelectorAll('th[data-sort-index]').forEach((o) => o.removeAttribute('aria-sort'));
         th.setAttribute('aria-sort', asc ? 'ascending' : 'descending');
+        restripe();
       };
       th.addEventListener('click', sort);
       th.addEventListener('keydown', (e) => {
@@ -419,6 +432,8 @@ const matLevels = (materials: string): MatGroup[] => {
         }
       });
     });
+
+    restripe();
 
     // 點整列（非連結區）也可進入寵物詳情。
     // 帶修飾鍵（Ctrl/Cmd＝新分頁、Shift＝新視窗）的點擊不接手——
