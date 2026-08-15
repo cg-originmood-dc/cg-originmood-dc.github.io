@@ -7,21 +7,29 @@
  * 清單由配方推導（listMaterials），介面不自寫材料清單；
  * 市價沒有「正確值」，不落資料層。匯出／匯入走剪貼簿文字
  * （一行一筆「名稱、Tab、價格」），方便朋友間分享行情或搬裝置。
+ *
+ * 採集材料（stackSize=40）輸入框收「一組」的價格——市場照組喊價，
+ * 免除心算；localStorage 一律記 1 個的價，與成本計算頁同鍵互通，
+ * 匯出／匯入則跟輸入框同單位（所見即所貼）。
  */
-import { listMaterials } from '../lib/craftCost';
+import { listMaterials, loadNpcPrices, stackSize } from '../lib/craftCost';
 import { getItem, itemImagePath } from '../lib/items';
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const npcPrices = loadNpcPrices();
 
-type Row = { n: string; cat: string; lv: string; href: string | null; img: string };
+type Row = { n: string; cat: string; lv: string; href: string | null; img: string; npc?: number; stack: number };
 const rows: Row[] = listMaterials().map((n) => {
   const it = getItem(n);
   return {
+    // cat 只當排序鍵讓同類材料相鄰，不顯示（道具庫分類還很亂，欄位先拿掉）
     n,
     cat: (it?.子分類 || it?.分類 || '').trim() || '未收錄',
     lv: (it?.等級 ?? '').trim(),
     href: it ? `${base}/道具總覽/${encodeURIComponent(n)}` : null,
     img: itemImagePath(n),
+    npc: npcPrices[n],
+    stack: stackSize(n),
   };
 });
 
@@ -53,9 +61,9 @@ rows.sort((a, b) => {
     <thead>
       <tr>
         <th>材料</th>
-        <th>類別</th>
         <th>等級</th>
-        <th>單價（1 個）</th>
+        <th>NPC售價</th>
+        <th>價格</th>
       </tr>
     </thead>
     <tbody>
@@ -65,9 +73,20 @@ rows.sort((a, b) => {
             {r.img && <img src={r.img} alt="" loading="lazy" />}
             {r.href ? <a href={r.href}>{r.n}</a> : r.n}
           </td>
-          <td>{r.cat === '未收錄' ? <span class="mp__na">未收錄</span> : r.cat}</td>
           <td>{r.lv || '—'}</td>
-          <td><input type="number" min="0" step="any" data-mat={r.n} /></td>
+          <td>{r.npc != null ? `${r.npc} G` : '—'}</td>
+          <td class="mp__price">
+            <input
+              type="number"
+              min="0"
+              step="any"
+              data-mat={r.n}
+              data-stack={String(r.stack)}
+              data-npc={r.npc != null ? String(r.npc) : undefined}
+            />
+            <small class="mp__unit">{r.stack > 1 ? `／組(${r.stack}個)` : '／個'}</small>
+            {r.stack > 1 && <small class="mp__per" data-per></small>}
+          </td>
         </tr>
       ))}
     </tbody>
@@ -76,8 +95,9 @@ rows.sort((a, b) => {
   <details class="mp__io" open>
     <summary>批次匯出／匯入行情</summary>
     <p>
-      「匯出並複製」會把已填的單價整理成一行一筆「材料名（Tab）價格」直接進剪貼簿，貼給朋友就能對行情；
-      把別人分享的內容貼進框內按「從框內匯入」即可批次帶入（也吃「名稱=價格」「名稱,價格」等寫法，價格請用 1 個的單價）。
+      「匯出並複製」會把已填的價格整理成一行一筆「材料名（Tab）價格」直接進剪貼簿，貼給朋友就能對行情；
+      把別人分享的內容貼進框內按「從框內匯入」即可批次帶入（也吃「名稱=價格」「名稱,價格」等寫法）。
+      價格單位跟表格輸入一致：採集材料（礦、木頭、食材、花材）一組 40 個的價，其餘 1 個的價。
     </p>
     <textarea data-io rows="8" spellcheck="false"></textarea>
     <div class="mp__io-btns">
@@ -122,11 +142,33 @@ rows.sort((a, b) => {
       counter.textContent = `已填 ${filled}／${inputs.length} 項`;
     };
 
+    // localStorage 存 1 個的價；採集材料的輸入框乘回組數顯示、存回時再除掉
+    const numStr = (n: number) => String(Math.round(n * 10000) / 10000);
+    const stackOf = (input: HTMLInputElement) => Number(input.dataset.stack || '1') || 1;
+    const syncPer = (input: HTMLInputElement) => {
+      const per = input.closest('td')?.querySelector<HTMLElement>('[data-per]');
+      if (!per) return;
+      const v = Number.parseFloat(input.value);
+      per.textContent =
+        input.value.trim() !== '' && Number.isFinite(v) ? `＝${numStr(v / stackOf(input))}／個` : '';
+    };
+    const saveCanon = (input: HTMLInputElement) => {
+      const v = Number.parseFloat(input.value);
+      lsSet(
+        KEY(input.dataset.mat ?? ''),
+        input.value.trim() !== '' && Number.isFinite(v) ? numStr(v / stackOf(input)) : '',
+      );
+    };
+
     inputs.forEach((input) => {
       const name = input.dataset.mat ?? '';
-      input.value = lsGet(KEY(name));
+      // NPC 固定售價當預設；使用者填過的（localStorage）優先
+      const canon = lsGet(KEY(name)) || (input.dataset.npc ?? '');
+      input.value = canon === '' ? '' : numStr(Number(canon) * stackOf(input));
+      syncPer(input);
       input.addEventListener('input', () => {
-        lsSet(KEY(name), input.value.trim());
+        saveCanon(input);
+        syncPer(input);
         refreshCount();
       });
     });
@@ -139,10 +181,12 @@ rows.sort((a, b) => {
     });
 
     clearBtn?.addEventListener('click', () => {
-      if (!confirm(`確定清除全部 ${inputs.length} 項單價？`)) return;
+      if (!confirm(`確定清除全部 ${inputs.length} 項自訂價格？（NPC 固定售價會回到預設）`)) return;
       inputs.forEach((input) => {
-        input.value = '';
+        const npc = input.dataset.npc;
+        input.value = npc != null ? numStr(Number(npc) * stackOf(input)) : '';
         lsSet(KEY(input.dataset.mat ?? ''), '');
+        syncPer(input);
       });
       refreshCount();
     });
@@ -183,8 +227,10 @@ rows.sort((a, b) => {
           skip++;
           continue;
         }
+        // 匯入的數字視同表格輸入（採集材料＝組價），存回時照樣換成 1 個的價
         input.value = m[2];
-        lsSet(KEY(m[1].trim()), m[2]);
+        saveCanon(input);
+        syncPer(input);
         ok++;
       }
       refreshCount();
@@ -266,8 +312,22 @@ rows.sort((a, b) => {
     image-rendering: pixelated;
   }
 
-  .mp__na {
+  td.mp__price {
+    text-align: left;
+  }
+
+  .mp__unit {
+    font-size: 0.8rem;
     color: var(--text-3);
+    margin-left: 0.15rem;
+    white-space: nowrap;
+  }
+
+  .mp__per {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--text-3);
+    margin-top: 0.1rem;
   }
 
   .mp__table input {

@@ -9,12 +9,16 @@
  * 材料市價隨伺服器行情浮動，沒有「正確值」可以放資料層，
  * 所以由使用者輸入、記在 localStorage（鍵以材料名共用，
  * 換算別的產品時同一種材料不用重填）。
+ *
+ * 採集材料（stackSize=40）輸入框收「一組」的價格——市場照組喊價，
+ * 免除心算；localStorage 一律記 1 個的價，與材料價格頁同鍵互通。
  */
 import { loadDataset } from '../lib/datasets';
-import { GROUPS, loadProducts } from '../lib/craftCost';
+import { GROUPS, loadProducts, loadNpcPrices } from '../lib/craftCost';
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const products = loadProducts();
+const npcPrices = loadNpcPrices();
 
 // 耗魔矩陣攤成 mana[技能-1][階數-1]，null＝該技能等級做不了該階
 const manaDs = loadDataset('製作耗魔');
@@ -31,6 +35,7 @@ const mana = (manaDs?.rows ?? []).map((r) =>
   data-cc
   data-products={JSON.stringify(products)}
   data-mana={JSON.stringify(mana)}
+  data-npc={JSON.stringify(npcPrices)}
   data-item-base={`${base}/道具總覽/`}
   hidden
 >
@@ -65,7 +70,7 @@ const mana = (manaDs?.rows ?? []).map((r) =>
       <tr>
         <th>材料</th>
         <th>數量／次</th>
-        <th>單價（1 個）</th>
+        <th>單價</th>
         <th>小計</th>
         <th>總需求</th>
       </tr>
@@ -102,12 +107,13 @@ const mana = (manaDs?.rows ?? []).map((r) =>
 <noscript><p>成本計算機需要開啟 JavaScript 才能使用。</p></noscript>
 
 <script>
-  type Mat = [string, number, 0 | 1];
+  type Mat = [string, number, 0 | 1, number];
   type Prod = { c: string; l: string; v: number; n: string; s: string; m: Mat[] };
 
   document.querySelectorAll<HTMLElement>('[data-cc]').forEach((root) => {
     const products: Prod[] = JSON.parse(root.dataset.products ?? '[]');
     const mana: (number | null)[][] = JSON.parse(root.dataset.mana ?? '[]');
+    const npc: Record<string, number> = JSON.parse(root.dataset.npc ?? '{}');
     const itemBase = root.dataset.itemBase ?? '';
 
     const q = <T extends HTMLElement>(sel: string) => root.querySelector<T>(sel);
@@ -150,6 +156,8 @@ const mana = (manaDs?.rows ?? []).map((r) =>
     const FEE = 'craftcost:fee';
 
     const fmt = (n: number) => n.toLocaleString('zh-Hant', { maximumFractionDigits: 2 });
+    // localStorage 存 1 個的價，組價輸入框換算時避免浮點尾數
+    const numStr = (n: number) => String(Math.round(n * 10000) / 10000);
 
     let current: Prod | null = null;
     let priceInputs: HTMLInputElement[] = [];
@@ -164,8 +172,9 @@ const mana = (manaDs?.rows ?? []).map((r) =>
 
       let cost = 0;
       let missing = 0;
-      p.m.forEach(([, qty], i) => {
-        const price = Number.parseFloat(priceInputs[i]?.value ?? '');
+      p.m.forEach(([, qty, , stack], i) => {
+        // 輸入框收的是一組價（採集材料 stack=40、其他 1），換回 1 個的價再算
+        const price = Number.parseFloat(priceInputs[i]?.value ?? '') / (stack || 1);
         if (Number.isFinite(price)) {
           const sub = qty * price;
           cost += sub;
@@ -221,7 +230,7 @@ const mana = (manaDs?.rows ?? []).map((r) =>
       subtotalCells = [];
       totalCells = [];
       matsBody.textContent = '';
-      p.m.forEach(([name, qty, linkable]) => {
+      p.m.forEach(([name, qty, linkable, stack]) => {
         const tr = document.createElement('tr');
         const nameTd = document.createElement('td');
         nameTd.className = 'cc__mat-name';
@@ -240,12 +249,23 @@ const mana = (manaDs?.rows ?? []).map((r) =>
         input.type = 'number';
         input.min = '0';
         input.step = 'any';
-        input.value = lsGet(PRICE(name));
+        // NPC 固定販售的材料（布料）自動帶售價當預設成本；使用者填過的市價優先。
+        // 記的一律是 1 個的價，採集材料的輸入框乘回組數顯示組價。
+        const canon = lsGet(PRICE(name)) || (npc[name] != null ? String(npc[name]) : '');
+        input.value = canon === '' ? '' : numStr(Number(canon) * stack);
+        const tip: string[] = [];
+        if (stack > 1) tip.push(`填一組（${stack} 個）的價格`);
+        if (npc[name] != null) tip.push(`NPC 固定售價 ${npc[name]} G／個，可自行覆寫`);
+        if (tip.length) input.title = tip.join('；');
         input.addEventListener('input', () => {
-          lsSet(PRICE(name), input.value.trim());
+          const v = Number.parseFloat(input.value);
+          lsSet(PRICE(name), input.value.trim() !== '' && Number.isFinite(v) ? numStr(v / stack) : '');
           recalc();
         });
-        priceTd.append(input);
+        const unit = document.createElement('small');
+        unit.className = 'cc__unit';
+        unit.textContent = stack > 1 ? `／組(${stack}個)` : '／個';
+        priceTd.append(input, unit);
         const subTd = document.createElement('td');
         const totalTd = document.createElement('td');
         priceInputs.push(input);
@@ -377,6 +397,13 @@ const mana = (manaDs?.rows ?? []).map((r) =>
     border: 1px solid var(--border);
     border-radius: 6px;
     text-align: right;
+  }
+
+  :global(.cc__table .cc__unit) {
+    font-size: 0.8rem;
+    color: var(--text-3);
+    margin-left: 0.15rem;
+    white-space: nowrap;
   }
 
   .cc__out {
