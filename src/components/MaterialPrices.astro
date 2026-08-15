@@ -105,7 +105,8 @@ rows.sort((a, b) => {
     <summary>批次匯出／匯入行情</summary>
     <p>
       「匯出並複製」會把已填的價格整理成一行一筆「材料名（Tab）一組價（Tab）一組幾個」直接進剪貼簿，
-      貼給朋友就能對行情；把別人分享的內容貼進框內按「從框內匯入」即可批次帶入
+      貼給朋友就能對行情；只調過組數、還沒填價的材料也會出（價格欄留空）。
+      把別人分享的內容貼進框內按「從框內匯入」即可批次帶入
       （也吃「名稱=價格」「名稱,價格,組數」等寫法，沒帶組數就照你目前的組數解讀）。
     </p>
     <textarea data-io rows="8" spellcheck="false"></textarea>
@@ -227,8 +228,9 @@ rows.sort((a, b) => {
 
     root.querySelector('[data-export]')?.addEventListener('click', () => {
       if (!io) return;
+      // 填過價格、或只調過組數的都要出——組數設定也是使用者的行情資訊
       const lines = inputs
-        .filter((i) => i.value.trim() !== '')
+        .filter((i) => i.value.trim() !== '' || stackOf(i) !== DEF_STACK)
         .map((i) => `${i.dataset.mat}\t${i.value.trim()}\t${stackOf(i)}`);
       io.value = lines.join('\n');
       io.select();
@@ -251,8 +253,8 @@ rows.sort((a, b) => {
       let ok = 0;
       let skip = 0;
       for (const line of io.value.split(/\r?\n/)) {
-        const m = /^(.+?)[\t=,，:：]\s*([\d.]+)(?:[\t,，]\s*(\d+))?\s*$/.exec(line.trim());
-        if (!m) {
+        const m = /^(.+?)[\t=,，:：]\s*([\d.]*)\s*(?:[\t,，]\s*(\d+))?\s*$/.exec(line.trim());
+        if (!m || (!m[2] && !m[3])) {
           if (line.trim()) skip++;
           continue;
         }
@@ -261,14 +263,17 @@ rows.sort((a, b) => {
           skip++;
           continue;
         }
-        // 匯入的數字視同表格輸入（組價）；第三欄是一組幾個，沒有就照收方目前的組數
+        // 匯入的數字視同表格輸入（組價）；第三欄是一組幾個，沒有就照收方目前的組數。
+        // 價格欄留空的列（只分享組數）不動原本的價格。
         if (m[3]) {
           const stackInput = stackInputOf(input);
           if (stackInput) stackInput.value = m[3];
           const v = Number.parseInt(m[3], 10);
           lsSet(SKEY(m[1].trim()), Number.isFinite(v) && v >= 1 && v !== DEF_STACK ? m[3] : '');
         }
-        input.value = m[2];
+        if (m[2]) {
+          input.value = m[2];
+        }
         saveCanon(input);
         syncPer(input);
         ok++;

@@ -95,12 +95,16 @@ const mana = (manaDs?.rows ?? []).map((r) =>
     <label>手續費％
       <input type="number" data-fee value="10" min="0" max="100" step="1" />
     </label>
+    <label title="每點耗魔折多少 G（回魔成本），會算進淨利；設 0 就不計">魔力成本／點
+      <input type="number" data-manacost value="1" min="0" step="any" />
+    </label>
   </div>
 
   <dl class="cc__out">
     <div><dt>單次材料成本</dt><dd data-o-cost>—</dd></div>
     <div><dt>耗魔</dt><dd data-o-mana>—</dd></div>
     <div><dt>總材料成本</dt><dd data-o-tcost>—</dd></div>
+    <div><dt>耗魔費用</dt><dd data-o-manacost>—</dd></div>
     <div><dt>擺攤實收／個</dt><dd data-o-net>—</dd></div>
     <div><dt>單個淨利</dt><dd data-o-profit>—</dd></div>
     <div><dt>總淨利</dt><dd data-o-tprofit>—</dd></div>
@@ -125,17 +129,19 @@ const mana = (manaDs?.rows ?? []).map((r) =>
     const timesInput = q<HTMLInputElement>('[data-times]');
     const saleInput = q<HTMLInputElement>('[data-sale]');
     const feeInput = q<HTMLInputElement>('[data-fee]');
+    const manaCostInput = q<HTMLInputElement>('[data-manacost]');
     const matsBody = q<HTMLElement>('[data-mats]');
     const meta = q<HTMLElement>('[data-meta]');
     const out = {
       cost: q<HTMLElement>('[data-o-cost]'),
       mana: q<HTMLElement>('[data-o-mana]'),
       tcost: q<HTMLElement>('[data-o-tcost]'),
+      manacost: q<HTMLElement>('[data-o-manacost]'),
       net: q<HTMLElement>('[data-o-net]'),
       profit: q<HTMLElement>('[data-o-profit]'),
       tprofit: q<HTMLElement>('[data-o-tprofit]'),
     };
-    if (!catSel || !prodSel || !skillSel || !timesInput || !saleInput || !feeInput || !matsBody || !meta) return;
+    if (!catSel || !prodSel || !skillSel || !timesInput || !saleInput || !feeInput || !manaCostInput || !matsBody || !meta) return;
 
     // localStorage 掛了（無痕、隱私設定）也照常能算，只是不記憶
     const lsGet = (k: string) => {
@@ -156,7 +162,9 @@ const mana = (manaDs?.rows ?? []).map((r) =>
     const PRICE = (name: string) => `craftcost:price:${name}`;
     const STACK = (name: string) => `craftcost:stack:${name}`;
     const SALE = (name: string) => `craftcost:sale:${name}`;
+    const SKILL = (cat: string) => `craftcost:skill:${cat}`;
     const FEE = 'craftcost:fee';
+    const MANACOST = 'craftcost:manacost';
 
     const fmt = (n: number) => n.toLocaleString('zh-Hant', { maximumFractionDigits: 2 });
     // localStorage 存 1 個的價，組價輸入框換算時避免浮點尾數
@@ -201,16 +209,30 @@ const mana = (manaDs?.rows ?? []).map((r) =>
 
       // 耗魔：矩陣列＝技能等級、欄＝產品階數；12 階是初心自加的品項，原表沒有資料
       const skill = Number(skillSel.value);
+      let cellMana: number | null = null;
+      let manaNote = '';
+      if (p.v > 11) {
+        manaNote = '？（12 階品項無耗魔資料）';
+      } else {
+        const cell = mana[skill - 1]?.[p.v - 1] ?? null;
+        if (cell == null) manaNote = `技能 ${skill} 級做不了 ${p.v} 階（需 ${p.v - 1} 級以上）`;
+        else cellMana = cell;
+      }
       if (out.mana) {
-        if (p.v > 11) {
-          out.mana.textContent = '？（12 階品項無耗魔資料）';
-        } else {
-          const cell = mana[skill - 1]?.[p.v - 1] ?? null;
-          out.mana.textContent =
-            cell == null
-              ? `技能 ${skill} 級做不了 ${p.v} 階（需 ${p.v - 1} 級以上）`
-              : `${fmt(cell)}／次，${times} 次共 ${fmt(cell * times)}`;
-        }
+        out.mana.textContent =
+          cellMana == null ? manaNote : `${fmt(cellMana)}／次，${times} 次共 ${fmt(cellMana * times)}`;
+      }
+
+      // 耗魔折成費用（預設每點 1 G）一併扣進淨利；設 0 就不計
+      const manaRate = Number.parseFloat(manaCostInput.value);
+      const hasRate = Number.isFinite(manaRate) && manaRate > 0;
+      const manaCost = hasRate && cellMana != null ? cellMana * manaRate : null;
+      if (out.manacost) {
+        out.manacost.textContent = !hasRate
+          ? '—（未計）'
+          : manaCost == null
+            ? '？（無耗魔資料，未計入淨利）'
+            : `${fmt(manaCost)} G／次，${times} 次共 ${fmt(manaCost * times)} G`;
       }
 
       const sale = Number.parseFloat(saleInput.value);
@@ -221,15 +243,16 @@ const mana = (manaDs?.rows ?? []).map((r) =>
         return;
       }
       const net = sale - Math.floor((sale * feePct) / 100);
-      const profit = net - cost;
+      const profit = net - cost - (manaCost ?? 0);
+      const noteHint = lack + (hasRate && manaCost == null ? '（耗魔費用未計）' : '');
       out.net && (out.net.textContent = `${fmt(net)} G（手續費 ${fmt(sale - net)}）`);
       const mark = (el: HTMLElement | null, value: number, suffix: string) => {
         if (!el) return;
         el.textContent = `${fmt(value)} G${suffix}`;
         el.classList.toggle('is-neg', value < 0);
       };
-      mark(out.profit, profit, lack);
-      mark(out.tprofit, profit * times, lack);
+      mark(out.profit, profit, noteHint);
+      mark(out.tprofit, profit * times, noteHint);
     };
 
     /** 換產品：重建材料列、帶回記過的單價與擺攤價、技能等級預設為產品階數 */
@@ -285,7 +308,9 @@ const mana = (manaDs?.rows ?? []).map((r) =>
         tr.append(nameTd, qtyTd, priceTd, subTd, totalTd);
         matsBody.append(tr);
       });
-      skillSel.value = String(Math.min(Math.max(p.v, 1), 11));
+      // 技能等級選過會記住（每種製作技能分開記）；沒記過才預設為產品階數
+      const savedSkill = lsGet(SKILL(p.c));
+      skillSel.value = savedSkill !== '' ? savedSkill : String(Math.min(Math.max(p.v, 1), 11));
       saleInput.value = lsGet(SALE(p.n));
       meta.textContent = `${p.c}　${p.l} 階「${p.n}」｜販店價：${p.s || '—'}`;
       recalc();
@@ -309,10 +334,17 @@ const mana = (manaDs?.rows ?? []).map((r) =>
       const p = list[Number(prodSel.value)];
       if (p) showProduct(p);
     });
-    skillSel.addEventListener('change', recalc);
+    skillSel.addEventListener('change', () => {
+      lsSet(SKILL(catSel.value), skillSel.value);
+      recalc();
+    });
     timesInput.addEventListener('input', recalc);
     feeInput.addEventListener('input', () => {
       lsSet(FEE, feeInput.value.trim());
+      recalc();
+    });
+    manaCostInput.addEventListener('input', () => {
+      lsSet(MANACOST, manaCostInput.value.trim());
       recalc();
     });
     saleInput.addEventListener('input', () => {
@@ -322,6 +354,8 @@ const mana = (manaDs?.rows ?? []).map((r) =>
 
     const savedFee = lsGet(FEE);
     if (savedFee !== '') feeInput.value = savedFee;
+    const savedManaCost = lsGet(MANACOST);
+    if (savedManaCost !== '') manaCostInput.value = savedManaCost;
     catSel.value = '料理';
     fillProducts();
     root.hidden = false;
