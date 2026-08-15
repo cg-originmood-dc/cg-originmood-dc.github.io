@@ -7,6 +7,7 @@ import PetList from '../components/PetList.astro';
 import PetIslandTabs from '../components/PetIslandTabs.astro';
 import PetSynthesisTables from '../components/PetSynthesisTables.astro';
 import LevelingSpots from '../components/LevelingSpots.astro';
+import CraftCostCalc from '../components/CraftCostCalc.astro';
 import TitleReputation from '../components/TitleReputation.astro';
 import SkillIndex from '../components/SkillIndex.astro';
 import SourceNote from '../components/SourceNote.astro';
@@ -48,6 +49,8 @@ const hasProse = entry.body != null && entry.body.trim().length > 0;
     <PetList />
   ) : entry.data.title === '專屬技能' ? (
     <ExclusiveSkills />
+  ) : entry.data.title === '成本計算' ? (
+    <CraftCostCalc />
   ) : (
     entry.data.datasets.map((name) => {
       const heading = datasetHeading(entry.id, name, entry.data.datasets.length);

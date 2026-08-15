@@ -1,0 +1,460 @@
+---
+/**
+ * 生產成本計算機（仿水藍魔力「生產小工具」的一般模式）。
+ *
+ * 配方不另外抄一份：直接吃本站武器／防具／料理／藥水各 CSV 的材料欄，
+ * 那邊修資料這裡自動跟著變。耗魔查 content/data/製作耗魔.csv
+ * （技能等級 × 產品階數的矩陣，「-」＝該技能等級做不了）。
+ *
+ * 材料市價隨伺服器行情浮動，沒有「正確值」可以放資料層，
+ * 所以由使用者輸入、記在 localStorage（鍵以材料名共用，
+ * 換算別的產品時同一種材料不用重填）。
+ */
+import { loadDataset } from '../lib/datasets';
+import { hasItem } from '../lib/items';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+
+/** 下拉的類別分組。名稱同 content/data 檔名與生產頁面，新增一份 CSV 時在這裡掛上即可。 */
+const GROUPS: { label: string; sets: string[] }[] = [
+  { label: '武器', sets: ['劍', '斧', '槍', '弓', '杖', '投擲武器', '小刀', '太刀'] },
+  { label: '防具', sets: ['頭盔', '帽子', '鎧甲', '衣服', '長袍', '盾牌', '靴子', '鞋子'] },
+  { label: '料理／藥水', sets: ['料理', '藥水'] },
+];
+
+/** 材料欄的單項格式「名稱(數量)」。名稱本身可含括號（生命力回復藥(100)），靠結尾錨定拆數量。 */
+const MAT = /^(.+?)\((\d+)\)$/;
+
+/** m: [名稱, 數量, 是否在道具庫（1 可連到道具頁）] */
+type Mat = [string, number, 0 | 1];
+type Product = { c: string; l: string; v: number; n: string; s: string; m: Mat[] };
+
+const products: Product[] = [];
+for (const g of GROUPS) {
+  for (const set of g.sets) {
+    const ds = loadDataset(set);
+    if (!ds) {
+      console.warn(`[成本計算] 找不到資料集 ${set}`);
+      continue;
+    }
+    let skipped = 0;
+    for (const r of ds.rows) {
+      const raw = (r['材料'] ?? '').trim();
+      const parts = raw ? raw.split('、') : [];
+      const m: Mat[] = [];
+      let ok = parts.length > 0;
+      for (const part of parts) {
+        const hit = MAT.exec(part.trim());
+        if (!hit) {
+          ok = false;
+          break;
+        }
+        m.push([hit[1], Number(hit[2]), hasItem(hit[1]) ? 1 : 0]);
+      }
+      // 材料解析不完整就整筆不收：算出少一味材料的成本比沒得算更糟
+      if (!ok) {
+        skipped++;
+        continue;
+      }
+      products.push({
+        c: set,
+        l: (r['等級'] ?? '').trim(),
+        v: Number.parseInt(r['等級'] ?? '', 10) || 0,
+        n: (r['名稱'] ?? '').trim(),
+        s: (r['販店價'] ?? '').trim(),
+        m,
+      });
+    }
+    if (skipped) {
+      console.warn(`[成本計算] ${set}：${skipped} 列材料欄空白或格式非「名稱(數量)」，未列入`);
+    }
+  }
+}
+
+// 耗魔矩陣攤成 mana[技能-1][階數-1]，null＝該技能等級做不了該階
+const manaDs = loadDataset('製作耗魔');
+const mana = (manaDs?.rows ?? []).map((r) =>
+  Array.from({ length: 11 }, (_, i) => {
+    const v = (r[`製作${i + 1}`] ?? '').trim();
+    return v && v !== '-' ? Number(v) : null;
+  }),
+);
+---
+
+<section
+  class="cc"
+  data-cc
+  data-products={JSON.stringify(products)}
+  data-mana={JSON.stringify(mana)}
+  data-item-base={`${base}/道具總覽/`}
+  hidden
+>
+  <div class="cc__pick">
+    <label>類別
+      <select data-cat>
+        {GROUPS.map((g) => (
+          <optgroup label={g.label}>
+            {g.sets.map((s) => (
+              <option value={s}>{s}</option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
+    </label>
+    <label>產品
+      <select data-prod></select>
+    </label>
+    <label>技能等級
+      <select data-skill>
+        {Array.from({ length: 11 }, (_, i) => (
+          <option value={i + 1}>{i + 1}</option>
+        ))}
+      </select>
+    </label>
+  </div>
+
+  <p class="cc__meta" data-meta></p>
+
+  <table class="cc__table">
+    <thead>
+      <tr>
+        <th>材料</th>
+        <th>數量／次</th>
+        <th>單價（1 個）</th>
+        <th>小計</th>
+        <th>總需求</th>
+      </tr>
+    </thead>
+    <tbody data-mats></tbody>
+  </table>
+
+  <div class="cc__pick cc__pick--calc">
+    <label>製作次數
+      <input type="number" data-times value="1" min="1" step="1" />
+    </label>
+    <label>擺攤價／個
+      <input type="number" data-sale min="0" step="1" placeholder="自行輸入" />
+    </label>
+    <label>手續費％
+      <input type="number" data-fee value="10" min="0" max="100" step="1" />
+    </label>
+  </div>
+
+  <dl class="cc__out">
+    <div><dt>單次材料成本</dt><dd data-o-cost>—</dd></div>
+    <div><dt>耗魔</dt><dd data-o-mana>—</dd></div>
+    <div><dt>總材料成本</dt><dd data-o-tcost>—</dd></div>
+    <div><dt>擺攤實收／個</dt><dd data-o-net>—</dd></div>
+    <div><dt>單個淨利</dt><dd data-o-profit>—</dd></div>
+    <div><dt>總淨利</dt><dd data-o-tprofit>—</dd></div>
+  </dl>
+</section>
+<noscript><p>成本計算機需要開啟 JavaScript 才能使用。</p></noscript>
+
+<script>
+  type Mat = [string, number, 0 | 1];
+  type Prod = { c: string; l: string; v: number; n: string; s: string; m: Mat[] };
+
+  document.querySelectorAll<HTMLElement>('[data-cc]').forEach((root) => {
+    const products: Prod[] = JSON.parse(root.dataset.products ?? '[]');
+    const mana: (number | null)[][] = JSON.parse(root.dataset.mana ?? '[]');
+    const itemBase = root.dataset.itemBase ?? '';
+
+    const q = <T extends HTMLElement>(sel: string) => root.querySelector<T>(sel);
+    const catSel = q<HTMLSelectElement>('[data-cat]');
+    const prodSel = q<HTMLSelectElement>('[data-prod]');
+    const skillSel = q<HTMLSelectElement>('[data-skill]');
+    const timesInput = q<HTMLInputElement>('[data-times]');
+    const saleInput = q<HTMLInputElement>('[data-sale]');
+    const feeInput = q<HTMLInputElement>('[data-fee]');
+    const matsBody = q<HTMLElement>('[data-mats]');
+    const meta = q<HTMLElement>('[data-meta]');
+    const out = {
+      cost: q<HTMLElement>('[data-o-cost]'),
+      mana: q<HTMLElement>('[data-o-mana]'),
+      tcost: q<HTMLElement>('[data-o-tcost]'),
+      net: q<HTMLElement>('[data-o-net]'),
+      profit: q<HTMLElement>('[data-o-profit]'),
+      tprofit: q<HTMLElement>('[data-o-tprofit]'),
+    };
+    if (!catSel || !prodSel || !skillSel || !timesInput || !saleInput || !feeInput || !matsBody || !meta) return;
+
+    // localStorage 掛了（無痕、隱私設定）也照常能算，只是不記憶
+    const lsGet = (k: string) => {
+      try {
+        return localStorage.getItem(k) ?? '';
+      } catch {
+        return '';
+      }
+    };
+    const lsSet = (k: string, v: string) => {
+      try {
+        if (v === '') localStorage.removeItem(k);
+        else localStorage.setItem(k, v);
+      } catch {
+        /* 記不住就算了 */
+      }
+    };
+    const PRICE = (name: string) => `craftcost:price:${name}`;
+    const SALE = (name: string) => `craftcost:sale:${name}`;
+    const FEE = 'craftcost:fee';
+
+    const fmt = (n: number) => n.toLocaleString('zh-Hant', { maximumFractionDigits: 2 });
+
+    let current: Prod | null = null;
+    let priceInputs: HTMLInputElement[] = [];
+    let subtotalCells: HTMLElement[] = [];
+    let totalCells: HTMLElement[] = [];
+
+    const recalc = () => {
+      const p = current;
+      if (!p) return;
+      const times = Math.max(1, Math.trunc(Number(timesInput.value)) || 1);
+      const feePct = Math.min(100, Math.max(0, Number(feeInput.value) || 0));
+
+      let cost = 0;
+      let missing = 0;
+      p.m.forEach(([, qty], i) => {
+        const price = Number.parseFloat(priceInputs[i]?.value ?? '');
+        if (Number.isFinite(price)) {
+          const sub = qty * price;
+          cost += sub;
+          subtotalCells[i].textContent = fmt(sub);
+        } else {
+          missing++;
+          subtotalCells[i].textContent = '—';
+        }
+        totalCells[i].textContent = fmt(qty * times);
+      });
+      const lack = missing ? `（缺 ${missing} 項單價）` : '';
+
+      out.cost && (out.cost.textContent = `${fmt(cost)} G${lack}`);
+      out.tcost && (out.tcost.textContent = `${fmt(cost * times)} G${lack}`);
+
+      // 耗魔：矩陣列＝技能等級、欄＝產品階數；12 階是初心自加的品項，原表沒有資料
+      const skill = Number(skillSel.value);
+      if (out.mana) {
+        if (p.v > 11) {
+          out.mana.textContent = '？（12 階品項無耗魔資料）';
+        } else {
+          const cell = mana[skill - 1]?.[p.v - 1] ?? null;
+          out.mana.textContent =
+            cell == null
+              ? `技能 ${skill} 級做不了 ${p.v} 階（需 ${p.v - 1} 級以上）`
+              : `${fmt(cell)}／次，${times} 次共 ${fmt(cell * times)}`;
+        }
+      }
+
+      const sale = Number.parseFloat(saleInput.value);
+      if (!Number.isFinite(sale) || sale <= 0) {
+        out.net && (out.net.textContent = '—（未填擺攤價）');
+        out.profit && (out.profit.textContent = '—');
+        out.tprofit && (out.tprofit.textContent = '—');
+        return;
+      }
+      const net = sale - Math.floor((sale * feePct) / 100);
+      const profit = net - cost;
+      out.net && (out.net.textContent = `${fmt(net)} G（手續費 ${fmt(sale - net)}）`);
+      const mark = (el: HTMLElement | null, value: number, suffix: string) => {
+        if (!el) return;
+        el.textContent = `${fmt(value)} G${suffix}`;
+        el.classList.toggle('is-neg', value < 0);
+      };
+      mark(out.profit, profit, lack);
+      mark(out.tprofit, profit * times, lack);
+    };
+
+    /** 換產品：重建材料列、帶回記過的單價與擺攤價、技能等級預設為產品階數 */
+    const showProduct = (p: Prod) => {
+      current = p;
+      priceInputs = [];
+      subtotalCells = [];
+      totalCells = [];
+      matsBody.textContent = '';
+      p.m.forEach(([name, qty, linkable]) => {
+        const tr = document.createElement('tr');
+        const nameTd = document.createElement('td');
+        nameTd.className = 'cc__mat-name';
+        if (linkable) {
+          const a = document.createElement('a');
+          a.href = itemBase + encodeURIComponent(name);
+          a.textContent = name;
+          nameTd.append(a);
+        } else {
+          nameTd.textContent = name;
+        }
+        const qtyTd = document.createElement('td');
+        qtyTd.textContent = String(qty);
+        const priceTd = document.createElement('td');
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.min = '0';
+        input.step = 'any';
+        input.value = lsGet(PRICE(name));
+        input.addEventListener('input', () => {
+          lsSet(PRICE(name), input.value.trim());
+          recalc();
+        });
+        priceTd.append(input);
+        const subTd = document.createElement('td');
+        const totalTd = document.createElement('td');
+        priceInputs.push(input);
+        subtotalCells.push(subTd);
+        totalCells.push(totalTd);
+        tr.append(nameTd, qtyTd, priceTd, subTd, totalTd);
+        matsBody.append(tr);
+      });
+      skillSel.value = String(Math.min(Math.max(p.v, 1), 11));
+      saleInput.value = lsGet(SALE(p.n));
+      meta.textContent = `${p.c}　${p.l} 階「${p.n}」｜販店價：${p.s || '—'}`;
+      recalc();
+    };
+
+    const fillProducts = () => {
+      const list = products.filter((p) => p.c === catSel.value);
+      prodSel.textContent = '';
+      list.forEach((p, i) => {
+        const opt = document.createElement('option');
+        opt.value = String(i);
+        opt.textContent = `${p.l}　${p.n}`;
+        prodSel.append(opt);
+      });
+      if (list.length) showProduct(list[0]);
+    };
+
+    catSel.addEventListener('change', fillProducts);
+    prodSel.addEventListener('change', () => {
+      const list = products.filter((p) => p.c === catSel.value);
+      const p = list[Number(prodSel.value)];
+      if (p) showProduct(p);
+    });
+    skillSel.addEventListener('change', recalc);
+    timesInput.addEventListener('input', recalc);
+    feeInput.addEventListener('input', () => {
+      lsSet(FEE, feeInput.value.trim());
+      recalc();
+    });
+    saleInput.addEventListener('input', () => {
+      if (current) lsSet(SALE(current.n), saleInput.value.trim());
+      recalc();
+    });
+
+    const savedFee = lsGet(FEE);
+    if (savedFee !== '') feeInput.value = savedFee;
+    catSel.value = '料理';
+    fillProducts();
+    root.hidden = false;
+  });
+</script>
+
+<style>
+  .cc {
+    margin-top: 1.25rem;
+  }
+
+  .cc__pick {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem 1.25rem;
+    align-items: center;
+    margin-bottom: 0.9rem;
+  }
+
+  .cc__pick--calc {
+    margin-top: 1rem;
+  }
+
+  .cc__pick label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--text-2);
+    white-space: nowrap;
+  }
+
+  .cc__pick select,
+  .cc__pick input {
+    font: inherit;
+    padding: 0.3rem 0.45rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--text);
+  }
+
+  .cc__pick input {
+    width: 6.5em;
+  }
+
+  .cc__meta {
+    margin: 0 0 0.6rem;
+    color: var(--text-2);
+  }
+
+  /* 材料列由 JS 動態長出來，樣式要走 :global 才掛得到 */
+  :global(.cc__table) {
+    width: auto;
+    min-width: min(34rem, 100%);
+    border-collapse: collapse;
+  }
+
+  :global(.cc__table th),
+  :global(.cc__table td) {
+    padding: 0.4rem 0.7rem;
+    border: 1px solid var(--border);
+    text-align: center;
+  }
+
+  :global(.cc__table th) {
+    background: var(--surface-2);
+    font-weight: 600;
+  }
+
+  :global(.cc__table td.cc__mat-name) {
+    text-align: left;
+  }
+
+  :global(.cc__table td input) {
+    width: 6em;
+    font: inherit;
+    padding: 0.25rem 0.35rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    text-align: right;
+  }
+
+  .cc__out {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    gap: 0.5rem 1.5rem;
+    margin: 1rem 0 0;
+    max-width: 40rem;
+  }
+
+  .cc__out > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    border-bottom: 1px dashed var(--border);
+    padding-bottom: 0.3rem;
+  }
+
+  .cc__out dt {
+    color: var(--text-2);
+  }
+
+  .cc__out dd {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  :global(.cc__out dd.is-neg) {
+    color: #b42318;
+  }
+
+  @media (max-width: 700px) {
+    .cc__pick {
+      gap: 0.5rem 0.9rem;
+    }
+  }
+</style>
