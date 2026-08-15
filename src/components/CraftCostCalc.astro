@@ -11,65 +11,10 @@
  * 換算別的產品時同一種材料不用重填）。
  */
 import { loadDataset } from '../lib/datasets';
-import { hasItem } from '../lib/items';
+import { GROUPS, loadProducts } from '../lib/craftCost';
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
-
-/** 下拉的類別分組。名稱同 content/data 檔名與生產頁面，新增一份 CSV 時在這裡掛上即可。 */
-const GROUPS: { label: string; sets: string[] }[] = [
-  { label: '武器', sets: ['劍', '斧', '槍', '弓', '杖', '投擲武器', '小刀', '太刀'] },
-  { label: '防具', sets: ['頭盔', '帽子', '鎧甲', '衣服', '長袍', '盾牌', '靴子', '鞋子'] },
-  { label: '料理／藥水', sets: ['料理', '藥水'] },
-];
-
-/** 材料欄的單項格式「名稱(數量)」。名稱本身可含括號（生命力回復藥(100)），靠結尾錨定拆數量。 */
-const MAT = /^(.+?)\((\d+)\)$/;
-
-/** m: [名稱, 數量, 是否在道具庫（1 可連到道具頁）] */
-type Mat = [string, number, 0 | 1];
-type Product = { c: string; l: string; v: number; n: string; s: string; m: Mat[] };
-
-const products: Product[] = [];
-for (const g of GROUPS) {
-  for (const set of g.sets) {
-    const ds = loadDataset(set);
-    if (!ds) {
-      console.warn(`[成本計算] 找不到資料集 ${set}`);
-      continue;
-    }
-    let skipped = 0;
-    for (const r of ds.rows) {
-      const raw = (r['材料'] ?? '').trim();
-      const parts = raw ? raw.split('、') : [];
-      const m: Mat[] = [];
-      let ok = parts.length > 0;
-      for (const part of parts) {
-        const hit = MAT.exec(part.trim());
-        if (!hit) {
-          ok = false;
-          break;
-        }
-        m.push([hit[1], Number(hit[2]), hasItem(hit[1]) ? 1 : 0]);
-      }
-      // 材料解析不完整就整筆不收：算出少一味材料的成本比沒得算更糟
-      if (!ok) {
-        skipped++;
-        continue;
-      }
-      products.push({
-        c: set,
-        l: (r['等級'] ?? '').trim(),
-        v: Number.parseInt(r['等級'] ?? '', 10) || 0,
-        n: (r['名稱'] ?? '').trim(),
-        s: (r['販店價'] ?? '').trim(),
-        m,
-      });
-    }
-    if (skipped) {
-      console.warn(`[成本計算] ${set}：${skipped} 列材料欄空白或格式非「名稱(數量)」，未列入`);
-    }
-  }
-}
+const products = loadProducts();
 
 // 耗魔矩陣攤成 mana[技能-1][階數-1]，null＝該技能等級做不了該階
 const manaDs = loadDataset('製作耗魔');
@@ -127,6 +72,11 @@ const mana = (manaDs?.rows ?? []).map((r) =>
     </thead>
     <tbody data-mats></tbody>
   </table>
+
+  <p class="cc__hint">
+    單價填過會記住。要一次維護全部材料、或匯入別人分享的行情，到
+    <a href={`${base}/生產製造/材料價格`}>材料價格</a> 頁。
+  </p>
 
   <div class="cc__pick cc__pick--calc">
     <label>製作次數
@@ -389,6 +339,12 @@ const mana = (manaDs?.rows ?? []).map((r) =>
   .cc__meta {
     margin: 0 0 0.6rem;
     color: var(--text-2);
+  }
+
+  .cc__hint {
+    margin: 0.6rem 0 0;
+    font-size: 0.9rem;
+    color: var(--text-3);
   }
 
   /* 材料列由 JS 動態長出來，樣式要走 :global 才掛得到 */

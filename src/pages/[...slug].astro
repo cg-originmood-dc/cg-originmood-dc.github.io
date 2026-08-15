@@ -8,6 +8,7 @@ import PetIslandTabs from '../components/PetIslandTabs.astro';
 import PetSynthesisTables from '../components/PetSynthesisTables.astro';
 import LevelingSpots from '../components/LevelingSpots.astro';
 import CraftCostCalc from '../components/CraftCostCalc.astro';
+import MaterialPrices from '../components/MaterialPrices.astro';
 import TitleReputation from '../components/TitleReputation.astro';
 import SkillIndex from '../components/SkillIndex.astro';
 import SourceNote from '../components/SourceNote.astro';
@@ -51,6 +52,8 @@ const hasProse = entry.body != null && entry.body.trim().length > 0;
     <ExclusiveSkills />
   ) : entry.data.title === '成本計算' ? (
     <CraftCostCalc />
+  ) : entry.data.title === '材料價格' ? (
+    <MaterialPrices />
   ) : (
     entry.data.datasets.map((name) => {
       const heading = datasetHeading(entry.id, name, entry.data.datasets.length);

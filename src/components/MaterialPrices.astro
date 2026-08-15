@@ -1,0 +1,320 @@
+---
+/**
+ * 材料單價維護頁。把所有配方會用到的材料攤成一張表，單價記
+ * localStorage（鍵 craftcost:price:<材料名>），與成本計算頁同鍵共用——
+ * 這裡填好，計算機選什麼產品都自動帶入。
+ *
+ * 清單由配方推導（listMaterials），介面不自寫材料清單；
+ * 市價沒有「正確值」，不落資料層。匯出／匯入走剪貼簿文字
+ * （一行一筆「名稱、Tab、價格」），方便朋友間分享行情或搬裝置。
+ */
+import { listMaterials } from '../lib/craftCost';
+import { getItem, itemImagePath } from '../lib/items';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+
+type Row = { n: string; cat: string; lv: string; href: string | null; img: string };
+const rows: Row[] = listMaterials().map((n) => {
+  const it = getItem(n);
+  return {
+    n,
+    cat: (it?.子分類 || it?.分類 || '').trim() || '未收錄',
+    lv: (it?.等級 ?? '').trim(),
+    href: it ? `${base}/道具總覽/${encodeURIComponent(n)}` : null,
+    img: itemImagePath(n),
+  };
+});
+
+// 分類照字典序、同分類照等級再照名稱；「未收錄」（道具庫還沒有的）壓底
+const collator = new Intl.Collator('zh-Hant', { numeric: true });
+const lvNum = (lv: string) => {
+  const n = Number(lv);
+  return lv !== '' && Number.isFinite(n) ? n : 99;
+};
+rows.sort((a, b) => {
+  if (a.cat !== b.cat) {
+    if (a.cat === '未收錄') return 1;
+    if (b.cat === '未收錄') return -1;
+    return collator.compare(a.cat, b.cat);
+  }
+  if (lvNum(a.lv) !== lvNum(b.lv)) return lvNum(a.lv) - lvNum(b.lv);
+  return collator.compare(a.n, b.n);
+});
+---
+
+<section class="mp" data-matprice hidden>
+  <div class="mp__bar">
+    <input type="search" data-filter placeholder="輸入材料名過濾…" />
+    <span class="mp__count" data-counter></span>
+    <button type="button" data-clear>清除全部單價</button>
+  </div>
+
+  <table class="mp__table">
+    <thead>
+      <tr>
+        <th>材料</th>
+        <th>類別</th>
+        <th>等級</th>
+        <th>單價（1 個）</th>
+      </tr>
+    </thead>
+    <tbody>
+      {rows.map((r) => (
+        <tr data-row data-name={r.n}>
+          <td class="mp__name">
+            {r.img && <img src={r.img} alt="" loading="lazy" />}
+            {r.href ? <a href={r.href}>{r.n}</a> : r.n}
+          </td>
+          <td>{r.cat === '未收錄' ? <span class="mp__na">未收錄</span> : r.cat}</td>
+          <td>{r.lv || '—'}</td>
+          <td><input type="number" min="0" step="any" data-mat={r.n} /></td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+
+  <details class="mp__io">
+    <summary>匯出／匯入行情</summary>
+    <p>格式一行一筆「材料名（Tab 或 =）價格」。匯出會把已填的單價填進下面的框，複製給朋友；把別人分享的內容貼進來按匯入即可帶入。</p>
+    <textarea data-io rows="8" spellcheck="false"></textarea>
+    <div class="mp__io-btns">
+      <button type="button" data-export>匯出到框內</button>
+      <button type="button" data-import>從框內匯入</button>
+      <span class="mp__io-status" data-io-status></span>
+    </div>
+  </details>
+</section>
+<noscript><p>材料價格維護需要開啟 JavaScript 才能使用。</p></noscript>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-matprice]').forEach((root) => {
+    const inputs = Array.from(root.querySelectorAll<HTMLInputElement>('input[data-mat]'));
+    const rows = Array.from(root.querySelectorAll<HTMLElement>('[data-row]'));
+    const counter = root.querySelector<HTMLElement>('[data-counter]');
+    const filter = root.querySelector<HTMLInputElement>('[data-filter]');
+    const clearBtn = root.querySelector<HTMLButtonElement>('[data-clear]');
+    const io = root.querySelector<HTMLTextAreaElement>('[data-io]');
+    const ioStatus = root.querySelector<HTMLElement>('[data-io-status]');
+
+    const KEY = (n: string) => `craftcost:price:${n}`;
+    const lsGet = (k: string) => {
+      try {
+        return localStorage.getItem(k) ?? '';
+      } catch {
+        return '';
+      }
+    };
+    const lsSet = (k: string, v: string) => {
+      try {
+        if (v === '') localStorage.removeItem(k);
+        else localStorage.setItem(k, v);
+      } catch {
+        /* 記不住就算了 */
+      }
+    };
+
+    const refreshCount = () => {
+      if (!counter) return;
+      const filled = inputs.filter((i) => i.value.trim() !== '').length;
+      counter.textContent = `已填 ${filled}／${inputs.length} 項`;
+    };
+
+    inputs.forEach((input) => {
+      const name = input.dataset.mat ?? '';
+      input.value = lsGet(KEY(name));
+      input.addEventListener('input', () => {
+        lsSet(KEY(name), input.value.trim());
+        refreshCount();
+      });
+    });
+
+    filter?.addEventListener('input', () => {
+      const q = filter.value.trim();
+      rows.forEach((row) => {
+        row.hidden = q !== '' && !(row.dataset.name ?? '').includes(q);
+      });
+    });
+
+    clearBtn?.addEventListener('click', () => {
+      if (!confirm(`確定清除全部 ${inputs.length} 項單價？`)) return;
+      inputs.forEach((input) => {
+        input.value = '';
+        lsSet(KEY(input.dataset.mat ?? ''), '');
+      });
+      refreshCount();
+    });
+
+    root.querySelector('[data-export]')?.addEventListener('click', () => {
+      if (!io) return;
+      const lines = inputs
+        .filter((i) => i.value.trim() !== '')
+        .map((i) => `${i.dataset.mat}\t${i.value.trim()}`);
+      io.value = lines.join('\n');
+      io.select();
+      ioStatus && (ioStatus.textContent = `已匯出 ${lines.length} 筆，Ctrl+C 複製`);
+    });
+
+    root.querySelector('[data-import]')?.addEventListener('click', () => {
+      if (!io) return;
+      const byName = new Map(inputs.map((i) => [i.dataset.mat ?? '', i]));
+      let ok = 0;
+      let skip = 0;
+      for (const line of io.value.split(/\r?\n/)) {
+        const m = /^(.+?)[\t=,，:：]\s*([\d.]+)\s*$/.exec(line.trim());
+        if (!m) {
+          if (line.trim()) skip++;
+          continue;
+        }
+        const input = byName.get(m[1].trim());
+        if (!input) {
+          skip++;
+          continue;
+        }
+        input.value = m[2];
+        lsSet(KEY(m[1].trim()), m[2]);
+        ok++;
+      }
+      refreshCount();
+      ioStatus && (ioStatus.textContent = `帶入 ${ok} 筆${skip ? `，略過 ${skip} 行` : ''}`);
+    });
+
+    refreshCount();
+    root.hidden = false;
+  });
+</script>
+
+<style>
+  .mp {
+    margin-top: 1.25rem;
+  }
+
+  .mp__bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem 1rem;
+    align-items: center;
+    margin-bottom: 0.9rem;
+  }
+
+  .mp__bar input[type='search'] {
+    font: inherit;
+    padding: 0.35rem 0.55rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    width: 14em;
+  }
+
+  .mp__count {
+    color: var(--text-2);
+  }
+
+  .mp__bar button {
+    font: inherit;
+    font-size: 0.85rem;
+    padding: 0.3rem 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--text-2);
+    cursor: pointer;
+    margin-left: auto;
+  }
+
+  .mp__bar button:hover {
+    background: var(--surface-2);
+  }
+
+  .mp__table {
+    width: auto;
+    min-width: min(30rem, 100%);
+    border-collapse: collapse;
+  }
+
+  .mp__table th,
+  .mp__table td {
+    padding: 0.35rem 0.7rem;
+    border: 1px solid var(--border);
+    text-align: center;
+  }
+
+  .mp__table th {
+    background: var(--surface-2);
+    font-weight: 600;
+  }
+
+  td.mp__name {
+    text-align: left;
+  }
+
+  .mp__name img {
+    height: 24px;
+    vertical-align: middle;
+    margin-right: 0.4rem;
+    image-rendering: pixelated;
+  }
+
+  .mp__na {
+    color: var(--text-3);
+  }
+
+  .mp__table input {
+    width: 6.5em;
+    font: inherit;
+    padding: 0.25rem 0.35rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    text-align: right;
+  }
+
+  .mp__io {
+    margin-top: 1.1rem;
+    max-width: 34rem;
+  }
+
+  .mp__io summary {
+    cursor: pointer;
+    color: var(--text-2);
+  }
+
+  .mp__io p {
+    font-size: 0.9rem;
+    color: var(--text-3);
+    margin: 0.5rem 0;
+  }
+
+  .mp__io textarea {
+    width: 100%;
+    font: inherit;
+    font-size: 0.9rem;
+    padding: 0.45rem 0.55rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-sizing: border-box;
+  }
+
+  .mp__io-btns {
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+    margin-top: 0.5rem;
+  }
+
+  .mp__io-btns button {
+    font: inherit;
+    font-size: 0.9rem;
+    padding: 0.3rem 0.7rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+  }
+
+  .mp__io-btns button:hover {
+    background: var(--surface-2);
+  }
+
+  .mp__io-status {
+    font-size: 0.9rem;
+    color: var(--text-2);
+  }
+</style>
