@@ -5,10 +5,12 @@
  * 那邊修資料這裡自動跟著變。材料市價隨伺服器行情浮動、沒有「正確值」
  * 可以放資料層，一律由使用者輸入、記在 localStorage
  * （鍵 `craftcost:price:<材料名>`，兩頁同鍵共用；值一律是 1 個的價，
- * 採集材料的輸入框以組價顯示、由介面換算）。
+ * 輸入框以組價顯示、由介面換算。一組幾個也是使用者可調：
+ * 鍵 `craftcost:stack:<材料名>`，沒設就是預設 40——本服最大堆疊，
+ * 礦、木、食材、花材、礦條等市場都照組喊價，論個賣的自己調成 1）。
  */
 import { loadDataset } from './datasets';
-import { getItem, hasItem } from './items';
+import { hasItem } from './items';
 
 /** 下拉的類別分組。名稱同 content/data 檔名與生產頁面，新增一份 CSV 時在這裡掛上即可。 */
 export const GROUPS: { label: string; sets: string[] }[] = [
@@ -20,21 +22,11 @@ export const GROUPS: { label: string; sets: string[] }[] = [
 /** 材料欄的單項格式「名稱(數量)」。名稱本身可含括號（生命力回復藥(100)），靠結尾錨定拆數量。 */
 const MAT = /^(.+?)\((\d+)\)$/;
 
-/**
- * 一組的數量。永恆初心的採集材料（礦、木頭、食材、花材——對應道具庫
- * 子分類 狩獵／伐木／挖掘）一組最多 40 個，市場行情也照組喊價，
- * 介面讓人直接輸一組的價格；布料由 NPC 單賣、稀有素材論個，視為 1。
- * 道具庫還沒收錄的材料查不到子分類，先當論個，補列後自動歸隊；
- * 若之後道具庫加了逐項堆疊欄位，改讀該欄即可。
- */
-const STACK_CATEGORIES = new Set(['狩獵', '伐木', '挖掘']);
-export function stackSize(name: string): number {
-  const it = getItem(name);
-  return it && STACK_CATEGORIES.has((it.子分類 ?? '').trim()) ? 40 : 1;
-}
+/** 一組幾個的預設值：本服最大堆疊 40。逐項調整存 localStorage，由頁面處理。 */
+export const DEFAULT_STACK = 40;
 
-/** [名稱, 數量, 是否在道具庫（1 可連到道具頁）, 一組數量（供組價⇄單價換算）] */
-export type Mat = [string, number, 0 | 1, number];
+/** [名稱, 數量, 是否在道具庫（1 可連到道具頁）] */
+export type Mat = [string, number, 0 | 1];
 export type Product = { c: string; l: string; v: number; n: string; s: string; m: Mat[] };
 
 export function loadProducts(): Product[] {
@@ -58,7 +50,7 @@ export function loadProducts(): Product[] {
             ok = false;
             break;
           }
-          m.push([hit[1], Number(hit[2]), hasItem(hit[1]) ? 1 : 0, stackSize(hit[1])]);
+          m.push([hit[1], Number(hit[2]), hasItem(hit[1]) ? 1 : 0]);
         }
         // 材料解析不完整就整筆不收：算出少一味材料的成本比沒得算更糟
         if (!ok) {
