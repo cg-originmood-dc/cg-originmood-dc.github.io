@@ -1,0 +1,159 @@
+---
+/**
+ * 精神衝擊波試算。常數只讀等級常數 CSV，公式在 mentalShockwave.ts。
+ */
+import { loadDataset } from '../lib/datasets';
+import { parseShockwaveLevels } from '../lib/mentalShockwave';
+
+const ds = loadDataset('精神衝擊波等級常數');
+const levels = parseShockwaveLevels(ds?.rows ?? []);
+---
+
+<section class="sw" data-sw data-levels={JSON.stringify(levels)}>
+  <h2>傷害試算</h2>
+  <p class="sw__lead">數字來自上方公式與本頁等級常數表。低精神（約 348 以下）可能另有門檻罰則，結果僅供對照。</p>
+  <div class="sw__pick">
+    <label>技能等級
+      <select data-lv>
+        {levels.map((lv) => (
+          <option value={lv.等級} selected={lv.等級 === 12}>{lv.等級}</option>
+        ))}
+      </select>
+    </label>
+    <label>精神
+      <input data-mind type="number" min="1" step="1" value="348" />
+    </label>
+    <label>防禦
+      <input data-def type="number" min="0" step="1" value="0" />
+    </label>
+  </div>
+  <table class="sw__out">
+    <tbody>
+      <tr><th>精神係數</th><td data-coef>—</td></tr>
+      <tr><th>h（工作值）</th><td data-h>—</td></tr>
+      <tr><th>有效攻擊 A</th><td data-a>—</td></tr>
+      <tr><th>中心值 X</th><td data-x>—</td></tr>
+      <tr><th>畫面中心（倍率 1.00）</th><td data-mid>—</td></tr>
+      <tr><th>畫面區間（0.90～1.10）</th><td data-rng>—</td></tr>
+    </tbody>
+  </table>
+  <p class="sw__note" data-note hidden></p>
+</section>
+
+<script>
+  import {
+    shockwaveAttack,
+    shockwaveDisplay,
+    shockwaveRaw,
+    type ShockwaveLevel,
+  } from '../lib/mentalShockwave';
+
+  function bind(root: HTMLElement) {
+    const raw = root.dataset.levels;
+    if (!raw) return;
+    const levels = JSON.parse(raw) as ShockwaveLevel[];
+    const byLv = new Map(levels.map((r) => [r.等級, r]));
+    const lvEl = root.querySelector<HTMLSelectElement>('[data-lv]');
+    const mindEl = root.querySelector<HTMLInputElement>('[data-mind]');
+    const defEl = root.querySelector<HTMLInputElement>('[data-def]');
+    const coefEl = root.querySelector('[data-coef]');
+    const hEl = root.querySelector('[data-h]');
+    const aEl = root.querySelector('[data-a]');
+    const xEl = root.querySelector('[data-x]');
+    const midEl = root.querySelector('[data-mid]');
+    const rngEl = root.querySelector('[data-rng]');
+    const noteEl = root.querySelector<HTMLElement>('[data-note]');
+    if (!lvEl || !mindEl || !defEl || !coefEl || !hEl || !aEl || !xEl || !midEl || !rngEl || !noteEl) {
+      return;
+    }
+
+    const paint = () => {
+      const row = byLv.get(Number(lvEl.value));
+      const mind = Number(mindEl.value);
+      const def = Number(defEl.value);
+      if (!row || !Number.isFinite(mind) || !Number.isFinite(def)) return;
+      const A = shockwaveAttack(mind, row.等級, row.h工作值);
+      const X = shockwaveRaw(A, def);
+      coefEl.textContent = `${row.精神係數}%`;
+      hEl.textContent = String(row.h工作值);
+      aEl.textContent = String(A);
+      xEl.textContent = Number.isFinite(X) ? X.toFixed(4) : '—';
+      midEl.textContent = Number.isFinite(X) ? String(shockwaveDisplay(X, 1)) : '—';
+      rngEl.textContent = Number.isFinite(X)
+        ? `${shockwaveDisplay(X, 0.9)} ～ ${shockwaveDisplay(X, 1.1)}`
+        : '—';
+      const low = mind < 348;
+      noteEl.hidden = !low;
+      noteEl.textContent = low
+        ? '此精神可能低於發揮門檻，實測常低於本式，請勿用低精神結果否決高精神公式。'
+        : '';
+    };
+
+    lvEl.addEventListener('change', paint);
+    mindEl.addEventListener('input', paint);
+    defEl.addEventListener('input', paint);
+    paint();
+  }
+
+  document.querySelectorAll<HTMLElement>('[data-sw]').forEach(bind);
+</script>
+
+<style>
+  .sw {
+    margin: 1.2rem 0 1.6rem;
+    padding: 12px 14px 14px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+  }
+  .sw h2 {
+    margin: 0 0 0.4rem;
+    font-size: 1.15rem;
+  }
+  .sw__lead,
+  .sw__note {
+    margin: 0 0 0.8rem;
+    font-size: 0.9rem;
+    color: #5f6368;
+  }
+  .sw__note {
+    color: #e65100;
+    margin: 0.7rem 0 0;
+  }
+  .sw__pick {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.7rem 1rem;
+    margin-bottom: 0.8rem;
+  }
+  .sw__pick label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    font-size: 0.85rem;
+  }
+  .sw__pick select,
+  .sw__pick input {
+    font: inherit;
+    padding: 0.3rem 0.45rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    min-width: 6.5em;
+  }
+  .sw__out {
+    width: auto;
+    min-width: min(28rem, 100%);
+    border-collapse: collapse;
+  }
+  .sw__out th,
+  .sw__out td {
+    padding: 0.4rem 0.7rem;
+    border: 1px solid #ddd;
+    text-align: left;
+  }
+  .sw__out th {
+    background: #f1f3f4;
+    font-weight: 600;
+    width: 12em;
+  }
+</style>
