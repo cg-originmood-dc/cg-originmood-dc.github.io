@@ -1,6 +1,7 @@
 ---
 import { buildNav } from '../lib/nav';
 import NavTree from '../components/NavTree.astro';
+import EventBanner from '../components/EventBanner.astro';
 import ReportIssue from '../components/ReportIssue.astro';
 import '../styles/global.css';
 
@@ -50,6 +51,7 @@ const here = decodeURIComponent(Astro.url.pathname).replace(/\/$/, '');
       </nav>
 
       <main id="main">
+        <EventBanner />
         <article class:list={['page', { 'is-db-embed': dbEmbed }]}>
           {
             !dbEmbed && breadcrumb.length > 0 && (

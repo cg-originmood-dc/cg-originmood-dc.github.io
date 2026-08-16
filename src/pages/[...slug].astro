@@ -5,6 +5,7 @@ import DataTable from '../components/DataTable.astro';
 import ExclusiveSkills from '../components/ExclusiveSkills.astro';
 import PetList from '../components/PetList.astro';
 import PetIslandTabs from '../components/PetIslandTabs.astro';
+import EventPeriods from '../components/EventPeriods.astro';
 import PetSynthesisTables from '../components/PetSynthesisTables.astro';
 import LevelingSpots from '../components/LevelingSpots.astro';
 import CraftCostCalc from '../components/CraftCostCalc.astro';
@@ -41,7 +42,10 @@ const hasProse = entry.body != null && entry.body.trim().length > 0;
   ) : entry.data.title === '稱號與聲望' ? (
     <TitleReputation />
   ) : entry.data.title === '週年慶寵物島' ? (
-    <PetIslandTabs />
+    <>
+      <EventPeriods event="週年慶寵物島" />
+      <PetIslandTabs />
+    </>
   ) : entry.data.title === '寵物合成活動' ? (
     <PetSynthesisTables />
   ) : entry.data.title === '技能總覽' ? (

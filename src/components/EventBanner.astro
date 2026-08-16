@@ -1,0 +1,147 @@
+---
+/**
+ * 全站限時活動提醒條（資料來源 content/data/限時活動.csv）。
+ *
+ * 每頁都帶著全部活動的起訖時間，由瀏覽器挑出「此刻進行中」的那期才顯示——
+ * 靜態站是 push 才建置，若在建置期判斷，活動開跑或結束當天沒人 push
+ * 就會提醒錯誤。沒有進行中的活動時整條不出現（預設 hidden，不閃一下）。
+ *
+ * 關掉的話記在 localStorage，以「期別」為鍵：下一期活動是新的鍵，會重新提醒。
+ */
+import { listEvents } from '../lib/events';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+// 只送 banner 用得到的欄位，別把整張表塞進每一頁
+const events = listEvents()
+  .filter((e) => e.start && e.end)
+  .map((e) => ({ n: e.期別, s: e.start, e: e.end, u: e.頁面 ? base + e.頁面 : '' }));
+---
+
+{events.length > 0 && (
+  <div class="evb" data-event-banner data-events={JSON.stringify(events)} hidden>
+    <p class="evb__text">
+      <span class="evb__tag">限時活動進行中</span>
+      <a class="evb__link" data-link href={base + '/'}><span data-name></span></a>
+      <span class="evb__when" data-when></span>
+    </p>
+    <button type="button" class="evb__close" data-close aria-label="關閉提醒">×</button>
+  </div>
+)}
+
+<script>
+  type Ev = { n: string; s: string; e: string; u: string };
+
+  document.querySelectorAll<HTMLElement>('[data-event-banner]').forEach((root) => {
+    const events: Ev[] = JSON.parse(root.dataset.events ?? '[]');
+    const now = Date.now();
+    // 同時多個活動進行中時，先提醒快結束的那個（比較急）
+    const live = events
+      .filter((v) => {
+        const s = Date.parse(v.s);
+        const e = Date.parse(v.e);
+        return Number.isFinite(s) && Number.isFinite(e) && now >= s && now <= e;
+      })
+      .sort((a, b) => Date.parse(a.e) - Date.parse(b.e))[0];
+    if (!live) return;
+
+    const KEY = `event-banner-dismissed:${live.n}`;
+    try {
+      if (localStorage.getItem(KEY)) return;
+    } catch {
+      /* 讀不到就照常提醒 */
+    }
+
+    const nameEl = root.querySelector<HTMLElement>('[data-name]');
+    const linkEl = root.querySelector<HTMLAnchorElement>('[data-link]');
+    const whenEl = root.querySelector<HTMLElement>('[data-when]');
+    if (nameEl) nameEl.textContent = live.n;
+    if (linkEl && live.u) linkEl.href = live.u;
+
+    const end = Date.parse(live.e);
+    const days = Math.ceil((end - now) / 86400000);
+    const endText = new Date(end).toLocaleString('zh-Hant', {
+      timeZone: 'Asia/Taipei',
+      month: 'numeric',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+    if (whenEl) whenEl.textContent = `到 ${endText} 止，剩 ${days} 天`;
+
+    root.querySelector('[data-close]')?.addEventListener('click', () => {
+      root.hidden = true;
+      try {
+        localStorage.setItem(KEY, '1');
+      } catch {
+        /* 記不住就下次再提醒一次 */
+      }
+    });
+
+    root.hidden = false;
+  });
+</script>
+
+<style>
+  .evb {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.9rem;
+    background: #fff8e5;
+    border-bottom: 1px solid #e6d9a8;
+    color: #6b4e00;
+  }
+
+  .evb[hidden] {
+    display: none;
+  }
+
+  .evb__text {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.6rem;
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+
+  .evb__tag {
+    padding: 0.05rem 0.5rem;
+    border-radius: 999px;
+    background: #9a6700;
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .evb__link {
+    color: inherit;
+    font-weight: 700;
+  }
+
+  .evb__when {
+    color: #8a6a1f;
+    font-size: 0.9rem;
+  }
+
+  .evb__close {
+    flex: none;
+    width: 1.9rem;
+    height: 1.9rem;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .evb__close:hover {
+    background: #f3e6bf;
+  }
+</style>

@@ -34,7 +34,9 @@ const tabs = [
   const islandNames = ['大地鼠寵物島', '火焰鼠寵物島', '惡夢鼠寵物島', '寶石鼠寵物島', '水藍鼠寵物島'];
 
   document.querySelectorAll<HTMLElement>('[data-pet-islands]').forEach((root) => {
-    const prose = root.previousElementSibling;
+    // 島嶼段落都在頁面正文裡。用選擇器找而不是 previousElementSibling——
+    // 兩者之間插進別的元件（活動期間表）時，相鄰關係就不成立了
+    const prose = root.parentElement?.querySelector('.prose') ?? null;
     const panels = root.querySelector<HTMLElement>('[data-panels]');
     const buttons = Array.from(root.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
     if (!(prose instanceof HTMLElement) || !panels) return;

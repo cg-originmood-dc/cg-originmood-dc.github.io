@@ -1,0 +1,166 @@
+---
+/**
+ * 某個限時活動的歷年期間表（資料來源 content/data/限時活動.csv）。
+ *
+ * 狀態（進行中／即將開始／已結束）在瀏覽器算，不在建置期算：
+ * 靜態站 push 才重建，活動開跑當天沒人 push 的話建置期的答案就是錯的。
+ */
+import { eventsOf } from '../lib/events';
+import { renderCell } from '../lib/richtext';
+
+interface Props {
+  /** 活動系列名，對應 CSV 的「活動」欄 */
+  event: string;
+}
+const { event } = Astro.props as Props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const rows = eventsOf(event);
+/** 期間顯示：同年就把結束的年份省掉，一眼看得出跨幾天 */
+const period = (e: (typeof rows)[number]) =>
+  e.開始.slice(0, 4) === e.結束.slice(0, 4) ? `${e.開始} ～ ${e.結束.slice(5)}` : `${e.開始} ～ ${e.結束}`;
+---
+
+{rows.length > 0 && (
+  <div class="evp" data-event-periods>
+    <table class="evp__table">
+      <thead>
+        <tr>
+          <th>狀態</th>
+          <th>活動期間（台灣時間）</th>
+          <th>期別</th>
+          <th>內容</th>
+          <th>官方公告</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((e) => (
+          <tr data-start={e.start ?? undefined} data-end={e.end ?? undefined}>
+            <td class="evp__state"><span class="evp__badge" data-state>—</span></td>
+            <td class="evp__period">
+              {period(e)}
+              {e.備註 && <small class="evp__note">{e.備註}</small>}
+            </td>
+            <td class="evp__name">{e.期別}</td>
+            <td class="evp__what">{e.關聯內容}</td>
+            <td class="evp__news" set:html={renderCell(e.官方公告, base)} />
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+)}
+
+<script>
+  // 狀態、剩餘天數都以「開啟頁面的當下」為準
+  document.querySelectorAll<HTMLElement>('[data-event-periods]').forEach((root) => {
+    const now = Date.now();
+    root.querySelectorAll<HTMLTableRowElement>('tbody tr').forEach((tr) => {
+      const badge = tr.querySelector<HTMLElement>('[data-state]');
+      if (!badge) return;
+      const start = tr.dataset.start ? Date.parse(tr.dataset.start) : NaN;
+      const end = tr.dataset.end ? Date.parse(tr.dataset.end) : NaN;
+      if (!Number.isFinite(start) || !Number.isFinite(end)) {
+        badge.textContent = '—';
+        return;
+      }
+      if (now < start) {
+        const days = Math.ceil((start - now) / 86400000);
+        badge.textContent = days <= 30 ? `${days} 天後開始` : '尚未開始';
+        tr.classList.add('is-upcoming');
+      } else if (now <= end) {
+        const days = Math.ceil((end - now) / 86400000);
+        badge.textContent = `進行中・剩 ${days} 天`;
+        tr.classList.add('is-live');
+      } else {
+        badge.textContent = '已結束';
+        tr.classList.add('is-past');
+      }
+    });
+  });
+</script>
+
+<style>
+  .evp {
+    margin: 0.75rem 0 1.5rem;
+    overflow-x: auto;
+  }
+
+  .evp__table {
+    width: 100%;
+    /* 不給下限的話，內容與公告兩欄會被壓成一字一行的直書。
+       撐開讓表格寬過容器，由 .evp 橫向捲動 */
+    min-width: 54rem;
+    border-collapse: collapse;
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+
+  .evp__table th,
+  .evp__table td {
+    padding: 6px 9px;
+    border: 1px solid var(--border);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .evp__table th {
+    background: var(--surface-2);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .evp__period,
+  .evp__name {
+    white-space: nowrap;
+  }
+
+  .evp__what {
+    min-width: 15rem;
+  }
+
+  .evp__news {
+    min-width: 12rem;
+  }
+
+  .evp__note {
+    display: block;
+    max-width: 22rem;
+    margin-top: 0.2rem;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: var(--text-3);
+    white-space: normal;
+  }
+
+  .evp__badge {
+    display: inline-block;
+    padding: 0.1rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 0.85rem;
+    color: var(--text-2);
+    white-space: nowrap;
+  }
+
+  /* 狀態由 JS 掛在列上，樣式要走 :global 才吃得到 */
+  :global(.evp__table tr.is-live) .evp__badge {
+    border-color: #1a7f37;
+    background: #e8f5ec;
+    color: #1a7f37;
+    font-weight: 700;
+  }
+
+  :global(.evp__table tr.is-live) td {
+    background: #f4fbf6;
+  }
+
+  :global(.evp__table tr.is-upcoming) .evp__badge {
+    border-color: #9a6700;
+    background: #fff8e5;
+    color: #9a6700;
+  }
+
+  :global(.evp__table tr.is-past) {
+    color: var(--text-3);
+  }
+</style>
