@@ -5,7 +5,9 @@
  * 刷聲望地點 → 稱號階梯 → 「還要幾天」計算機 → 完整數值表（收合查證用）。
  *
  * 資料來源（content/data/）：
- * - 稱號-戰鬥系.csv  稱號階梯與吉拉場數；「升上此階天數」由差額 ÷ 每日上限算出
+ * - 稱號階梯.csv     四個職業群各一條階梯；「升上此階天數」由差額 ÷ 每日上限算出
+ * - 稱號職業群.csv   哪些職業走哪一條階梯，兼作階梯表的職業群選單來源
+ * - 晉階條件.csv     四關晉階任務的技能／等級／稱號／階級需求
  * - 聲望刷點.csv     競技場六王與里洞的「角色等級區間 → 聲望」對照，
  *                    「連結」欄有值時地點名稱連到站內頁（里洞連推薦練功攻略）
  * - 聲望日課.csv     各職業每天做的事（手風琴）
@@ -20,7 +22,9 @@ import { LIST_SEP, loadDataset } from '../lib/datasets';
 const get = (r: Record<string, string>, k: string) => (r[k] ?? '').trim();
 const split = (v: string) => v.split(LIST_SEP).map((s) => s.trim()).filter(Boolean);
 
-const ladderRows = loadDataset('稱號-戰鬥系')?.rows ?? [];
+const ladderRows = loadDataset('稱號階梯')?.rows ?? [];
+const trackRows = loadDataset('稱號職業群')?.rows ?? [];
+const promoRows = loadDataset('晉階條件')?.rows ?? [];
 const spotRows = loadDataset('聲望刷點')?.rows ?? [];
 const dailyRows = loadDataset('聲望日課')?.rows ?? [];
 const actionRows = loadDataset('聲望行為')?.rows ?? [];
@@ -29,17 +33,61 @@ const npcRows = loadDataset('稱號NPC')?.rows ?? [];
 const claimNpcs = npcRows.filter((r) => get(r, '用途') === '領稱號');
 const progressNpcs = npcRows.filter((r) => get(r, '用途') === '問進度');
 
-/** 階梯：diff 為數字才能算天數，天數以每日上限 1600 計算 */
-const ladder = ladderRows.map((r) => {
-  const diff = Number(get(r, '與前階差額'));
+/**
+ * 稱號軌：一個職業群一條階梯。生產／服務／採集三軌的稱號名相同、門檻不同，
+ * 所以是「先選職業群，再看階梯」，不是四欄並排。
+ * diff 為數字才能算天數，天數以每日上限 1600 計算。
+ */
+const tracks = trackRows.map((t) => {
+  const group = get(t, '職業群');
+  const rows = ladderRows
+    .filter((r) => get(r, '職業群') === group)
+    .map((r) => {
+      const diff = Number(get(r, '與前階差額'));
+      return {
+        title: get(r, '稱號'),
+        total: get(r, '累積聲望'),
+        diff: Number.isFinite(diff) ? diff : null,
+        jira: get(r, '吉拉場數(約)'),
+        promote: get(r, '可晉階'),
+      };
+    });
   return {
-    title: get(r, '稱號'),
-    total: get(r, '累積聲望'),
-    diff: Number.isFinite(diff) ? diff : null,
-    jira: get(r, '吉拉場數(約)'),
+    group,
+    jobs: split(get(t, '適用職業')),
+    claim: get(t, '領取方式'),
+    note: get(t, '說明'),
+    rows,
+    // 只有戰鬥系那一軌填了吉拉場數，其他軌整欄空的就別佔一欄寬度
+    hasJira: rows.some((r) => r.jira !== '-'),
   };
 });
 const fmt = (n: number) => n.toLocaleString('en-US');
+
+/** 晉階條件：一關一張卡，卡內一列一個職業群 */
+const stages = [...new Set(promoRows.map((r) => get(r, '階段')))].map((no) => {
+  const rows = promoRows.filter((r) => get(r, '階段') === no);
+  return {
+    no,
+    // 同一關的戰鬥系與生產系升的階級不同名（王宮／資深），兩個都要寫出來
+    ranks: [...new Set(rows.map((r) => `${get(r, '前一階級')} → ${get(r, '晉階')}`))],
+    // 備註常常整關通用（神獸的兩人限制對兩個戰鬥系群都成立），收在表格下方列一次就好
+    notes: [...new Set(rows.map((r) => get(r, '備註')).filter(Boolean))],
+    rows: rows.map((r) => ({
+      group: get(r, '職業群'),
+      jobs: split(get(r, '適用職業')),
+      need: get(r, '技能需求') !== '-' ? `專職技能 ${get(r, '技能需求')}` : `人物等級 ${get(r, '等級需求')}`,
+      bySkill: get(r, '技能需求') !== '-',
+      title: get(r, '需求稱號'),
+      from: get(r, '前一階級'),
+      to: get(r, '晉階'),
+      quest: get(r, '任務'),
+      route: get(r, '路線'),
+      link: get(r, '連結'),
+      note: get(r, '備註'),
+    })),
+  };
+});
 
 /** 刷點：以（分組, 地點）分組成卡片；聲望最高的區間列是甜蜜區 */
 type Bracket = { range: string; rep: string; dead: boolean };
@@ -111,6 +159,7 @@ const NAV = [
   { href: '#daily', label: '各職業' },
   { href: '#spots', label: '去哪刷' },
   { href: '#ladder', label: '稱號階梯' },
+  { href: '#promote', label: '晉階條件' },
   { href: '#calc', label: '還要幾天', accent: true },
   { href: '#tables', label: '完整數值' },
 ];
@@ -122,14 +171,17 @@ const SOURCES = [
   { text: '巴哈姆特：永恆初心轉職聲望討論', href: 'https://forum.gamer.com.tw/C.php?bsn=70151&snA=3381' },
 ];
 
-/** 計算機用的階梯資料（無名的旅人累積=0；待補階排除） */
-const calcLadder = ladder.map((l) => ({
-  title: l.title,
-  cum: l.total === '-' ? 0 : Number(l.total.replace(/[^0-9]/g, '')) || null,
+/** 計算機用的階梯資料（無名的旅人累積=0；待補階排除），跟著職業群一起切換 */
+const calcTracks = tracks.map((t) => ({
+  group: t.group,
+  ladder: t.rows.map((l) => ({
+    title: l.title,
+    cum: l.total === '-' ? 0 : Number(l.total.replace(/[^0-9]/g, '')) || null,
+  })),
 }));
 ---
 
-<div class="rt" data-rt data-ladder={JSON.stringify(calcLadder)}>
+<div class="rt" data-rt data-tracks={JSON.stringify(calcTracks)}>
   <!-- Sticky 導覽 -->
   <nav class="rt__nav" aria-label="頁內導覽">
     {NAV.map((n) => (
@@ -342,30 +394,55 @@ const calcLadder = ladder.map((l) => ({
   <!-- #ladder 稱號階梯 -->
   <section id="ladder" class="rt__section">
     <h2>稱號階梯</h2>
-    <p class="rt__subnote">找到你現在的稱號，往右看要幾天。天數＝與前階差額 ÷ 每日上限。</p>
-    <div class="rt__card rt__tablewrap">
-      <table>
-        <thead>
-          <tr>
-            <th>稱號</th>
-            <th class="is-num">累積聲望</th>
-            <th class="is-num">吉拉場數(約)</th>
-            <th class="is-num">升上此階天數</th>
-          </tr>
-        </thead>
-        <tbody>
-          {ladder.map((row) => (
-            <tr>
-              <td>{row.title}</td>
-              <td class="is-num is-blue">{row.total === '-' ? '—' : row.total === '待補' ? '待補' : fmt(Number(row.total))}</td>
-              <td class="is-num">{row.jira === '-' ? '—' : row.jira}</td>
-              <td class="is-num is-green">
-                {row.diff ? `約 ${Math.ceil(row.diff / 1600)} 天` : '—'}
-              </td>
-            </tr>
+    <p class="rt__subnote">
+      四個職業群各走各的階梯：稱號名不同、門檻也不同。選你的職業群，再找現在的稱號往右看要幾天。
+    </p>
+    <div class="rt__card rt__trackpick">
+      <label>
+        職業群
+        <select data-track>
+          {tracks.map((t) => (
+            <option value={t.group}>{t.group}</option>
           ))}
-        </tbody>
-      </table>
+        </select>
+      </label>
+      {tracks.map((t) => (
+        <div class="rt__trackinfo" data-track-info={t.group} hidden>
+          <p class="rt__trackjobs">{t.jobs.join('、')}</p>
+          <p class="rt__trackmeta">
+            <b>{t.claim}</b>
+            {t.note && <span>{t.note}</span>}
+          </p>
+        </div>
+      ))}
+    </div>
+    <div class="rt__card rt__tablewrap">
+      {tracks.map((t) => (
+        <table data-track-table={t.group} hidden>
+          <thead>
+            <tr>
+              <th>稱號</th>
+              <th class="is-num">累積聲望</th>
+              {t.hasJira && <th class="is-num">吉拉場數(約)</th>}
+              <th class="is-num">升上此階天數</th>
+              <th>可晉階</th>
+            </tr>
+          </thead>
+          <tbody>
+            {t.rows.map((row) => (
+              <tr class:list={{ 'is-gate': row.promote !== '' }}>
+                <td>{row.title}</td>
+                <td class="is-num is-blue">{row.total === '-' ? '—' : row.total === '待補' ? '待補' : fmt(Number(row.total))}</td>
+                {t.hasJira && <td class="is-num">{row.jira === '-' ? '—' : row.jira}</td>}
+                <td class="is-num is-green">
+                  {row.diff ? `約 ${Math.ceil(row.diff / 1600)} 天` : '—'}
+                </td>
+                <td>{row.promote ? <span class="rt__gate">{row.promote}</span> : '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ))}
     </div>
     <details class="rt__fineprint">
       <summary>數值假設與注意事項</summary>
@@ -375,8 +452,69 @@ const calcLadder = ladder.map((l) => ({
         <li>吉拉一場約 +70，需符合「王的平均等級 ≥ 自己等級 ÷ 2 − 3（捨去小數）」才拿得滿。</li>
         <li>有效怪判定：怪物等級 ≥ 自己等級 ÷ 4 − 3（捨去小數），不符合則無聲望。換算過來就是「自己等級超過 怪物等級 × 4 ＋ 15 就沒有聲望」，與競技場六王及里洞的實測區間全部吻合。</li>
         <li>轉職聲望歸零，且永恆初心不保留聲望上限（官方客服回覆）。</li>
+        <li>生產、服務、採集三軌的門檻與晉階條件出自舊服玩家整理，稱號名與階級名已對照永恆初心站內資料校正（大師／名師、王宮／資深、師範／御用），數值本身尚未在初心實測。</li>
       </ul>
     </details>
+  </section>
+
+  <!-- #promote 晉階條件 -->
+  <section id="promote" class="rt__section">
+    <h2>稱號拿到之後：晉階條件</h2>
+    <p class="rt__subnote">
+      稱號只是門票。四關都是同一個組合：<b>專職技能等級（或人物等級）＋ 稱號 ＋ 打指定任務</b>。
+    </p>
+    {stages.map((stage) => (
+      <div class="rt__card rt__stage">
+        <h3>
+          <span class="rt__stage-no">第 {stage.no} 關</span>
+          {stage.ranks.map((r) => (
+            <span class="rt__stage-rank">{r}</span>
+          ))}
+        </h3>
+        <div class="rt__tablewrap">
+          <table>
+            <thead>
+              <tr>
+                <th>職業群</th>
+                <th>需求</th>
+                <th>稱號</th>
+                <th>階級</th>
+                <th>任務</th>
+              </tr>
+            </thead>
+            <tbody>
+              {stage.rows.map((r) => (
+                <tr>
+                  <td>
+                    <b>{r.group}</b>
+                    <details class="rt__jobs">
+                      <summary>{r.jobs.length} 個職業</summary>
+                      {r.jobs.join('、')}
+                    </details>
+                  </td>
+                  <td>
+                    <span class:list={['rt__need', { 'is-skill': r.bySkill }]}>{r.need}</span>
+                  </td>
+                  <td class="rt__reqtitle">{r.title}</td>
+                  <td class="rt__notecell">{r.from} → {r.to}</td>
+                  <td>
+                    {r.link ? <a href={base + r.link}>{r.quest}</a> : r.quest}
+                    {r.route && <span class="rt__route" data-route={r.route}>{r.route}線</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {stage.notes.length > 0 && (
+          <ul class="rt__stage-notes">
+            {stage.notes.map((n) => (
+              <li>{n}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+    ))}
   </section>
 
   <!-- #calc 計算機 -->
@@ -501,20 +639,32 @@ const calcLadder = ladder.map((l) => ({
 
 <script>
   document.querySelectorAll<HTMLElement>('[data-rt]').forEach((root) => {
-    const ladder: { title: string; cum: number | null }[] = JSON.parse(root.dataset.ladder ?? '[]');
+    type Track = { group: string; ladder: { title: string; cum: number | null }[] };
+    const tracks: Track[] = JSON.parse(root.dataset.tracks ?? '[]');
     const fmt = (n: number) => n.toLocaleString('en-US');
     const CAP = 1600;
 
+    const trackSel = root.querySelector<HTMLSelectElement>('[data-track]')!;
     const curSel = root.querySelector<HTMLSelectElement>('[data-calc-cur]')!;
     const targetSel = root.querySelector<HTMLSelectElement>('[data-calc-target]')!;
-    for (const [i, l] of ladder.entries()) {
-      if (l.cum === null && i > 0) continue; // 待補階（無際的青空）不進計算機
-      const opt = new Option(l.title, String(l.cum ?? 0));
-      curSel.add(opt.cloneNode(true) as HTMLOptionElement);
-      if (i > 0) targetSel.add(opt);
-    }
-    curSel.value = '0';
-    targetSel.value = '2000';
+
+    /** 換職業群：階梯表、職業清單、計算機的選項全部跟著換 */
+    const pickTrack = (group: string) => {
+      for (const el of root.querySelectorAll<HTMLElement>('[data-track-table], [data-track-info]')) {
+        el.hidden = (el.dataset.trackTable ?? el.dataset.trackInfo) !== group;
+      }
+      const ladder = tracks.find((t) => t.group === group)?.ladder ?? [];
+      curSel.replaceChildren();
+      targetSel.replaceChildren();
+      for (const [i, l] of ladder.entries()) {
+        if (l.cum === null) continue; // 待補階（無際的青空、賢者之石擁有者）不進計算機
+        const opt = new Option(l.title, String(l.cum));
+        curSel.add(opt.cloneNode(true) as HTMLOptionElement);
+        if (i > 0) targetSel.add(opt);
+      }
+      curSel.selectedIndex = 0;
+      targetSel.selectedIndex = 0;
+    };
 
     const update = () => {
       const cur = Number(curSel.value);
@@ -546,6 +696,11 @@ const calcLadder = ladder.map((l) => ({
       update();
     });
     targetSel.addEventListener('change', update);
+    trackSel.addEventListener('change', () => {
+      pickTrack(trackSel.value);
+      update();
+    });
+    pickTrack(trackSel.value);
     update();
   });
 </script>
@@ -1064,6 +1219,177 @@ const calcLadder = ladder.map((l) => ({
 
   .rt tr.is-zero td {
     background: #fdf5f3;
+  }
+
+  /* ── 階梯表的職業群選擇 ── */
+  .rt__trackpick {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px 16px;
+  }
+
+  .rt__trackpick > label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #6b675c;
+    white-space: nowrap;
+  }
+
+  .rt__trackpick select {
+    padding: 7px 10px;
+    border: 1px solid #d8d5cb;
+    border-radius: 6px;
+    background: #fff;
+    font: inherit;
+    font-size: 14px;
+  }
+
+  .rt__trackinfo {
+    flex: 1 1 260px;
+  }
+
+  .rt__trackjobs {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.7;
+    color: #4a463c;
+  }
+
+  .rt__trackmeta {
+    margin: 4px 0 0;
+    font-size: 12px;
+    color: #8a857a;
+  }
+
+  .rt__trackmeta b {
+    color: #2c6e49;
+  }
+
+  .rt__trackmeta b::after {
+    content: '·';
+    margin: 0 5px;
+    color: #c9c5bb;
+  }
+
+  /* 可晉階的那幾階是階梯上的關卡，給底色讓它跳出來 */
+  .rt tr.is-gate td {
+    background: #fdf8ec;
+    font-weight: 700;
+  }
+
+  .rt__gate {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: #b98a2e;
+    color: #fff;
+    font-size: 12px;
+  }
+
+  /* ── 晉階條件 ── */
+  .rt__stage h3 {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px;
+    font-size: 15px;
+    color: #1a1813;
+  }
+
+  .rt__stage-no {
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: #2c5f9e;
+    color: #fff;
+    font-size: 13px;
+  }
+
+  .rt__stage-rank {
+    font-size: 13px;
+    font-weight: 400;
+    color: #6b675c;
+  }
+
+  .rt__stage-rank + .rt__stage-rank::before {
+    content: '／';
+    color: #c9c5bb;
+  }
+
+  .rt__stage td b {
+    display: block;
+    white-space: nowrap;
+  }
+
+  .rt__jobs {
+    font-size: 12px;
+    color: #8a857a;
+    line-height: 1.7;
+  }
+
+  .rt__jobs summary {
+    cursor: pointer;
+    color: #2c5f9e;
+  }
+
+  .rt__need {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 5px;
+    background: #f4f3ee;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .rt__need.is-skill {
+    background: #f4f9f2;
+    color: #2c6e49;
+  }
+
+  .rt__route {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 7px;
+    border-radius: 5px;
+    font-size: 12px;
+    color: #fff;
+  }
+
+  .rt__route[data-route='紅'] {
+    background: #c0392b;
+  }
+
+  .rt__route[data-route='藍'] {
+    background: #2c5f9e;
+  }
+
+  .rt__route[data-route='黃'] {
+    background: #b98a2e;
+  }
+
+  .rt__route[data-route='綠'] {
+    background: #2c6e49;
+  }
+
+  .rt__reqtitle {
+    color: #7a5a15;
+    font-weight: 700;
+  }
+
+  .rt__stage-notes {
+    margin: 12px 0 0;
+    padding-left: 1.2em;
+    font-size: 12px;
+    color: #8a857a;
+    line-height: 1.8;
+  }
+
+  .rt__stage-notes li::marker {
+    content: '※ ';
   }
 
   .rt__notecell {
