@@ -9,6 +9,7 @@ import Base from '../../../layouts/Base.astro';
 import { listSkills, getSkill, skillScope, skillPath, skillIcon, mpLabel, type SkillSide } from '../../../lib/skills';
 import { listPetsWithSkill } from '../../../lib/pets';
 import { craftSkillHref } from '../../../lib/craftSkills';
+import { skillRelatedPages } from '../../../lib/skillRelatedPages';
 
 export function getStaticPaths() {
   const real = listSkills().map((s) => ({
@@ -47,6 +48,7 @@ for (const h of holders) {
 }
 
 const craftHref = craftSkillHref(name);
+const relatedPages = skillRelatedPages(name);
 
 /** 持有寵物欄掛寵物側；尚無寵物側等級資料時才暫掛人物側，且不重複兩欄。 */
 const holderKey: 'char' | 'pet' = skill?.pet ? 'pet' : 'char';
@@ -122,6 +124,13 @@ if (skill?.pet) sides.push({ key: 'pet', label: '寵物技能', side: skill.pet 
           <a href={`${base}${craftHref}`}>{craftHref.replace(/^\//, '')}</a>
         </p>
       )}
+
+      {relatedPages.map((p) => (
+        <p class="related-banner">
+          此技能的站內{p.label}：
+          <a href={`${base}${p.href}`}>{p.label}</a>
+        </p>
+      ))}
 
       {sides.map(({ key, label, side }) => (
         <section class="skill-side">
@@ -247,6 +256,15 @@ if (skill?.pet) sides.push({ key: 'pet', label: '寵物技能', side: skill.pet 
     font-size: 14px;
   }
   .craft-banner a { font-weight: 700; color: #2e7d32; }
+  .related-banner {
+    margin: 0 0 12px;
+    padding: 10px 14px;
+    background: #e8f0fe;
+    border: 1px solid #aecbfa;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+  .related-banner a { font-weight: 700; }
 
   .skill-side { margin-bottom: 20px; }
   .info-table {

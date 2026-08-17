@@ -10,6 +10,7 @@ import PetSynthesisTables from '../components/PetSynthesisTables.astro';
 import LevelingSpots from '../components/LevelingSpots.astro';
 import CraftCostCalc from '../components/CraftCostCalc.astro';
 import MaterialPrices from '../components/MaterialPrices.astro';
+import MentalShockwaveCalc from '../components/MentalShockwaveCalc.astro';
 import TitleReputation from '../components/TitleReputation.astro';
 import SkillIndex from '../components/SkillIndex.astro';
 import SourceNote from '../components/SourceNote.astro';
@@ -59,15 +60,18 @@ const hasProse = entry.body != null && entry.body.trim().length > 0;
   ) : entry.data.title === '材料價格' ? (
     <MaterialPrices />
   ) : (
-    entry.data.datasets.map((name) => {
-      const heading = datasetHeading(entry.id, name, entry.data.datasets.length);
-      return (
-        <>
-          {heading && <h2 class="dataset__title">{heading}</h2>}
-          <DataTable name={name} materialLevels={entry.data.materialLevels} />
-        </>
-      );
-    })
+    <>
+      {entry.data.title === '精神衝擊波傷害公式' && <MentalShockwaveCalc />}
+      {entry.data.datasets.map((name) => {
+        const heading = datasetHeading(entry.id, name, entry.data.datasets.length);
+        return (
+          <>
+            {heading && <h2 class="dataset__title">{heading}</h2>}
+            <DataTable name={name} materialLevels={entry.data.materialLevels} />
+          </>
+        );
+      })}
+    </>
   )}
 
   <SourceNote sourceUrl={entry.data.sourceUrl} />

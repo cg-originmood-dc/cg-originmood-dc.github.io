@@ -1,0 +1,156 @@
+---
+/**
+ * 精神衝擊波試算。常數只讀等級常數 CSV，公式在 mentalShockwave.ts。
+ */
+import { loadDataset } from '../lib/datasets';
+import { parseShockwaveLevels } from '../lib/mentalShockwave';
+
+const ds = loadDataset('精神衝擊波等級常數');
+const levels = parseShockwaveLevels(ds?.rows ?? []);
+---
+
+<section class="sw" data-sw data-levels={JSON.stringify(levels)}>
+  <h2>自己填數字試試看</h2>
+  <p class="sw__lead">用上面的算法，代入你的精神、技能等級和對方防禦。精神偏低時，實際常常比這裡低。</p>
+  <div class="sw__pick">
+    <label>技能等級
+      <select data-lv>
+        {levels.map((lv) => (
+          <option value={lv.等級} selected={lv.等級 === 12}>{lv.等級}</option>
+        ))}
+      </select>
+    </label>
+    <label>精神
+      <input data-mind type="number" min="1" step="1" value="348" />
+    </label>
+    <label>防禦
+      <input data-def type="number" min="0" step="1" value="0" />
+    </label>
+  </div>
+  <table class="sw__out">
+    <tbody>
+      <tr><th>這級精神倍率</th><td data-coef>—</td></tr>
+      <tr><th>基礎 G</th><td data-g>—</td></tr>
+      <tr><th>有效攻擊</th><td data-a>—</td></tr>
+      <tr><th>傷害中心（還沒隨機）</th><td data-mid>—</td></tr>
+      <tr><th>畫面大概會跳</th><td data-rng>—</td></tr>
+    </tbody>
+  </table>
+  <p class="sw__note" data-note hidden></p>
+</section>
+
+<script>
+  import {
+    shockwaveAttack,
+    shockwaveDisplay,
+    shockwaveRaw,
+    type ShockwaveLevel,
+  } from '../lib/mentalShockwave';
+
+  function bind(root: HTMLElement) {
+    const raw = root.dataset.levels;
+    if (!raw) return;
+    const levels = JSON.parse(raw) as ShockwaveLevel[];
+    const byLv = new Map(levels.map((r) => [r.等級, r]));
+    const lvEl = root.querySelector<HTMLSelectElement>('[data-lv]');
+    const mindEl = root.querySelector<HTMLInputElement>('[data-mind]');
+    const defEl = root.querySelector<HTMLInputElement>('[data-def]');
+    const coefEl = root.querySelector('[data-coef]');
+    const gEl = root.querySelector('[data-g]');
+    const aEl = root.querySelector('[data-a]');
+    const midEl = root.querySelector('[data-mid]');
+    const rngEl = root.querySelector('[data-rng]');
+    const noteEl = root.querySelector<HTMLElement>('[data-note]');
+    if (!lvEl || !mindEl || !defEl || !coefEl || !gEl || !aEl || !midEl || !rngEl || !noteEl) {
+      return;
+    }
+
+    const paint = () => {
+      const row = byLv.get(Number(lvEl.value));
+      const mind = Number(mindEl.value);
+      const def = Number(defEl.value);
+      if (!row || !Number.isFinite(mind) || !Number.isFinite(def)) return;
+      const A = shockwaveAttack(mind, row.等級, row.基礎G);
+      const X = shockwaveRaw(A, def);
+      coefEl.textContent = `${row.精神倍率}%`;
+      gEl.textContent = String(row.基礎G);
+      aEl.textContent = String(A);
+      midEl.textContent = Number.isFinite(X) ? String(shockwaveDisplay(X, 1)) : '—';
+      rngEl.textContent = Number.isFinite(X)
+        ? `${shockwaveDisplay(X, 0.9)} ～ ${shockwaveDisplay(X, 1.1)}（約九折到十一折）`
+        : '—';
+      const low = mind < 348;
+      noteEl.hidden = !low;
+      noteEl.textContent = low
+        ? '你的精神可能還沒到這級發揮得最好的程度，實際傷害常常比這裡算的低。'
+        : '';
+    };
+
+    lvEl.addEventListener('change', paint);
+    mindEl.addEventListener('input', paint);
+    defEl.addEventListener('input', paint);
+    paint();
+  }
+
+  document.querySelectorAll<HTMLElement>('[data-sw]').forEach(bind);
+</script>
+
+<style>
+  .sw {
+    margin: 1.2rem 0 1.6rem;
+    padding: 12px 14px 14px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+  }
+  .sw h2 {
+    margin: 0 0 0.4rem;
+    font-size: 1.15rem;
+  }
+  .sw__lead,
+  .sw__note {
+    margin: 0 0 0.8rem;
+    font-size: 0.9rem;
+    color: #5f6368;
+  }
+  .sw__note {
+    color: #e65100;
+    margin: 0.7rem 0 0;
+  }
+  .sw__pick {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.7rem 1rem;
+    margin-bottom: 0.8rem;
+  }
+  .sw__pick label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    font-size: 0.85rem;
+  }
+  .sw__pick select,
+  .sw__pick input {
+    font: inherit;
+    padding: 0.3rem 0.45rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    min-width: 6.5em;
+  }
+  .sw__out {
+    width: auto;
+    min-width: min(28rem, 100%);
+    border-collapse: collapse;
+  }
+  .sw__out th,
+  .sw__out td {
+    padding: 0.4rem 0.7rem;
+    border: 1px solid #ddd;
+    text-align: left;
+  }
+  .sw__out th {
+    background: #f1f3f4;
+    font-weight: 600;
+    width: 12em;
+  }
+</style>
