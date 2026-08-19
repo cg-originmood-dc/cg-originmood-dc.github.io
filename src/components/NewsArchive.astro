@@ -1,0 +1,161 @@
+---
+/**
+ * 官網公告存檔的總覽。
+ * 列表直接由 content/公告存檔/ 的檔案長出來，新增一篇存檔就自動多一列。
+ */
+import { getCollection } from 'astro:content';
+import { groupByYear, sortAnnouncements } from '../lib/announcements';
+
+const entries = await getCollection('announcements');
+const years = groupByYear(entries);
+const all = sortAnnouncements(entries);
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const latest = all[0];
+---
+
+<div class="newsarc">
+  <p class="newsarc__count">
+    共 <b>{all.length}</b> 篇，涵蓋 {all[all.length - 1]?.data.日期} ～ {latest?.data.日期}。
+  </p>
+
+  <label class="newsarc__search">
+    <span class="newsarc__searchlabel">搜尋標題或編號</span>
+    <input type="search" placeholder="例：週年、維護、17664" autocomplete="off" />
+  </label>
+  <p class="newsarc__empty" hidden>沒有符合的公告。</p>
+
+  {
+    years.map(({ year, items }, i) => (
+      <details class="newsarc__year" open={i === 0}>
+        <summary>
+          {year} 年<span class="newsarc__yearcount">{items.length} 篇</span>
+        </summary>
+        <ul class="newsarc__list">
+          {items.map((e) => (
+            <li class="newsarc__item" data-key={`${e.data.標題} ${e.data.編號} ${e.data.日期}`}>
+              <a href={`${base}/公告存檔/${e.id}`}>
+                <time class="newsarc__date">{e.data.日期}</time>
+                <span class="newsarc__title">{e.data.標題}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </details>
+    ))
+  }
+</div>
+
+<script>
+  const root = document.querySelector<HTMLElement>('.newsarc');
+  const input = root?.querySelector<HTMLInputElement>('.newsarc__search input');
+  const empty = root?.querySelector<HTMLElement>('.newsarc__empty');
+  const years = [...(root?.querySelectorAll<HTMLDetailsElement>('.newsarc__year') ?? [])];
+
+  // 沒搜尋時只有最新年份是展開的；搜尋中要全部攤開才看得到命中的項目，
+  // 清空後再還原成原本的展開狀態
+  const openState = years.map((y) => y.open);
+
+  input?.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase();
+    let hits = 0;
+
+    for (const [i, year] of years.entries()) {
+      let shown = 0;
+      for (const item of year.querySelectorAll<HTMLElement>('.newsarc__item')) {
+        const match = !q || (item.dataset.key ?? '').toLowerCase().includes(q);
+        item.hidden = !match;
+        if (match) shown += 1;
+      }
+      year.hidden = shown === 0;
+      year.open = q ? shown > 0 : openState[i];
+      hits += shown;
+    }
+
+    if (empty) empty.hidden = hits > 0;
+  });
+</script>
+
+<style>
+  .newsarc__count {
+    margin: 0 0 1rem;
+    color: var(--text-2);
+  }
+
+  .newsarc__search {
+    display: block;
+    margin-bottom: 1.25rem;
+  }
+
+  .newsarc__searchlabel {
+    display: block;
+    margin-bottom: 0.3rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  .newsarc__search input {
+    width: min(100%, 26rem);
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font: inherit;
+  }
+
+  .newsarc__empty {
+    margin: 0 0 1rem;
+    color: var(--text-2);
+  }
+
+  .newsarc__year {
+    margin-bottom: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+
+  .newsarc__year > summary {
+    padding: 0.55rem 0.8rem;
+    cursor: pointer;
+    font-weight: 700;
+  }
+
+  .newsarc__yearcount {
+    margin-left: 0.6rem;
+    color: var(--text-2);
+    font-size: 0.85rem;
+    font-weight: 400;
+  }
+
+  .newsarc__list {
+    margin: 0;
+    padding: 0 0 0.4rem;
+    list-style: none;
+  }
+
+  .newsarc__item a {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.3rem 0.8rem;
+    text-decoration: none;
+  }
+
+  .newsarc__item a:hover {
+    background: var(--surface-2);
+  }
+
+  .newsarc__date {
+    flex: none;
+    color: var(--text-2);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .newsarc__title {
+    color: var(--link);
+  }
+
+  @media (max-width: 40rem) {
+    .newsarc__item a {
+      flex-direction: column;
+      gap: 0.1rem;
+    }
+  }
+</style>

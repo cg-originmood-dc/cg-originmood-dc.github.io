@@ -1,0 +1,64 @@
+---
+/**
+ * 官網公告存檔的單篇頁。
+ * 內文是 content/公告存檔/<編號>.md 裡剝過樣式的原文 HTML，這裡只負責排版與前後篇導覽。
+ */
+import { getCollection, render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import { sortAnnouncements, ARCHIVE_PAGE } from '../../lib/announcements';
+
+export async function getStaticPaths() {
+  const entries = sortAnnouncements(await getCollection('announcements'));
+  return entries.map((entry, i) => ({
+    params: { id: entry.id },
+    props: {
+      entry,
+      // 陣列是新的排前面，所以「前一篇」在後面
+      newer: entries[i - 1] ?? null,
+      older: entries[i + 1] ?? null,
+    },
+  }));
+}
+
+const { entry, newer, older } = Astro.props;
+const { Content } = await render(entry);
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const href = (id: string) => `${base}/公告存檔/${id}`;
+---
+
+<Base title={entry.data.標題} breadcrumb={['公告存檔']}>
+  <h1 class="page-title">{entry.data.標題}</h1>
+
+  <p class="newsmeta">
+    <span class="newsmeta__date">{entry.data.日期}</span>
+    <span class="newsmeta__id">公告 {entry.data.編號}</span>
+    <a class="newsmeta__src" href={entry.data.原始網址} target="_blank" rel="noopener noreferrer">
+      官網原文 ↗
+    </a>
+  </p>
+
+  <div class="newsdoc">
+    <Content />
+  </div>
+
+  <nav class="newsnav" aria-label="前後篇">
+    {older ? (
+      <a class="newsnav__prev" href={href(older.id)}>
+        <span class="newsnav__dir">← 更早</span>
+        <span class="newsnav__title">{older.data.標題}</span>
+      </a>
+    ) : (
+      <span />
+    )}
+    {newer && (
+      <a class="newsnav__next" href={href(newer.id)}>
+        <span class="newsnav__dir">更新 →</span>
+        <span class="newsnav__title">{newer.data.標題}</span>
+      </a>
+    )}
+  </nav>
+
+  <p class="newsback">
+    <a href={`${base}${ARCHIVE_PAGE}`}>回公告存檔總覽</a>
+  </p>
+</Base>

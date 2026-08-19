@@ -31,4 +31,23 @@ const pages = defineCollection({
   }),
 });
 
-export const collections = { pages };
+/**
+ * 官網公告的存檔。官網頁面隨時可能被撤下或改版，這裡留一份可以連過去的副本，
+ * 內文是從官網原文剝掉樣式後的 HTML（表格的 colspan/rowspan 原樣保留）。
+ * 一篇一檔，檔名就是公告編號。
+ */
+const announcements = defineCollection({
+  loader: glob({ pattern: '*.md', base: './content/公告存檔' }),
+  schema: z.object({
+    /** 公告編號，等同官網網址結尾的數字，也是檔名 */
+    編號: z.string(),
+    /** 官網的公告標題 */
+    標題: z.string(),
+    /** 官網標示的公告日期 */
+    日期: z.string(),
+    /** 官網原文網址，存檔頁會標出來讓人可以對照 */
+    原始網址: z.string().url(),
+  }),
+});
+
+export const collections = { pages, announcements };

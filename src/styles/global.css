@@ -370,6 +370,91 @@ main {
   background: var(--surface-2);
 }
 
+/* ------------------------------------------------ 官網公告存檔 */
+
+/*
+ * 存檔內文是官網原文剝掉樣式後的 HTML。斷行在轉檔時已經一律正規化成 <br />，
+ * 所以這裡不能像 .prose 那樣開 pre-wrap，否則排版用的縮排換行會變成多餘的空行。
+ */
+.newsdoc {
+  overflow-wrap: break-word;
+}
+
+.newsdoc img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* 公告表格常常寫死 800px 寬，改成自己橫捲，不要撐破版面 */
+.newsdoc table {
+  display: block;
+  max-width: 100%;
+  margin: 1rem 0;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.newsdoc th,
+.newsdoc td {
+  padding: 0.35rem 0.6rem;
+  border: 1px solid #999;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.newsmeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  margin: -0.75rem 0 1.25rem;
+  color: var(--text-2);
+  font-size: 0.9rem;
+}
+
+.newsmeta__id {
+  font-variant-numeric: tabular-nums;
+}
+
+.newsnav {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 2.5rem 0 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.newsnav a {
+  display: block;
+  max-width: 22rem;
+  text-decoration: none;
+}
+
+.newsnav__next {
+  margin-left: auto;
+  text-align: right;
+}
+
+.newsnav__dir {
+  display: block;
+  color: var(--text-2);
+  font-size: 0.85rem;
+}
+
+.newsnav__title {
+  display: block;
+}
+
+.newsnav a:hover .newsnav__title {
+  text-decoration: underline;
+}
+
+.newsback {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
 /* 原站的語意色 */
 .hl-key {
   color: var(--hl-key);
