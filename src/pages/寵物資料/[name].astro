@@ -8,6 +8,7 @@ import Base from '../../layouts/Base.astro';
 import FusionTree from '../../components/FusionTree.astro';
 import FusionCycleGroup from '../../components/FusionCycleGroup.astro';
 import PetElementDisplay from '../../components/PetElementDisplay.astro';
+import PetQuickSearch from '../../components/PetQuickSearch.astro';
 import {
   listPets,
   getPet,
@@ -163,6 +164,8 @@ const levelOptions = Array.from({ length: 160 }, (_, i) => i + 1);
   ) : (
     <Base title={`${pet.名稱} - 寵物資料`} dbEmbed>
       <div class="pet-page">
+        <PetQuickSearch />
+
         <a class="pet-page__back" href={`${base}/寵物清單`}>
           ← 返回寵物清單
         </a>

@@ -1,0 +1,230 @@
+---
+/**
+ * 寵物快速搜尋：打名字直接跳到那隻的詳情頁。
+ *
+ * 清單不嵌在這裡，第一次聚焦時才去抓 /寵物索引.json（見 pages/寵物索引.json.ts）——
+ * 一千多隻的清單嵌進每一頁的話，dist 會多出一千多份一樣的東西。
+ */
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+---
+
+<div class="petfind" data-petfind data-base={base}>
+  <label class="petfind__label" for="petfind-input">寵物快速搜尋</label>
+  <div class="petfind__box">
+    <input
+      id="petfind-input"
+      type="search"
+      class="petfind__input"
+      placeholder="打名字跳到該寵物，例：黃金虎人"
+      autocomplete="off"
+      role="combobox"
+      aria-expanded="false"
+      aria-controls="petfind-list"
+      aria-autocomplete="list"
+    />
+    <ul class="petfind__list" id="petfind-list" role="listbox" hidden></ul>
+  </div>
+</div>
+
+<script>
+  type Pet = { n: string; r: string; i: string };
+
+  document.querySelectorAll<HTMLElement>('[data-petfind]').forEach((root) => {
+    const base = root.dataset.base ?? '';
+    const input = root.querySelector<HTMLInputElement>('.petfind__input')!;
+    const list = root.querySelector<HTMLUListElement>('.petfind__list')!;
+
+    let pets: Pet[] | null = null;
+    let loading: Promise<void> | null = null;
+    let hits: Pet[] = [];
+    let active = -1;
+
+    const href = (name: string) => `${base}/寵物資料/${encodeURIComponent(name)}`;
+
+    function load() {
+      if (pets || loading) return loading ?? Promise.resolve();
+      loading = fetch(`${base}/寵物索引.json`)
+        .then((r) => r.json())
+        .then((d: Pet[]) => {
+          pets = d;
+        })
+        .catch(() => {
+          pets = [];
+        });
+      return loading;
+    }
+
+    function render() {
+      list.replaceChildren();
+      if (!hits.length) {
+        list.hidden = true;
+        input.setAttribute('aria-expanded', 'false');
+        return;
+      }
+      hits.forEach((p, idx) => {
+        const li = document.createElement('li');
+        li.className = 'petfind__item' + (idx === active ? ' is-active' : '');
+        li.setAttribute('role', 'option');
+        li.setAttribute('aria-selected', String(idx === active));
+
+        const a = document.createElement('a');
+        a.href = href(p.n);
+        if (p.i) {
+          const img = document.createElement('img');
+          img.src = p.i.startsWith('/') ? base + p.i : p.i;
+          img.alt = '';
+          img.loading = 'lazy';
+          img.width = 32;
+          img.height = 32;
+          a.append(img);
+        }
+        const name = document.createElement('span');
+        name.className = 'petfind__name';
+        name.textContent = p.n;
+        a.append(name);
+        if (p.r) {
+          const race = document.createElement('span');
+          race.className = 'petfind__race';
+          race.textContent = p.r;
+          a.append(race);
+        }
+        li.append(a);
+        list.append(li);
+      });
+      list.hidden = false;
+      input.setAttribute('aria-expanded', 'true');
+    }
+
+    function search() {
+      const q = input.value.trim().toLowerCase();
+      if (!q || !pets) {
+        hits = [];
+        active = -1;
+        render();
+        return;
+      }
+      // 開頭命中的排前面，這樣打「黃金」時「黃金虎人」會在「暴走黃金虎」之前
+      const starts: Pet[] = [];
+      const contains: Pet[] = [];
+      for (const p of pets) {
+        const n = p.n.toLowerCase();
+        if (n.startsWith(q)) starts.push(p);
+        else if (n.includes(q)) contains.push(p);
+        if (starts.length >= 12) break;
+      }
+      hits = [...starts, ...contains].slice(0, 12);
+      active = hits.length ? 0 : -1;
+      render();
+    }
+
+    input.addEventListener('focus', () => {
+      load().then(() => {
+        if (input.value.trim()) search();
+      });
+    });
+    input.addEventListener('input', () => {
+      load().then(search);
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (!hits.length) return;
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        active = (active + (e.key === 'ArrowDown' ? 1 : -1) + hits.length) % hits.length;
+        render();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (active >= 0) location.href = href(hits[active].n);
+      } else if (e.key === 'Escape') {
+        hits = [];
+        active = -1;
+        render();
+      }
+    });
+
+    // 點到外面就收起來；用 mousedown 之前的 blur 會讓點選項目失效，所以延一拍
+    document.addEventListener('click', (e) => {
+      if (!root.contains(e.target as Node)) {
+        hits = [];
+        active = -1;
+        render();
+      }
+    });
+  });
+</script>
+
+<style>
+  .petfind {
+    margin: 0 0 1rem;
+  }
+
+  .petfind__label {
+    display: block;
+    margin-bottom: 0.3rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-2);
+  }
+
+  .petfind__box {
+    position: relative;
+    max-width: 26rem;
+  }
+
+  .petfind__input {
+    width: 100%;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font: inherit;
+  }
+
+  .petfind__list {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 2px);
+    left: 0;
+    right: 0;
+    max-height: 20rem;
+    margin: 0;
+    padding: 0.25rem;
+    overflow-y: auto;
+    list-style: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 6px 18px rgb(0 0 0 / 12%);
+  }
+
+  .petfind__item a {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.3rem 0.45rem;
+    border-radius: 4px;
+    text-decoration: none;
+    color: var(--text);
+  }
+
+  .petfind__item.is-active a,
+  .petfind__item a:hover {
+    background: var(--surface-2);
+  }
+
+  .petfind__item img {
+    flex: none;
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+  }
+
+  .petfind__name {
+    flex: 1;
+  }
+
+  .petfind__race {
+    flex: none;
+    color: var(--text-3);
+    font-size: 0.85rem;
+  }
+</style>
