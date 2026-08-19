@@ -1,0 +1,203 @@
+---
+/**
+ * 官方大事記頁的兩個分頁：整理過的大事記，與全部公告的原文存檔。
+ *
+ * 兩份資料講的是同一件事（官網公告），只是一個挑重點、一個留全文，
+ * 拆成兩個頁面的話讀者得在導覽列上下來回找。
+ *
+ * 各分頁的說明文字寫在 content/pages/官方大事記.md 的 <h2> 區塊裡，載入後才
+ * 搬進對應的面板——說明是內容，寫死在元件裡編輯者就改不動了。做法沿用
+ * PetIslandTabs：用標題文字對面板，不靠節點的相鄰關係。
+ */
+import DataTable from './DataTable.astro';
+import NewsArchive from './NewsArchive.astro';
+
+const tabs = [
+  { id: '大事記', hint: '挑出來的重要公告' },
+  { id: '公告存檔', hint: '官網原文備份' },
+];
+---
+
+<section class="newstabs" data-newstabs hidden>
+  <div class="newstabs__tabs" role="tablist" aria-label="切換大事記與公告存檔">
+    {
+      tabs.map((tab, index) => (
+        <button
+          class:list={['newstabs__tab', { 'is-active': index === 0 }]}
+          type="button"
+          role="tab"
+          id={tab.id}
+          aria-controls={`panel-${tab.id}`}
+          aria-selected={index === 0 ? 'true' : 'false'}
+          tabindex={index === 0 ? 0 : -1}
+          data-anchor={tab.id}
+        >
+          <strong>{tab.id}</strong>
+          <span>{tab.hint}</span>
+        </button>
+      ))
+    }
+  </div>
+
+  {
+    tabs.map((tab, index) => (
+      <section
+        class="newstabs__panel"
+        id={`panel-${tab.id}`}
+        role="tabpanel"
+        aria-labelledby={tab.id}
+        hidden={index !== 0}
+      >
+        <div class="newstabs__note prose" data-note={tab.id} />
+        {tab.id === '大事記' ? <DataTable name="官方大事記" /> : <NewsArchive />}
+      </section>
+    ))
+  }
+</section>
+
+<noscript>
+  <style>
+    /* 沒有 JS 就沒有分頁籤，兩塊直接攤開，不然存檔整份都看不到 */
+    [data-newstabs] {
+      display: block !important;
+    }
+    [data-newstabs] .newstabs__tabs {
+      display: none;
+    }
+    [data-newstabs] .newstabs__panel[hidden] {
+      display: block !important;
+    }
+  </style>
+</noscript>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-newstabs]').forEach((root) => {
+    const buttons = Array.from(root.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+    const panels = Array.from(root.querySelectorAll<HTMLElement>('[role="tabpanel"]'));
+
+    // 說明文字在頁面正文裡，依 <h2> 的文字搬進同名面板
+    const prose = root.parentElement?.querySelector('.prose');
+    if (prose instanceof HTMLElement) {
+      for (const heading of Array.from(prose.querySelectorAll<HTMLElement>(':scope > h2'))) {
+        const note = root.querySelector(`[data-note="${CSS.escape(heading.textContent?.trim() ?? '')}"]`);
+        if (!note) continue;
+        let node: Element | null = heading.nextElementSibling;
+        heading.remove();
+        while (node && !node.matches('h2')) {
+          const next: Element | null = node.nextElementSibling;
+          note.append(node);
+          node = next;
+        }
+      }
+    }
+
+    const activate = (index: number, focus = false, updateHash = true) => {
+      buttons.forEach((button, i) => {
+        const active = i === index;
+        button.classList.toggle('is-active', active);
+        button.setAttribute('aria-selected', String(active));
+        button.tabIndex = active ? 0 : -1;
+      });
+      panels.forEach((panel, i) => {
+        panel.hidden = i !== index;
+      });
+      const anchor = buttons[index]?.dataset.anchor;
+      if (updateHash && anchor) history.replaceState(null, '', `#${anchor}`);
+      if (focus) buttons[index]?.focus();
+    };
+
+    buttons.forEach((button, index) => {
+      button.addEventListener('click', () => activate(index));
+      button.addEventListener('keydown', (event) => {
+        let next = index;
+        if (event.key === 'ArrowRight') next = (index + 1) % buttons.length;
+        else if (event.key === 'ArrowLeft') next = (index - 1 + buttons.length) % buttons.length;
+        else if (event.key === 'Home') next = 0;
+        else if (event.key === 'End') next = buttons.length - 1;
+        else return;
+        event.preventDefault();
+        activate(next, true);
+      });
+    });
+
+    // 單篇存檔頁是連 #公告存檔 回來的，開頁就要停在那一頁籤。
+    // id 掛在頁籤按鈕上而不是面板上，瀏覽器自己的錨點捲動就會停在頁籤列——
+    // 停在面板的話頁籤列被推出畫面，看不出來自己在哪一頁、也不知道還有另一頁。
+    // （那次捲動比任何 JS 時機都晚，搶不贏，只能讓它捲到對的地方）
+    const indexFromHash = () =>
+      buttons.findIndex((b) => `#${b.dataset.anchor}` === decodeURIComponent(location.hash));
+    const initial = indexFromHash();
+    activate(initial >= 0 ? initial : 0, false, false);
+    window.addEventListener('hashchange', () => {
+      const index = indexFromHash();
+      if (index >= 0) activate(index, false, false);
+    });
+
+    root.hidden = false;
+  });
+</script>
+
+<style>
+  .newstabs {
+    margin-top: 1.5rem;
+  }
+
+  .newstabs__tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    padding: 0.15rem 0 0.45rem;
+  }
+
+  .newstabs__tab {
+    flex: 1 0 8rem;
+    min-width: 0;
+    /* 頁籤按鈕就是 #公告存檔 的錨點，留點空隙才不會整條貼著畫面頂 */
+    scroll-margin-top: 1rem;
+    padding: 0.55rem 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--text-2);
+    font: inherit;
+    text-align: center;
+    cursor: pointer;
+  }
+
+  .newstabs__tab strong,
+  .newstabs__tab span {
+    display: block;
+  }
+
+  .newstabs__tab span {
+    margin-top: 0.15rem;
+    font-size: 0.82rem;
+  }
+
+  .newstabs__tab:hover {
+    background: var(--surface-2);
+  }
+
+  .newstabs__tab.is-active {
+    border-color: var(--link);
+    background: var(--link);
+    color: #fff;
+  }
+
+  .newstabs__tab:focus-visible {
+    outline: 2px solid var(--link);
+    outline-offset: 2px;
+  }
+
+  .newstabs__panel[hidden] {
+    display: none;
+  }
+
+  .newstabs__note:empty {
+    display: none;
+  }
+
+  .newstabs__note {
+    margin-bottom: 1.25rem;
+  }
+</style>

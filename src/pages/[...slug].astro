@@ -13,7 +13,7 @@ import MaterialPrices from '../components/MaterialPrices.astro';
 import MentalShockwaveCalc from '../components/MentalShockwaveCalc.astro';
 import TitleReputation from '../components/TitleReputation.astro';
 import SkillIndex from '../components/SkillIndex.astro';
-import NewsArchive from '../components/NewsArchive.astro';
+import NewsTabs from '../components/NewsTabs.astro';
 import SourceNote from '../components/SourceNote.astro';
 import { datasetHeading } from '../lib/dataset-headings';
 import { HOME_ID } from '../lib/nav';
@@ -52,8 +52,8 @@ const hasProse = entry.body != null && entry.body.trim().length > 0;
     <PetSynthesisTables />
   ) : entry.data.title === '技能總覽' ? (
     <SkillIndex />
-  ) : entry.data.title === '公告存檔' ? (
-    <NewsArchive />
+  ) : entry.data.title === '官方大事記' ? (
+    <NewsTabs />
   ) : entry.data.title === '寵物清單' ? (
     <PetList />
   ) : entry.data.title === '專屬技能' ? (

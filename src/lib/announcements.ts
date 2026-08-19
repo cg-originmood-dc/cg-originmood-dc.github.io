@@ -2,8 +2,11 @@ import type { CollectionEntry } from 'astro:content';
 
 export type Announcement = CollectionEntry<'announcements'>;
 
-/** 存檔總覽頁的網址；單篇頁要連回來，寫死在兩個地方會走鐘 */
-export const ARCHIVE_PAGE = '/公告存檔';
+/**
+ * 存檔總覽的網址；單篇頁要連回來，寫死在兩個地方會走鐘。
+ * 總覽併進官方大事記頁當分頁籤了，所以要帶 hash 才會停在對的那一頁。
+ */
+export const ARCHIVE_PAGE = '/官方大事記#公告存檔';
 
 /**
  * 新的排前面。
