@@ -56,7 +56,7 @@ const mana = (manaDs?.rows ?? []).map((r) =>
     <label>產品
       <select data-prod></select>
     </label>
-    <label>技能等級
+    <label title="你自己的製作技能等級，決定耗魔多少；換產品不會動它">技能等級
       <select data-skill>
         {Array.from({ length: 11 }, (_, i) => (
           <option value={i + 1}>{i + 1}</option>
@@ -258,7 +258,7 @@ const mana = (manaDs?.rows ?? []).map((r) =>
       mark(out.tprofit, profit * times, noteHint);
     };
 
-    /** 換產品：重建材料列、帶回記過的單價與擺攤價、技能等級預設為產品階數 */
+    /** 換產品：重建材料列、帶回記過的單價與擺攤價（技能等級不動，見 applySkillDefaults） */
     const showProduct = (p: Prod) => {
       current = p;
       priceInputs = [];
@@ -311,14 +311,22 @@ const mana = (manaDs?.rows ?? []).map((r) =>
         tr.append(nameTd, qtyTd, priceTd, subTd, totalTd);
         matsBody.append(tr);
       });
-      // 技能等級、製作次數選過會記住（每種製作技能分開記）；沒記過用預設
-      const savedSkill = lsGet(SKILL(p.c));
-      skillSel.value = savedSkill !== '' ? savedSkill : String(Math.min(Math.max(p.v, 1), 11));
-      const savedTimes = lsGet(TIMES(p.c));
-      timesInput.value = savedTimes !== '' ? savedTimes : String(defaultTimes(p.c));
       saleInput.value = lsGet(SALE(p.n));
       meta.textContent = `${p.c}　${p.l} 階「${p.n}」｜販店價：${p.s || '—'}`;
       recalc();
+    };
+
+    /**
+     * 技能等級與製作次數是「玩家」的設定，不是產品的屬性——換產品時不能動它。
+     * 之前換產品會把技能等級重設成該產品的階數，於是選 8 階螃蟹鍋就變成
+     * 「技能 8 級」，耗魔顯示 103；實際滿等 11 級做同一道是 79，數字看起來
+     * 就是錯的。選過會記住（每種製作技能分開記），沒記過用滿等 11。
+     */
+    const applySkillDefaults = (cat: string) => {
+      const savedSkill = lsGet(SKILL(cat));
+      skillSel.value = savedSkill !== '' ? savedSkill : '11';
+      const savedTimes = lsGet(TIMES(cat));
+      timesInput.value = savedTimes !== '' ? savedTimes : String(defaultTimes(cat));
     };
 
     const fillProducts = () => {
@@ -330,6 +338,7 @@ const mana = (manaDs?.rows ?? []).map((r) =>
         opt.textContent = `${p.l}　${p.n}`;
         prodSel.append(opt);
       });
+      applySkillDefaults(catSel.value);
       if (list.length) showProduct(list[0]);
     };
 
