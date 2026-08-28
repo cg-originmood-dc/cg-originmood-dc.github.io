@@ -16,8 +16,10 @@ import { getItem } from '../lib/items';
  * 這種欄位多給一個勾選框只看有值的列。判斷條件是欄位內容有沒有 Markdown 連結，
  * 不寫死欄位名字 —— 之後別的 CSV 加同樣形態的欄位也會自動有這個勾選框。
  *
- * 表格那張用縮圖，放大預覽才用原圖。預覽那張是 display:none + loading="lazy"，
- * 瀏覽器不會事先下載，真的 hover 才抓——寵物頁 1069 列，差別是 56MB 對 20MB。
+ * 表格那張用縮圖，放大預覽才用原圖。圖片先只放 data-src：縮圖進入表格的
+ * 可視區附近才真正設定 src，原圖則到 hover / 鍵盤聚焦時才設定。不能只依賴
+ * loading="lazy"，因為不同瀏覽器對 overflow 表格與 display:none 圖片的預載
+ * 策略不同；寵物清單上千列時，提早抓取會是數十 MB。
  */
 /**
  * 「名稱(數量)、名稱(數量)」的材料欄。這種欄位折行時會折在名字或數量中間
@@ -183,14 +185,40 @@ const matLevels = (materials: string): MatGroup[] => {
                     detail ? (
                       <a class="dataset__img-link" href={detail}>
                         <span class="hoverpic">
-                          <img src={src(thumbOf(row[col]))} alt={petName} loading="lazy" decoding="async" />
-                          <img class="hoverpic__big" src={src(row[col])} alt="" loading="lazy" decoding="async" />
+                          <img
+                            class="dataset__thumb"
+                            data-lazy-src={src(thumbOf(row[col]))}
+                            alt={petName}
+                            width="40"
+                            height="40"
+                            loading="lazy"
+                            decoding="async"
+                          />
+                          <img
+                            class="hoverpic__big"
+                            data-preview-src={src(row[col])}
+                            alt=""
+                            decoding="async"
+                          />
                         </span>
                       </a>
                     ) : (
                       <span class="hoverpic">
-                        <img src={src(thumbOf(row[col]))} alt="" loading="lazy" decoding="async" />
-                        <img class="hoverpic__big" src={src(row[col])} alt="" loading="lazy" decoding="async" />
+                        <img
+                          class="dataset__thumb"
+                          data-lazy-src={src(thumbOf(row[col]))}
+                          alt=""
+                          width="40"
+                          height="40"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                        <img
+                          class="hoverpic__big"
+                          data-preview-src={src(row[col])}
+                          alt=""
+                          decoding="async"
+                        />
                       </span>
                     )
                   ) : null}
@@ -308,6 +336,46 @@ const matLevels = (materials: string): MatGroup[] => {
     if (!tbody) return;
     const rows = Array.from(tbody.rows);
     const total = rows.length;
+
+    // 真正的按需圖片：縮圖只在表格捲動區附近才給 src；放大原圖到滑入／聚焦
+    // 時才給 src。這讓直出的完整 HTML 表格保留，但不會因上千列而排隊抓完整圖庫。
+    const revealThumb = (img: HTMLImageElement) => {
+      const lazySrc = img.dataset.lazySrc;
+      if (!lazySrc) return;
+      img.src = lazySrc;
+      delete img.dataset.lazySrc;
+    };
+    const lazyThumbs = root.querySelectorAll<HTMLImageElement>('img[data-lazy-src]');
+    if ('IntersectionObserver' in window) {
+      const scrollRoot = root.querySelector<HTMLElement>('.dataset__scroll');
+      const observer = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            if (!entry.isIntersecting) continue;
+            const img = entry.target as HTMLImageElement;
+            revealThumb(img);
+            observer.unobserve(img);
+          }
+        },
+        { root: scrollRoot, rootMargin: '240px 0px' },
+      );
+      lazyThumbs.forEach((img) => observer.observe(img));
+    } else {
+      lazyThumbs.forEach(revealThumb);
+    }
+
+    const revealPreview = (target: EventTarget | null) => {
+      const el = target instanceof Element ? target : null;
+      const hoverpic = el?.closest<HTMLElement>('.hoverpic');
+      if (!hoverpic || !root.contains(hoverpic)) return;
+      const img = hoverpic.querySelector<HTMLImageElement>('img[data-preview-src]');
+      const previewSrc = img?.dataset.previewSrc;
+      if (!img || !previewSrc) return;
+      img.src = previewSrc;
+      delete img.dataset.previewSrc;
+    };
+    root.addEventListener('pointerover', (event) => revealPreview(event.target));
+    root.addEventListener('focusin', (event) => revealPreview(event.target));
     // 資料欄前面可能插了肖像圖欄（寵物表）與工具按鈕欄，兩者都不在 cols 裡，
     // 所以 data-sort-index / data-filter-col 這些索引都要加上這個偏移。
     // 偏移直接數「第一個資料表頭之前有幾個 th」——
@@ -320,26 +388,27 @@ const matLevels = (materials: string): MatGroup[] => {
     );
     const noteCol = note ? Number(note.dataset.noteCol) + lead : -1;
 
-    // 搜尋字串先算好：一來 1069 列每次按鍵都跑 textContent 很浪費，
-    // 二來要把工具按鈕的字排除掉，否則搜「算」會命中每一列。
+    // 搜尋索引不要在首屏同步掃過整張表；第一次真的搜尋時才逐列建立並快取。
     // 綁在列物件上而不是用陣列索引 —— 排序會重排 rows，索引會對不上。
-    const hay = new Map(
-      rows.map((tr) => [
-        tr,
-        Array.from(tr.cells)
-          .filter((td) => !td.classList.contains('col-act'))
-          // 一行一條的欄位要自己補回分隔空白，textContent 會把相鄰兩條黏成一個字串。
-          // 帶 data-sort 的格子（名稱下方標了材料等級）只搜原始值，標注是衍生的不入索引
-          .map((td) =>
-            td.dataset.sort ??
-            (td.classList.contains('is-list')
-              ? Array.from(td.children, (n) => n.textContent).join(' ')
-              : td.textContent),
-          )
-          .join(' ')
-          .toLowerCase(),
-      ]),
-    );
+    const hay = new Map<HTMLTableRowElement, string>();
+    const searchableText = (tr: HTMLTableRowElement) => {
+      const hit = hay.get(tr);
+      if (hit !== undefined) return hit;
+      const value = Array.from(tr.cells)
+        .filter((td) => !td.classList.contains('col-act'))
+        // 一行一條的欄位要自己補回分隔空白，textContent 會把相鄰兩條黏成一個字串。
+        // 帶 data-sort 的格子（名稱下方標了材料等級）只搜原始值，標注是衍生的不入索引
+        .map((td) =>
+          td.dataset.sort ??
+          (td.classList.contains('is-list')
+            ? Array.from(td.children, (n) => n.textContent).join(' ')
+            : td.textContent),
+        )
+        .join(' ')
+        .toLowerCase();
+      hay.set(tr, value);
+      return value;
+    };
 
     // 斑馬紋照「目前看得到的列」重新編號——nth-child 會把篩掉的隱藏列也算進去，
     // 一過濾條紋就兩深兩淺黏在一起，所以由 JS 標 class
@@ -364,7 +433,7 @@ const matLevels = (materials: string): MatGroup[] => {
       let shown = 0;
       for (const tr of rows) {
         const hit =
-          (!q || hay.get(tr)!.includes(q)) &&
+          (!q || searchableText(tr).includes(q)) &&
           (!want || (tr.dataset.filter ?? tr.cells[col]?.textContent?.trim()) === want) &&
           (!onlyNote || !!tr.cells[noteCol]?.textContent?.trim());
         tr.hidden = !hit;

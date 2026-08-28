@@ -786,6 +786,13 @@ main {
   image-rendering: pixelated; /* 遊戲點陣圖放大時保持銳利 */
 }
 
+/* 固定縮圖占位，圖片尚未進入表格可視區時也不會反覆改變欄寬／列高。 */
+.dataset .col-img img.dataset__thumb {
+  width: 2.5rem;
+  height: 2.5rem;
+  object-fit: contain;
+}
+
 /* 滑過縮圖看大圖，對應原站的 .hover-container / .hover-image */
 .hoverpic {
   position: relative;
@@ -811,7 +818,8 @@ main {
   pointer-events: none;
 }
 
-.dataset .col-img .hoverpic:hover img.hoverpic__big {
+.dataset .col-img .hoverpic:hover img.hoverpic__big[src],
+.dataset .col-img .hoverpic:focus-within img.hoverpic__big[src] {
   display: block;
 }
 
