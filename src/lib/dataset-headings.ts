@@ -89,6 +89,9 @@ for (const [base, titles] of Object.entries(SPECIAL_HEADINGS)) {
   });
 }
 
+SPECIAL_TITLE_BY_DATASET.set('狩獵-更新記錄', '異動紀錄');
+SPECIAL_TITLE_BY_DATASET.set('伐木-更新記錄', '異動紀錄');
+
 /**
  * 只替已確認遺失標題的多表頁回傳標題；其他頁回傳 undefined，避免單表頁
  * 額外長出與頁面 H1 重複的標題。
