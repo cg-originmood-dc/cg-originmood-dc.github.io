@@ -1,0 +1,17 @@
+---
+import Base from '../../layouts/Base.astro';
+import PetList from '../../components/PetList.astro';
+---
+
+<Base title="寵物清單（無圖測試版）" noindex>
+  <h1 class="page-title">寵物清單（無圖測試版）</h1>
+
+  <div class="prose">
+    <p>
+      本頁與正式寵物清單使用同一份完整資料及相同的搜尋、篩選、排序功能，
+      但伺服器產出的表格完全不包含圖片欄、圖片節點或圖片網址，供 Edge 捲動效能 A/B 測試。
+    </p>
+  </div>
+
+  <PetList showImages={false} />
+</Base>

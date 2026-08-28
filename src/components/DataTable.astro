@@ -17,9 +17,10 @@ import { getItem } from '../lib/items';
  * 不寫死欄位名字 —— 之後別的 CSV 加同樣形態的欄位也會自動有這個勾選框。
  *
  * 表格那張用縮圖，放大預覽才用原圖。圖片先只放 data-src：縮圖進入表格的
- * 可視區附近才真正設定 src，原圖則到 hover / 鍵盤聚焦時才設定。不能只依賴
- * loading="lazy"，因為不同瀏覽器對 overflow 表格與 display:none 圖片的預載
- * 策略不同；寵物清單上千列時，提早抓取會是數十 MB。
+ * 可視區附近才真正設定 src，離開後卸載；原圖則只在 hover / 鍵盤聚焦期間
+ * 設定 src。不能只依賴 loading="lazy"，因為不同瀏覽器對 overflow 表格與
+ * display:none 圖片的預載及動態 GIF 解碼策略不同；寵物清單一路捲動時，
+ * 已載入但離屏仍持續播放的 GIF 也會累積成明顯負擔。
  */
 /**
  * 「名稱(數量)、名稱(數量)」的材料欄。這種欄位折行時會折在名字或數量中間
@@ -42,12 +43,21 @@ interface Props {
   filterTabs?: boolean;
   /** 在名稱欄下方標注材料欄各項的等級（查道具庫），由頁面 frontmatter 開啟 */
   materialLevels?: boolean;
+  /** false 時連圖片欄與 img 節點都不輸出，供大型動態圖片表做純文字 A/B 測試 */
+  showImages?: boolean;
 }
-const { name, dataset: given, filterTabs = false, materialLevels = false } = Astro.props as Props;
+const {
+  name,
+  dataset: given,
+  filterTabs = false,
+  materialLevels = false,
+  showImages = true,
+} = Astro.props as Props;
 const dataset = given ?? (name ? loadDataset(name) : null);
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const src = (v: string) => (v.startsWith('/') ? base + v : v);
 const cols = dataset?.columns.filter((c) => !dataset.imageColumns.includes(c)) ?? [];
+const visibleImageColumns = showImages ? (dataset?.imageColumns ?? []) : [];
 /** 圖欄的表頭：image 沿用原站的「圖」，額外的圖欄（材料圖）直接用欄名 */
 const imgLabel = (c: string) => (c === 'image' ? '圖' : c);
 
@@ -67,7 +77,9 @@ const petDetailHref = (petName: string) =>
  * 圖欄的位置：寵物表的圖是該列主角的肖像，跟名稱一樣放最前面；
  * 其他表的圖是佐證用的存檔截圖，放最後才不會把名稱、材料往右擠。
  */
-const imageFirst = dataset ? PET_NAME_DATASETS.has(dataset.name) : false;
+const imageFirst = visibleImageColumns.length > 0 && dataset
+  ? PET_NAME_DATASETS.has(dataset.name)
+  : false;
 
 /**
  * 材料等級標注（頁面 frontmatter 開 materialLevels 才有）。
@@ -153,7 +165,7 @@ const matLevels = (materials: string): MatGroup[] => {
         <table>
           <thead>
             <tr>
-              {imageFirst && dataset.imageColumns.map((c) => <th scope="col" class="col-img">{imgLabel(c)}</th>)}
+              {imageFirst && visibleImageColumns.map((c) => <th scope="col" class="col-img">{imgLabel(c)}</th>)}
               {dataset.action && <th scope="col" class="col-act">工具</th>}
               {cols.map((c, i) => (
                 <th
@@ -172,14 +184,14 @@ const matLevels = (materials: string): MatGroup[] => {
                   {c}
                 </th>
               ))}
-              {!imageFirst && dataset.imageColumns.map((c) => <th scope="col" class="col-img">{imgLabel(c)}</th>)}
+              {!imageFirst && visibleImageColumns.map((c) => <th scope="col" class="col-img">{imgLabel(c)}</th>)}
             </tr>
           </thead>
           <tbody>
             {dataset.rows.map((row) => {
               const petName = linkNameCol ? (row[linkNameCol] ?? '').trim() : '';
               const detail = petName ? petDetailHref(petName) : null;
-              const imgCells = dataset.imageColumns.map((col) => (
+              const imgCells = visibleImageColumns.map((col) => (
                 <td class="col-img">
                   {row[col] ? (
                     detail ? (
@@ -337,13 +349,19 @@ const matLevels = (materials: string): MatGroup[] => {
     const rows = Array.from(tbody.rows);
     const total = rows.length;
 
-    // 真正的按需圖片：縮圖只在表格捲動區附近才給 src；放大原圖到滑入／聚焦
-    // 時才給 src。這讓直出的完整 HTML 表格保留，但不會因上千列而排隊抓完整圖庫。
+    // 真正的按需圖片：縮圖只在表格捲動區附近才給 src，離開後移除 src，
+    // 避免 Edge / Chromium 繼續解碼一路捲過的動態 GIF。壓縮資料仍可走瀏覽器快取，
+    // 回捲時不必重新下載；重點是同時播放／合成的圖片數維持在固定範圍內。
     const revealThumb = (img: HTMLImageElement) => {
       const lazySrc = img.dataset.lazySrc;
-      if (!lazySrc) return;
+      if (!lazySrc || img.hasAttribute('src')) return;
       img.src = lazySrc;
-      delete img.dataset.lazySrc;
+    };
+    const unloadThumb = (img: HTMLImageElement) => {
+      img.removeAttribute('src');
+      // 若捲動時游標剛好停在縮圖欄，pointerover 可能已載入放大圖；列離屏時一併卸載。
+      img.closest('.hoverpic')?.querySelector<HTMLImageElement>('img.hoverpic__big')
+        ?.removeAttribute('src');
     };
     const lazyThumbs = root.querySelectorAll<HTMLImageElement>('img[data-lazy-src]');
     if ('IntersectionObserver' in window) {
@@ -351,10 +369,9 @@ const matLevels = (materials: string): MatGroup[] => {
       const observer = new IntersectionObserver(
         (entries) => {
           for (const entry of entries) {
-            if (!entry.isIntersecting) continue;
             const img = entry.target as HTMLImageElement;
-            revealThumb(img);
-            observer.unobserve(img);
+            if (entry.isIntersecting) revealThumb(img);
+            else unloadThumb(img);
           }
         },
         { root: scrollRoot, rootMargin: '240px 0px' },
@@ -370,12 +387,21 @@ const matLevels = (materials: string): MatGroup[] => {
       if (!hoverpic || !root.contains(hoverpic)) return;
       const img = hoverpic.querySelector<HTMLImageElement>('img[data-preview-src]');
       const previewSrc = img?.dataset.previewSrc;
-      if (!img || !previewSrc) return;
+      if (!img || !previewSrc || img.hasAttribute('src')) return;
       img.src = previewSrc;
-      delete img.dataset.previewSrc;
+    };
+    const unloadPreview = (target: EventTarget | null, related: EventTarget | null) => {
+      const el = target instanceof Element ? target : null;
+      const hoverpic = el?.closest<HTMLElement>('.hoverpic');
+      if (!hoverpic || !root.contains(hoverpic)) return;
+      const next = related instanceof Node ? related : null;
+      if (next && hoverpic.contains(next)) return;
+      hoverpic.querySelector<HTMLImageElement>('img.hoverpic__big')?.removeAttribute('src');
     };
     root.addEventListener('pointerover', (event) => revealPreview(event.target));
     root.addEventListener('focusin', (event) => revealPreview(event.target));
+    root.addEventListener('pointerout', (event) => unloadPreview(event.target, event.relatedTarget));
+    root.addEventListener('focusout', (event) => unloadPreview(event.target, event.relatedTarget));
     // 資料欄前面可能插了肖像圖欄（寵物表）與工具按鈕欄，兩者都不在 cols 裡，
     // 所以 data-sort-index / data-filter-col 這些索引都要加上這個偏移。
     // 偏移直接數「第一個資料表頭之前有幾個 th」——

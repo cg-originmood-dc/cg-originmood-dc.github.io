@@ -6,10 +6,25 @@
  */
 import DataTable from './DataTable.astro';
 import { petListDataset } from '../lib/pets';
+
+interface Props {
+  showImages?: boolean;
+}
+const { showImages = true } = Astro.props as Props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 ---
 
 <div class="pet-list">
-  <DataTable dataset={petListDataset()} filterTabs />
+  <p class="pet-list__variant">
+    {
+      showImages ? (
+        <a href={`${base}/寵物清單/無圖/`}>Edge 捲動卡頓？開啟無圖測試版</a>
+      ) : (
+        <a href={`${base}/寵物清單/`}>返回有圖版</a>
+      )
+    }
+  </p>
+  <DataTable dataset={petListDataset()} filterTabs showImages={showImages} />
 </div>
 
 <style is:global>
@@ -20,5 +35,9 @@ import { petListDataset } from '../lib/pets';
   }
   .pet-list .dataset[data-filter-active=''] tbody tr[data-filter='永恆初心專屬']:hover td {
     background-color: #f0e9cf;
+  }
+  .pet-list__variant {
+    margin: 0 0 0.65rem;
+    font-size: 0.9rem;
   }
 </style>
