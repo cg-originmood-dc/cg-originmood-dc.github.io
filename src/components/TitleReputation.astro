@@ -758,6 +758,20 @@ const calcTracks = tracks.map((t) => ({
     font-weight: 700;
   }
 
+  /* 手機版最上面有 sticky 的「☰ 選單」列（z-index: 30）。頁內導覽若同樣貼在
+     top: 0 且層級更高，半透明白底會蓋在深色選單列上，看起來像選單背景變灰。
+     改成貼齊選單列下緣、層級壓在它下面（略微上移的部份由選單列蓋住，避免露縫）。 */
+  @media (max-width: 60rem) {
+    .rt__nav {
+      top: 50px;
+      z-index: 20;
+    }
+
+    .rt__section {
+      scroll-margin-top: 106px;
+    }
+  }
+
   /* ── 卡片基底 ── */
   .rt__card {
     border: 1px solid #e6e3da;
