@@ -14,6 +14,10 @@ _root.html
 _sample.html
 _pets.html
 
+# 本機研究素材與介面比對截圖，不屬於網站部署內容
+/incoming/
+/skills-index.jpeg
+
 # Python
 __pycache__/
 *.pyc
