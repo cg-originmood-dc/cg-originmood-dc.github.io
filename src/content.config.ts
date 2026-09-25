@@ -17,6 +17,12 @@ const pages = defineCollection({
     sourceUrl: z.string().url().optional(),
     /** 上層分類，用來組麵包屑與側邊導覽 */
     breadcrumb: z.array(z.string()).default([]),
+    /** 將指定的二／三級標題及其子章節顯示成分頁；無 JavaScript 時仍依序閱讀原文。 */
+    routeTabs: z.array(z.object({
+      label: z.string(),
+      heading: z.string(),
+      anchor: z.string().regex(/^[a-z][a-z0-9-]*$/),
+    })).default([]),
     /** 這頁要渲染哪些 content/data/*.csv 資料集 */
     datasets: z.array(z.string()).default([]),
     /**

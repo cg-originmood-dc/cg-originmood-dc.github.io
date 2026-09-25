@@ -1,0 +1,95 @@
+---
+interface Props {
+  tabs: { label: string; heading: string; anchor: string }[];
+}
+const { tabs } = Astro.props;
+---
+
+<section class="quest-routes" data-quest-routes data-tabs={JSON.stringify(tabs)} hidden>
+  <div class="quest-routes__tabs" role="tablist" aria-label="選擇勳章路線">
+    {tabs.map((tab, index) => (
+      <button type="button" role="tab" id={`route-tab-${tab.anchor}`}
+        aria-controls={tab.anchor} aria-selected={index === 0 ? 'true' : 'false'}
+        tabindex={index === 0 ? 0 : -1}>{tab.label}</button>
+    ))}
+  </div>
+  <div data-route-panels></div>
+</section>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-quest-routes]').forEach(root => {
+    const tabs: { label: string; heading: string; anchor: string }[] = JSON.parse(root.dataset.tabs ?? '[]');
+    const prose = root.parentElement?.querySelector<HTMLElement>('.prose');
+    const host = root.querySelector<HTMLElement>('[data-route-panels]');
+    const buttons = Array.from(root.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+    if (!prose || !host || tabs.length < 2) return;
+    const headings = tabs.map(tab => Array.from(prose.querySelectorAll<HTMLElement>(':scope > h2, :scope > h3'))
+      .find(h => h.textContent?.trim() === tab.heading));
+    // 缺段落時不隱藏任何正文，保留完整可讀的 fallback。
+    if (headings.some(h => !h)) return;
+    headings[0]!.before(root);
+    const panels = headings.map((heading, index) => {
+      const panel = document.createElement('section');
+      panel.id = tabs[index].anchor;
+      panel.setAttribute('role', 'tabpanel');
+      panel.setAttribute('aria-labelledby', buttons[index].id);
+      panel.tabIndex = 0;
+      const level = Number(heading!.tagName.slice(1));
+      let node: Element | null = heading!;
+      while (node) {
+        if (node !== heading && /^H[1-6]$/.test(node.tagName) && Number(node.tagName.slice(1)) <= level) break;
+        const next = node.nextElementSibling;
+        panel.append(node);
+        node = next;
+      }
+      host.append(panel);
+      return panel;
+    });
+    const activate = (index: number, focus = false, updateHash = false) => {
+      panels.forEach((p, i) => p.hidden = i !== index);
+      buttons.forEach((button, i) => {
+        button.setAttribute('aria-selected', String(i === index));
+        button.tabIndex = i === index ? 0 : -1;
+      });
+      if (focus) buttons[index].focus();
+      if (updateHash) history.replaceState(null, '', `#${tabs[index].anchor}`);
+    };
+    const fromHash = () => {
+      let id = '';
+      try { id = decodeURIComponent(location.hash.slice(1)); } catch { return -1; }
+      const target = document.getElementById(id);
+      return panels.findIndex(p => p.id === id || (target !== null && p.contains(target)));
+    };
+    buttons.forEach((button, index) => {
+      button.addEventListener('click', () => activate(index, false, true));
+      button.addEventListener('keydown', e => {
+        let next: number;
+        if (e.key === 'ArrowRight') next = (index + 1) % tabs.length;
+        else if (e.key === 'ArrowLeft') next = (index + tabs.length - 1) % tabs.length;
+        else if (e.key === 'Home') next = 0;
+        else if (e.key === 'End') next = tabs.length - 1;
+        else return;
+        e.preventDefault();
+        activate(next, true, true);
+      });
+    });
+    activate(Math.max(0, fromHash()));
+    root.hidden = false;
+    window.addEventListener('hashchange', () => {
+      const index = fromHash();
+      if (index >= 0) activate(index);
+    });
+  });
+</script>
+
+<style>
+  .quest-routes { margin: 1rem 0 1.5rem; }
+  .quest-routes__tabs { display: flex; gap: .5rem; border-bottom: 1px solid var(--border); padding-bottom: .5rem; }
+  button { flex: 1; padding: .65rem 1rem; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-2, #f7f7f7); color: var(--text); font: inherit; font-weight: 700; cursor: pointer; }
+  button[aria-selected="true"] { background: var(--link); border-color: var(--link); color: white; }
+  button:focus-visible { outline: 3px solid var(--link); outline-offset: 3px; }
+  @media print {
+    .quest-routes__tabs { display: none; }
+    .quest-routes :global([role="tabpanel"]) { display: block !important; }
+  }
+</style>

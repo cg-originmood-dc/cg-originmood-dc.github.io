@@ -5,6 +5,7 @@ import DataTable from '../components/DataTable.astro';
 import ExclusiveSkills from '../components/ExclusiveSkills.astro';
 import PetList from '../components/PetList.astro';
 import PetIslandTabs from '../components/PetIslandTabs.astro';
+import QuestRouteTabs from '../components/QuestRouteTabs.astro';
 import EventPeriods from '../components/EventPeriods.astro';
 import PetSynthesisTables from '../components/PetSynthesisTables.astro';
 import LevelingSpots from '../components/LevelingSpots.astro';
@@ -38,6 +39,8 @@ const hasProse = entry.body != null && entry.body.trim().length > 0;
       <Content />
     </div>
   )}
+
+  {entry.data.routeTabs.length > 0 && <QuestRouteTabs tabs={entry.data.routeTabs} />}
 
   {entry.data.title === '推薦練功攻略' ? (
     <LevelingSpots />

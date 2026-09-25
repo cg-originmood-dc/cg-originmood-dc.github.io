@@ -1,0 +1,10 @@
+{
+  "title": "訓練第3、4層・地圖銜接",
+  "asset": "training-3-4-linked.webp",
+  "stages": [
+    {"mapId": 46041, "routeIndex": 0, "title": "① 第3層：沿外圍走到 A", "start": "起", "end": "A", "transition": "踩 A 傳到第4層的 A"},
+    {"mapId": 46042, "routeIndex": 0, "title": "② 第4層：從 A 繞到 B", "start": "A", "end": "B", "transition": "踩 B 回到第3層的 B"},
+    {"mapId": 46041, "routeIndex": 1, "title": "③ 回第3層：從 B 找試驗官 C", "start": "B", "end": "C", "battle": true, "transition": "C 處戰勝後，到第4層的 C"},
+    {"mapId": 46042, "routeIndex": 1, "title": "④ 第4層：從 C 找試驗官", "start": "C", "end": "終", "battle": true}
+  ]
+}
