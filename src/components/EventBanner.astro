@@ -14,7 +14,10 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 // 只送 banner 用得到的欄位，別把整張表塞進每一頁
 const events = listEvents()
   .filter((e) => e.start && e.end)
-  .map((e) => ({ n: e.期別, s: e.start, e: e.end, u: e.頁面 ? base + e.頁面 : '' }));
+  .map((e) => ({
+    n: e.期別, s: e.start, e: e.end, u: e.頁面 ? base + e.頁面 : '',
+    gn: e.攻略名稱, gu: e.攻略頁面 ? base + e.攻略頁面 : '',
+  }));
 ---
 
 {events.length > 0 && (
@@ -23,13 +26,14 @@ const events = listEvents()
       <span class="evb__tag">限時活動進行中</span>
       <a class="evb__link" data-link href={base + '/'}><span data-name></span></a>
       <span class="evb__when" data-when></span>
+      <a class="evb__link evb__guide" data-guide hidden></a>
     </p>
     <button type="button" class="evb__close" data-close aria-label="關閉提醒">×</button>
   </div>
 )}
 
 <script>
-  type Ev = { n: string; s: string; e: string; u: string };
+  type Ev = { n: string; s: string; e: string; u: string; gn: string; gu: string };
 
   document.querySelectorAll<HTMLElement>('[data-event-banner]').forEach((root) => {
     const events: Ev[] = JSON.parse(root.dataset.events ?? '[]');
@@ -56,6 +60,12 @@ const events = listEvents()
     const whenEl = root.querySelector<HTMLElement>('[data-when]');
     if (nameEl) nameEl.textContent = live.n;
     if (linkEl && live.u) linkEl.href = live.u;
+    const guideEl = root.querySelector<HTMLAnchorElement>('[data-guide]');
+    if (guideEl && live.gn && live.gu) {
+      guideEl.textContent = live.gn;
+      guideEl.href = live.gu;
+      guideEl.hidden = false;
+    }
 
     const end = Date.parse(live.e);
     const days = Math.ceil((end - now) / 86400000);
@@ -125,6 +135,11 @@ const events = listEvents()
 
   .evb__when {
     color: #8a6a1f;
+    font-size: 0.9rem;
+  }
+
+  .evb__guide:not([hidden]) {
+    flex-basis: 100%;
     font-size: 0.9rem;
   }
 

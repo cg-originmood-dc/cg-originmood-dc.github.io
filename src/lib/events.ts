@@ -26,6 +26,9 @@ export interface GameEvent {
   關聯內容: string;
   官方公告: string;
   備註: string;
+  /** 同期公告的攻略入口；不代表攻略任務與本活動共用起訖。 */
+  攻略名稱: string;
+  攻略頁面: string;
 }
 
 /**
@@ -55,6 +58,8 @@ export function listEvents(): GameEvent[] {
     關聯內容: (r['關聯內容'] ?? '').trim(),
     官方公告: (r['官方公告'] ?? '').trim(),
     備註: (r['備註'] ?? '').trim(),
+    攻略名稱: (r['攻略名稱'] ?? '').trim(),
+    攻略頁面: (r['攻略頁面'] ?? '').trim(),
   }));
 }
 
