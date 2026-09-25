@@ -1,0 +1,10 @@
+{
+  "title":"救醒諾利 → 歸途騎士團 → 離開火山",
+  "subtitle":"實線沿路走；虛線分別表示對話傳送、戰鬥後銜接",
+  "asset":"return-linked.webp",
+  "stages":[
+    {"assetName":"medicine-departure","routeIndex":0,"title":"① 最下層：先配藥，再找諾利交藥","start":"起","end":"A","transition":"A → A：與諾利交談後，傳往歸途"},
+    {"assetName":"return-before-battle","routeIndex":0,"title":"② 歸途：走到豪爾旁，交談開戰","start":"A","end":"B","transition":"B → B：戰勝白銀騎士團後，接下一格"},
+    {"assetName":"return-after-battle","routeIndex":0,"title":"③ 戰後：再找豪爾或薇絲交談","start":"B","end":"終","transition":"傳回庫魯克斯島530,706，再回村找卡雷姆"}
+  ]
+}

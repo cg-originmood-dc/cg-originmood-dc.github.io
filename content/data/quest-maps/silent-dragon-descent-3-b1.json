@@ -1,0 +1,42 @@
+{
+  "title": "下降②・3樓到地下1樓",
+  "asset": "descent-3-b1.webp",
+  "stages": [
+    {
+      "mapId": 48017,
+      "assetName": "48017-descent",
+      "routeIndex": 0,
+      "title": "1. 3樓：往2樓",
+      "start": "起",
+      "end": "A",
+      "transition": "下樓後接2樓地圖"
+    },
+    {
+      "mapId": 48016,
+      "assetName": "48016-descent",
+      "routeIndex": 0,
+      "title": "2. 2樓：往1樓",
+      "start": "A",
+      "end": "B",
+      "transition": "下樓後接1樓地圖"
+    },
+    {
+      "mapId": 48014,
+      "assetName": "48014-descent",
+      "routeIndex": 0,
+      "title": "3. 1樓：往地下1樓",
+      "start": "B",
+      "end": "C",
+      "transition": "下樓後接地下1樓地圖"
+    },
+    {
+      "mapId": 48000,
+      "assetName": "48000-descent",
+      "routeIndex": 0,
+      "title": "4. 地下1樓：往地下2樓",
+      "start": "C",
+      "end": "終",
+      "transition": "下樓後接地下2樓地圖"
+    }
+  ]
+}

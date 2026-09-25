@@ -1,0 +1,33 @@
+{
+  "title": "下降④・地下5樓到地下7樓",
+  "asset": "descent-b5-b7.webp",
+  "stages": [
+    {
+      "mapId": 48003,
+      "assetName": "48003-descent",
+      "routeIndex": 0,
+      "title": "1. 地下5樓：往地下6樓",
+      "start": "起",
+      "end": "A",
+      "transition": "下樓後接地下6樓地圖"
+    },
+    {
+      "mapId": 48004,
+      "assetName": "48004-descent",
+      "routeIndex": 0,
+      "title": "2. 地下6樓：往地下7樓",
+      "start": "A",
+      "end": "B",
+      "transition": "下樓後接地下7樓地圖"
+    },
+    {
+      "mapId": 48005,
+      "assetName": "48005-descent",
+      "routeIndex": 0,
+      "title": "3. 地下7樓：往地下8樓",
+      "start": "B",
+      "end": "終",
+      "transition": "下樓後接地下8樓地圖"
+    }
+  ]
+}

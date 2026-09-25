@@ -1,0 +1,38 @@
+{
+  "title": "火山4、5樓・照順序接著走",
+  "asset": "ascent-4-5-linked.webp",
+  "stages": [
+    {
+      "mapId": 48019,
+      "routeIndex": 0,
+      "title": "① 第4樓：走到第一座上樓梯",
+      "start": "起",
+      "end": "A",
+      "transition": "A → A：上第5樓"
+    },
+    {
+      "mapId": 48020,
+      "routeIndex": 0,
+      "title": "② 第5樓：繞到下樓梯",
+      "start": "A",
+      "end": "B",
+      "transition": "B → B：回第4樓另一側"
+    },
+    {
+      "mapId": 48019,
+      "routeIndex": 1,
+      "title": "③ 第4樓：沿另一段路再上樓",
+      "start": "B",
+      "end": "C",
+      "transition": "C → C：再上第5樓"
+    },
+    {
+      "mapId": 48020,
+      "routeIndex": 1,
+      "title": "④ 第5樓：從這側洞口出山腰",
+      "start": "C",
+      "end": "終",
+      "transition": "出洞後沿山腰前往第6樓"
+    }
+  ]
+}

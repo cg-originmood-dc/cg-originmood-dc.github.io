@@ -1,0 +1,33 @@
+{
+  "title": "下降①・6樓到4樓",
+  "asset": "descent-6-4.webp",
+  "stages": [
+    {
+      "mapId": 48022,
+      "assetName": "48022-descent",
+      "routeIndex": 0,
+      "title": "1. 6樓：往5樓",
+      "start": "起",
+      "end": "A",
+      "transition": "下樓後接5樓地圖"
+    },
+    {
+      "mapId": 48020,
+      "assetName": "48020-descent",
+      "routeIndex": 0,
+      "title": "2. 5樓：往4樓",
+      "start": "A",
+      "end": "B",
+      "transition": "下樓後接4樓地圖"
+    },
+    {
+      "mapId": 48019,
+      "assetName": "48019-descent",
+      "routeIndex": 0,
+      "title": "3. 4樓：往3樓",
+      "start": "B",
+      "end": "終",
+      "transition": "下樓後接3樓地圖"
+    }
+  ]
+}

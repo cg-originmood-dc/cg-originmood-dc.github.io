@@ -1,0 +1,9 @@
+{
+  "title":"艾兒卡絲之家②・地下迷宮",
+  "asset":"house-maze-linked.webp",
+  "stages":[
+    {"assetName":"house-b2-first","routeIndex":0,"title":"④ 地下2樓：先走迷宮前半段","start":"起","end":"A","transition":"A → A：回地下1樓另一側"},
+    {"assetName":"house-b1-middle","routeIndex":0,"title":"⑤ 地下1樓：繞到另一座下樓梯","start":"A","end":"B","transition":"B → B：再下地下2樓"},
+    {"assetName":"house-b2-second","routeIndex":0,"title":"⑥ 地下2樓：穿過迷宮後半段","start":"B","end":"終","transition":"由此上地下1樓，接下一組圖"}
+  ]
+}

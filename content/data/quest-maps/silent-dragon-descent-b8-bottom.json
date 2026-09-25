@@ -1,0 +1,42 @@
+{
+  "title": "下降⑤・地下8樓到最下層",
+  "asset": "descent-b8-bottom.webp",
+  "stages": [
+    {
+      "mapId": 48006,
+      "assetName": "48006-descent",
+      "routeIndex": 0,
+      "title": "1. 地下8樓：往地下9樓",
+      "start": "起",
+      "end": "A",
+      "transition": "下樓後接地下9樓地圖"
+    },
+    {
+      "mapId": 48007,
+      "assetName": "48007-descent",
+      "routeIndex": 0,
+      "title": "2. 地下9樓：往地下10樓",
+      "start": "A",
+      "end": "B",
+      "transition": "下樓後接地下10樓地圖"
+    },
+    {
+      "mapId": 48008,
+      "assetName": "48008-descent",
+      "routeIndex": 0,
+      "title": "3. 地下10樓：往最下層",
+      "start": "B",
+      "end": "C",
+      "transition": "下樓後接最下層地圖"
+    },
+    {
+      "mapId": 48011,
+      "assetName": "48011-descent",
+      "routeIndex": 0,
+      "title": "4. 最下層：前往藥劑師",
+      "start": "C",
+      "end": "終",
+      "transition": "找賽米列交談，領記事紙條後離開火山"
+    }
+  ]
+}
