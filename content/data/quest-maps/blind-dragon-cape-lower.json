@@ -1,0 +1,7 @@
+{
+  "title":"岬之神殿：地下4階 → 艾汀", "asset":"cape-lower-linked.webp",
+  "stages":[
+    {"assetName":"cape-b4","routeIndex":0,"title":"4. 地下4階：走向另一端出口","start":"起","end":"A","transition":"(4,7) 下樓 → 最下層 (5,14)"},
+    {"assetName":"cape-dragon","routeIndex":0,"title":"5. 最下層：找盲目之龍艾汀領獎","start":"A","end":"終","transition":"與艾汀 (22,14) 交談；每人都要帶紅龍諾利的鱗片"}
+  ]
+}

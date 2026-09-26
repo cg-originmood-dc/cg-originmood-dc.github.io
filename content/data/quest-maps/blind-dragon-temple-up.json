@@ -1,0 +1,8 @@
+{
+  "title":"神殿：右側房間 → 謁見之間", "asset":"temple-up-linked.webp",
+  "stages":[
+    {"assetName":"temple-stairs","routeIndex":0,"title":"1. 神殿1樓：走到上樓樓梯","start":"起","end":"A","transition":"踩樓梯 → 抵達神殿2樓 (79,14)"},
+    {"assetName":"temple-2f","routeIndex":0,"title":"2. 神殿2樓：進入謁見之間","start":"A","end":"B","transition":"進門 → 抵達謁見之間 (35,10)"},
+    {"assetName":"audience","routeIndex":0,"title":"3. 謁見之間：找聖女的心腹","start":"B","end":"終","transition":"與 (19,10) 的心腹交談，接下收集觸媒的委託"}
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "title":"岬之神殿：地下1階 → 地下3階", "asset":"cape-upper-linked.webp",
+  "stages":[
+    {"assetName":"cape-b1","routeIndex":0,"title":"1. 地下1階：從薇絲處傳入後往左上走","start":"起","end":"A","transition":"(11,6) 下樓 → 地下2階 (23,4)"},
+    {"assetName":"cape-b2","routeIndex":0,"title":"2. 地下2階：繞到另一側的樓梯","start":"A","end":"B","transition":"(7,13) 下樓 → 地下3階 (3,7)"},
+    {"assetName":"cape-b3","routeIndex":0,"title":"3. 地下3階：穿過短廊","start":"B","end":"終","transition":"(10,7) 下樓 → 地下4階 (11,7)，接下圖"}
+  ]
+}

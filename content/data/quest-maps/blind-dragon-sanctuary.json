@@ -1,0 +1,8 @@
+{
+  "title":"收齊觸媒後：前往地下聖堂", "asset":"sanctuary-linked.webp",
+  "stages":[
+    {"assetName":"saint-room","routeIndex":0,"title":"1. 聖女的房間：走到內側出口","start":"起","end":"A","transition":"通過 (16,6) → 神殿1樓內側 (51,88)"},
+    {"assetName":"inner-temple","routeIndex":0,"title":"2. 神殿1樓內側：一路走向上方入口","start":"A","end":"B","transition":"進入 (51,22) → 地下聖堂 (15,53)"},
+    {"assetName":"sanctuary","routeIndex":0,"title":"3. 地下聖堂：找聖女瑪哈","start":"B","end":"終","transition":"與瑪哈 (14,24) 交談、交出觸媒，傳往過去"}
+  ]
+}
