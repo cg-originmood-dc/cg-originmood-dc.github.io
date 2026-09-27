@@ -1,0 +1,9 @@
+{
+  "title": "阿凱魯法城一樓 → 地下 → 王族暗道",
+  "subtitle": "先向國王取得王族之印，再循下圖前往地下",
+  "asset": "castle-basement-linked.webp",
+  "stages": [
+    {"mapId":33100,"routeIndex":0,"title":"1. 城內一樓：找東側下樓梯","start":"起","end":"A","transition":"由 (42,21) 下樓，抵達地下 (44,20)"},
+    {"mapId":33110,"routeIndex":0,"title":"2. 地下：沿走道找士兵布羅","start":"A","end":"終","transition":"與 (12,6) 士兵交談，傳送進王族暗道"}
+  ]
+}
