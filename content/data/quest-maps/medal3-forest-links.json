@@ -1,0 +1,10 @@
+{
+  "title": "追加支線・過去的森林",
+  "subtitle": "實線沿路走；虛線表示與皇女交談後換景",
+  "asset": "forest-linked.webp",
+  "stages": [
+    {"mapId":47030,"routeIndex":0,"title":"1. 找皇女交談","start":"起","end":"A","transition":"交談後換景，接下一張圖的 A"},
+    {"mapId":47031,"routeIndex":0,"title":"2. 再與皇女交談","start":"A","end":"B","transition":"再次換景，進入森林深處的 B"},
+    {"mapId":47032,"routeIndex":0,"title":"3. 森林深處：帕魯凱斯","start":"B","end":"終","transition":"交談開戰；打贏後找無名少女回島上"}
+  ]
+}

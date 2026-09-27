@@ -1,0 +1,10 @@
+{
+  "title": "穿過伊利斯礦山・前往米村",
+  "subtitle": "實線沿路走；虛線連接樓梯前後的同字母位置",
+  "asset": "mine-linked.webp",
+  "stages": [
+    {"assetName":"mine-lumi","routeIndex":0,"title":"1. 魯米那斯側：往大坑道","start":"起","end":"A","transition":"踩樓梯下大坑道，接下一張圖的 A"},
+    {"assetName":"mine-main","routeIndex":0,"title":"2. 大坑道：走向另一端樓梯","start":"A","end":"B","transition":"由188,12上樓，接下一張圖的 B"},
+    {"assetName":"mine-mino","routeIndex":0,"title":"3. 米諾基亞側：出洞到島上","start":"B","end":"終","transition":"出洞到381,804，再前往米村西側入口"}
+  ]
+}
