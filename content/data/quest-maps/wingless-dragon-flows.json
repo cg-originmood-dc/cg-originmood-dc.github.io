@@ -1,0 +1,626 @@
+[
+  {
+    "title": "出發：井底到黑之宮殿",
+    "asset": "start.webp",
+    "stages": [
+      {
+        "assetName": "town",
+        "routeIndex": 0,
+        "title": "雷克塔爾鎮・很深的井",
+        "start": "起",
+        "end": "A",
+        "transition": "調查井，選「是」"
+      },
+      {
+        "assetName": "underworld",
+        "routeIndex": 0,
+        "title": "冥府之道・耶卡",
+        "start": "A",
+        "end": "B",
+        "transition": "打贏耶卡後傳送"
+      },
+      {
+        "assetName": "wasteland",
+        "routeIndex": 0,
+        "title": "諾斯菲拉特大地",
+        "start": "B",
+        "end": "終",
+        "transition": "進入黑之宮殿"
+      }
+    ]
+  },
+  {
+    "title": "黑之宮殿：先下墓場",
+    "asset": "entry.webp",
+    "stages": [
+      {
+        "assetName": "entrance",
+        "routeIndex": 0,
+        "title": "黑之宮殿入口",
+        "start": "起",
+        "end": "A",
+        "transition": "進入1樓"
+      },
+      {
+        "assetName": "hall",
+        "routeIndex": 0,
+        "title": "黑之宮殿1樓",
+        "start": "A",
+        "end": "B",
+        "transition": "進入中庭"
+      },
+      {
+        "assetName": "courtyard-first",
+        "routeIndex": 0,
+        "title": "中庭・第一次前往歌姬",
+        "start": "B",
+        "end": "終",
+        "transition": "下墓場，接下一張圖"
+      }
+    ]
+  },
+  {
+    "title": "墓場繞路：前往歌姬",
+    "asset": "singer-path.webp",
+    "stages": [
+      {
+        "assetName": "grave-first",
+        "routeIndex": 0,
+        "title": "墓場・繞往內側中庭",
+        "start": "起",
+        "end": "A",
+        "transition": "樓梯回到中庭內側"
+      },
+      {
+        "assetName": "courtyard-singer",
+        "routeIndex": 0,
+        "title": "中庭・歌姬房間",
+        "start": "A",
+        "end": "B",
+        "transition": "上2樓"
+      },
+      {
+        "assetName": "singer",
+        "routeIndex": 0,
+        "title": "黑之宮殿2樓・歌姬賽蓮",
+        "start": "B",
+        "end": "終",
+        "transition": "找賽蓮交談，傳往龍之沙漏"
+      }
+    ]
+  },
+  {
+    "title": "北路：進入火山",
+    "asset": "north.webp",
+    "stages": [
+      {
+        "assetName": "courtyard-north",
+        "routeIndex": 0,
+        "title": "中庭・北路往火山",
+        "start": "起",
+        "end": "A",
+        "transition": "下墓場"
+      },
+      {
+        "assetName": "grave-north",
+        "routeIndex": 0,
+        "title": "墓場・北路出口",
+        "start": "A",
+        "end": "B",
+        "transition": "從出口進火山"
+      },
+      {
+        "assetName": "volcano-b1",
+        "routeIndex": 0,
+        "title": "貝尼恰斯火山地下1樓",
+        "start": "B",
+        "end": "終",
+        "transition": "下地下2樓"
+      }
+    ]
+  },
+  {
+    "title": "火山：地下2樓至4樓",
+    "asset": "volcano-upper.webp",
+    "stages": [
+      {
+        "assetName": "volcano-b2",
+        "routeIndex": 0,
+        "title": "貝尼恰斯火山地下2樓",
+        "start": "起",
+        "end": "A",
+        "transition": "下地下3樓"
+      },
+      {
+        "assetName": "volcano-b3",
+        "routeIndex": 0,
+        "title": "貝尼恰斯火山地下3樓",
+        "start": "A",
+        "end": "B",
+        "transition": "下地下4樓"
+      },
+      {
+        "assetName": "volcano-b4",
+        "routeIndex": 0,
+        "title": "貝尼恰斯火山地下4樓",
+        "start": "B",
+        "end": "終",
+        "transition": "下地下5樓"
+      }
+    ]
+  },
+  {
+    "title": "火山：先從6樓繞進7樓",
+    "asset": "volcano-detour-1.webp",
+    "stages": [
+      {
+        "assetName": "volcano-b5",
+        "routeIndex": 0,
+        "title": "貝尼恰斯火山地下5樓",
+        "start": "起",
+        "end": "A",
+        "transition": "下地下6樓"
+      },
+      {
+        "assetName": "volcano-b6a",
+        "routeIndex": 0,
+        "title": "火山地下6樓・第一次",
+        "start": "A",
+        "end": "B",
+        "transition": "先下地下7樓"
+      },
+      {
+        "assetName": "volcano-b7a",
+        "routeIndex": 0,
+        "title": "火山地下7樓・第一次",
+        "start": "B",
+        "end": "終",
+        "transition": "回地下6樓另一側，接下一張圖"
+      }
+    ]
+  },
+  {
+    "title": "火山：6、7樓繼續繞路",
+    "asset": "volcano-detour-2.webp",
+    "stages": [
+      {
+        "assetName": "volcano-b6b",
+        "routeIndex": 0,
+        "title": "火山地下6樓・第二次",
+        "start": "起",
+        "end": "A",
+        "transition": "再次下地下7樓"
+      },
+      {
+        "assetName": "volcano-b7b",
+        "routeIndex": 0,
+        "title": "火山地下7樓・第二次",
+        "start": "A",
+        "end": "B",
+        "transition": "再回地下6樓"
+      },
+      {
+        "assetName": "volcano-b6c",
+        "routeIndex": 0,
+        "title": "火山地下6樓・第三次",
+        "start": "B",
+        "end": "終",
+        "transition": "下地下7樓第三個區域"
+      }
+    ]
+  },
+  {
+    "title": "火山：地下7樓至9樓",
+    "asset": "volcano-lower.webp",
+    "stages": [
+      {
+        "assetName": "volcano-b7c",
+        "routeIndex": 0,
+        "title": "火山地下7樓・第三次",
+        "start": "起",
+        "end": "A",
+        "transition": "下地下8樓"
+      },
+      {
+        "assetName": "volcano-b8",
+        "routeIndex": 0,
+        "title": "貝尼恰斯火山地下8樓",
+        "start": "A",
+        "end": "B",
+        "transition": "下地下9樓"
+      },
+      {
+        "assetName": "volcano-b9",
+        "routeIndex": 0,
+        "title": "貝尼恰斯火山地下9樓",
+        "start": "B",
+        "end": "終",
+        "transition": "下地下10樓"
+      }
+    ]
+  },
+  {
+    "title": "火山：諾利戰與沙漏",
+    "asset": "nori-finish.webp",
+    "stages": [
+      {
+        "assetName": "volcano-b10",
+        "routeIndex": 0,
+        "title": "貝尼恰斯火山地下10樓",
+        "start": "起",
+        "end": "A",
+        "transition": "進入最下層"
+      },
+      {
+        "assetName": "nori",
+        "routeIndex": 0,
+        "title": "火山最下層・沉默之龍諾利",
+        "start": "A",
+        "end": "B",
+        "transition": "戰勝諾利後傳送"
+      },
+      {
+        "assetName": "volcano-hourglass",
+        "routeIndex": 0,
+        "title": "火山地下2樓・龍之沙漏",
+        "start": "B",
+        "end": "終",
+        "transition": "調查沙漏，返回歌姬"
+      }
+    ]
+  },
+  {
+    "title": "南路：前往深海",
+    "asset": "south.webp",
+    "stages": [
+      {
+        "assetName": "courtyard-south",
+        "routeIndex": 0,
+        "title": "中庭・南路往深海",
+        "start": "起",
+        "end": "A",
+        "transition": "下墓場"
+      },
+      {
+        "assetName": "grave-south",
+        "routeIndex": 0,
+        "title": "墓場・南路出口",
+        "start": "A",
+        "end": "B",
+        "transition": "到島上後，走（859,692）樓梯進深海"
+      },
+      {
+        "assetName": "sea-1",
+        "routeIndex": 0,
+        "title": "深海第1層・刻之蠟燭",
+        "start": "B",
+        "end": "終",
+        "transition": "調查燈籠取得刻之蠟燭，傳到第2層"
+      }
+    ]
+  },
+  {
+    "title": "深海：第2層至4層",
+    "asset": "sea-upper.webp",
+    "stages": [
+      {
+        "assetName": "sea-2",
+        "routeIndex": 0,
+        "title": "深海第2層",
+        "start": "起",
+        "end": "A",
+        "transition": "前往第3層"
+      },
+      {
+        "assetName": "sea-3",
+        "routeIndex": 0,
+        "title": "深海第3層",
+        "start": "A",
+        "end": "B",
+        "transition": "前往第4層"
+      },
+      {
+        "assetName": "sea-4",
+        "routeIndex": 0,
+        "title": "深海第4層",
+        "start": "B",
+        "end": "終",
+        "transition": "前往第5層"
+      }
+    ]
+  },
+  {
+    "title": "深海：第5、6層來回繞路",
+    "asset": "sea-detour.webp",
+    "stages": [
+      {
+        "assetName": "sea-5a",
+        "routeIndex": 0,
+        "title": "深海第5層・第一次",
+        "start": "起",
+        "end": "A",
+        "transition": "先下第6層"
+      },
+      {
+        "assetName": "sea-6a",
+        "routeIndex": 0,
+        "title": "深海第6層・第一次",
+        "start": "A",
+        "end": "B",
+        "transition": "回第5層另一側"
+      },
+      {
+        "assetName": "sea-5b",
+        "routeIndex": 0,
+        "title": "深海第5層・第二次",
+        "start": "B",
+        "end": "C",
+        "transition": "再次下第6層"
+      },
+      {
+        "assetName": "sea-6b",
+        "routeIndex": 0,
+        "title": "深海第6層・第二次",
+        "start": "C",
+        "end": "終",
+        "transition": "前往第7層"
+      }
+    ]
+  },
+  {
+    "title": "深海：艾汀戰與沙漏",
+    "asset": "adin-finish.webp",
+    "stages": [
+      {
+        "assetName": "sea-7",
+        "routeIndex": 0,
+        "title": "深海第7層・通往中央的傳送點",
+        "start": "起",
+        "end": "A",
+        "transition": "傳至中央，調查燈籠（50,48）進入海之神殿"
+      },
+      {
+        "assetName": "adin",
+        "routeIndex": 0,
+        "title": "海之神殿・盲目之龍艾汀",
+        "start": "A",
+        "end": "B",
+        "transition": "戰勝艾汀後傳送"
+      },
+      {
+        "assetName": "sea-hourglass",
+        "routeIndex": 0,
+        "title": "深海第7層・龍之沙漏",
+        "start": "B",
+        "end": "終",
+        "transition": "調查沙漏，返回歌姬"
+      }
+    ]
+  },
+  {
+    "title": "東路：前往三選一房間",
+    "asset": "east.webp",
+    "stages": [
+      {
+        "assetName": "courtyard-east",
+        "routeIndex": 0,
+        "title": "中庭・東路往寶座",
+        "start": "起",
+        "end": "A",
+        "transition": "下墓場"
+      },
+      {
+        "assetName": "grave-east",
+        "routeIndex": 0,
+        "title": "墓場・東路出口",
+        "start": "A",
+        "end": "終",
+        "transition": "進入黑之宮殿1樓"
+      }
+    ]
+  },
+  {
+    "title": "黑之宮殿1樓：第1至4個路口",
+    "asset": "rooms-first.webp",
+    "stages": [
+      {
+        "assetName": "rooms-1",
+        "routeIndex": 0,
+        "title": "黑之宮殿1樓・第1個路口",
+        "start": "起",
+        "end": "A",
+        "transition": "進入標示房間，傳到第2路口"
+      },
+      {
+        "assetName": "rooms-2",
+        "routeIndex": 0,
+        "title": "黑之宮殿1樓・第2個路口",
+        "start": "A",
+        "end": "B",
+        "transition": "傳到第3路口"
+      },
+      {
+        "assetName": "rooms-3",
+        "routeIndex": 0,
+        "title": "黑之宮殿1樓・第3個路口",
+        "start": "B",
+        "end": "C",
+        "transition": "傳到第4路口"
+      },
+      {
+        "assetName": "rooms-4",
+        "routeIndex": 0,
+        "title": "黑之宮殿1樓・第4個路口",
+        "start": "C",
+        "end": "終",
+        "transition": "傳到第5路口，接下一張圖"
+      }
+    ]
+  },
+  {
+    "title": "黑之宮殿1樓：第5至8個路口",
+    "asset": "rooms-last.webp",
+    "stages": [
+      {
+        "assetName": "rooms-5",
+        "routeIndex": 0,
+        "title": "黑之宮殿1樓・第5個路口",
+        "start": "起",
+        "end": "A",
+        "transition": "進入標示房間，傳到第6路口"
+      },
+      {
+        "assetName": "rooms-6",
+        "routeIndex": 0,
+        "title": "黑之宮殿1樓・第6個路口",
+        "start": "A",
+        "end": "B",
+        "transition": "傳到第7路口"
+      },
+      {
+        "assetName": "rooms-7",
+        "routeIndex": 0,
+        "title": "黑之宮殿1樓・第7個路口",
+        "start": "B",
+        "end": "C",
+        "transition": "傳到第8路口"
+      },
+      {
+        "assetName": "rooms-8",
+        "routeIndex": 0,
+        "title": "黑之宮殿1樓・第8個路口",
+        "start": "C",
+        "end": "終",
+        "transition": "進入地下1樓"
+      }
+    ]
+  },
+  {
+    "title": "黑之宮殿：地下1樓至3樓",
+    "asset": "palace-upper.webp",
+    "stages": [
+      {
+        "assetName": "palace-b1",
+        "routeIndex": 0,
+        "title": "黑之宮殿地下1樓",
+        "start": "起",
+        "end": "A",
+        "transition": "下地下2樓"
+      },
+      {
+        "assetName": "palace-b2",
+        "routeIndex": 0,
+        "title": "黑之宮殿地下2樓",
+        "start": "A",
+        "end": "B",
+        "transition": "下地下3樓"
+      },
+      {
+        "assetName": "palace-b3",
+        "routeIndex": 0,
+        "title": "黑之宮殿地下3樓",
+        "start": "B",
+        "end": "終",
+        "transition": "下地下4樓"
+      }
+    ]
+  },
+  {
+    "title": "黑之宮殿：地下4樓至6樓",
+    "asset": "palace-middle.webp",
+    "stages": [
+      {
+        "assetName": "palace-b4",
+        "routeIndex": 0,
+        "title": "黑之宮殿地下4樓",
+        "start": "起",
+        "end": "A",
+        "transition": "下地下5樓"
+      },
+      {
+        "assetName": "palace-b5",
+        "routeIndex": 0,
+        "title": "黑之宮殿地下5樓",
+        "start": "A",
+        "end": "B",
+        "transition": "下地下6樓"
+      },
+      {
+        "assetName": "palace-b6",
+        "routeIndex": 0,
+        "title": "黑之宮殿地下6樓",
+        "start": "B",
+        "end": "終",
+        "transition": "下地下7樓"
+      }
+    ]
+  },
+  {
+    "title": "黑之宮殿：地下7樓至10樓",
+    "asset": "palace-lower.webp",
+    "stages": [
+      {
+        "assetName": "palace-b7",
+        "routeIndex": 0,
+        "title": "黑之宮殿地下7樓",
+        "start": "起",
+        "end": "A",
+        "transition": "下地下8樓"
+      },
+      {
+        "assetName": "palace-b8",
+        "routeIndex": 0,
+        "title": "黑之宮殿地下8樓",
+        "start": "A",
+        "end": "B",
+        "transition": "下地下9樓"
+      },
+      {
+        "assetName": "palace-b9",
+        "routeIndex": 0,
+        "title": "黑之宮殿地下9樓",
+        "start": "B",
+        "end": "C",
+        "transition": "下地下10樓"
+      },
+      {
+        "assetName": "palace-b10",
+        "routeIndex": 0,
+        "title": "黑之宮殿地下10樓",
+        "start": "C",
+        "end": "終",
+        "transition": "進入最下層"
+      }
+    ]
+  },
+  {
+    "title": "黑之宮殿最下層：前往寶座",
+    "asset": "throne-path.webp",
+    "stages": [
+      {
+        "assetName": "palace-bottom-1",
+        "routeIndex": 0,
+        "title": "黑之宮殿最下層・前段",
+        "start": "起",
+        "end": "A",
+        "transition": "進入最下層後段"
+      },
+      {
+        "assetName": "palace-bottom-2",
+        "routeIndex": 0,
+        "title": "黑之宮殿最下層・後段",
+        "start": "A",
+        "end": "B",
+        "transition": "進入寶座"
+      },
+      {
+        "assetName": "throne",
+        "routeIndex": 0,
+        "title": "寶座・里雍",
+        "start": "B",
+        "end": "終",
+        "transition": "戰勝後再與里雍交談，接杜瓦戰"
+      }
+    ]
+  }
+]
