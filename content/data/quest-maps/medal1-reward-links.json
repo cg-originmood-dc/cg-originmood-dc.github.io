@@ -1,0 +1,9 @@
+{
+  "title":"露比戰後 → 荷特普領稱號",
+  "subtitle":"先與露比交談傳送，再找荷特普；不是打完就領到稱號",
+  "asset":"reward-linked.webp",
+  "stages":[
+    {"mapId":33610,"routeIndex":0,"title":"1. 戰後換景：往右找露比交談","start":"起","end":"A","transition":"露比對話後，傳到？？？ (309,136)"},
+    {"mapId":59721,"routeIndex":0,"title":"2. 往右找荷特普領取稱號","start":"A","end":"終","transition":"與荷特普 (319,136) 交談，領取第一等勳章稱號"}
+  ]
+}

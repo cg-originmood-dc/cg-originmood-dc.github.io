@@ -1,0 +1,10 @@
+{
+  "title":"地下3樓 → 地下4樓 → 地下5樓",
+  "subtitle":"色慾戰後接這段；虛線連接下樓前後的位置",
+  "asset":"middle-linked.webp",
+  "stages":[
+    {"mapId":33603,"routeIndex":1,"title":"1. 色慾戰後：走右側出口","start":"起","end":"A","transition":"由 (46,22) 下樓，抵達地下4樓 (46,2)"},
+    {"mapId":33604,"routeIndex":0,"title":"2. 地下4樓：繞過通道往下走","start":"A","end":"B","transition":"由 (24,45) 下樓，抵達地下5樓 (23,44)"},
+    {"mapId":33605,"routeIndex":0,"title":"3. 地下5樓：往北找怠惰的守門者","start":"B","end":"終","transition":"在 (18,2) 找守門者，持怠惰的罪書開戰"}
+  ]
+}
