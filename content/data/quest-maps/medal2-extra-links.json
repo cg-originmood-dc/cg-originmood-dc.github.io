@@ -1,0 +1,9 @@
+{
+  "title": "二追：石碑 → 深遠的黑暗",
+  "subtitle": "實線是步行；虛線是調查石碑後的傳送",
+  "asset": "extra-linked.webp",
+  "stages": [
+    {"mapId":46063,"routeIndex":1,"title":"1. 領玉手箱後，往右上方調查石碑","start":"起","end":"A","transition":"調查石碑 (24,9)，傳往深遠的黑暗"},
+    {"mapId":46064,"routeIndex":0,"title":"2. 往北找露比，交談取得項鍊","start":"A","end":"終","transition":"取得隸屬的項鍊，傳回米村 (23,116)"}
+  ]
+}
