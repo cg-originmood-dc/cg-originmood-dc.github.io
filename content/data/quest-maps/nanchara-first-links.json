@@ -1,0 +1,10 @@
+{
+  "title":"南恰拉山第1通路：進洞到出洞",
+  "subtitle":"實線沿路走；虛線連接樓梯換層前後的位置",
+  "asset":"first-linked.webp",
+  "stages":[
+    {"mapId":34000,"routeIndex":0,"title":"1. 進洞後往西，走樓梯下去","start":"起","end":"A","transition":"在 (10,61) 下樓，抵達地下通道 (12,41)"},
+    {"mapId":34001,"routeIndex":0,"title":"2. 穿過地下通道，往北上樓","start":"A","end":"B","transition":"在 (11,2) 上樓，抵達上層另一端 (19,9)"},
+    {"mapId":34000,"routeIndex":1,"title":"3. 上樓後往右走，從洞口出去","start":"B","end":"終","transition":"出洞回到米內葛爾島 (298,405)，再走到 (314,399) 進第2通路"}
+  ]
+}

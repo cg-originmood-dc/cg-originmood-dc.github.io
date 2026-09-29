@@ -1,0 +1,10 @@
+{
+  "title":"南恰拉山第2通路：進洞到路霸側",
+  "subtitle":"實線沿路走；虛線連接樓梯換層前後的位置",
+  "asset":"second-linked.webp",
+  "stages":[
+    {"mapId":34002,"routeIndex":0,"title":"1. 進洞繞過山壁，到東側樓梯","start":"起","end":"A","transition":"在 (45,37) 下樓，抵達地下通道 (46,34)"},
+    {"mapId":34003,"routeIndex":0,"title":"2. 往下繞過山壁，沿西側往北","start":"A","end":"B","transition":"在 (27,2) 上樓，抵達上層另一端 (17,4)"},
+    {"mapId":34002,"routeIndex":1,"title":"3. 上樓後走右側洞口，出去找路霸","start":"B","end":"終","transition":"出洞抵達島上 (301,347)，再找阿德基姆 (309,349)"}
+  ]
+}
