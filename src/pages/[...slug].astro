@@ -12,6 +12,7 @@ import LevelingSpots from '../components/LevelingSpots.astro';
 import CraftCostCalc from '../components/CraftCostCalc.astro';
 import MaterialPrices from '../components/MaterialPrices.astro';
 import MentalShockwaveCalc from '../components/MentalShockwaveCalc.astro';
+import PetSkillCostCalc from '../components/PetSkillCostCalc.astro';
 import TitleReputation from '../components/TitleReputation.astro';
 import SkillIndex from '../components/SkillIndex.astro';
 import NewsTabs from '../components/NewsTabs.astro';
@@ -59,6 +60,8 @@ const hasProse = entry.body != null && entry.body.trim().length > 0;
     <NewsTabs />
   ) : entry.data.title === '寵物清單' ? (
     <PetList />
+  ) : entry.data.title === '寵物技能學習費用試算' ? (
+    <PetSkillCostCalc />
   ) : entry.data.title === '專屬技能' ? (
     <ExclusiveSkills />
   ) : entry.data.title === '成本計算' ? (

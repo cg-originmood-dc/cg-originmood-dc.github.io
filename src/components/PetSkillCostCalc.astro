@@ -1,0 +1,204 @@
+---
+import { loadDataset } from '../lib/datasets';
+import { MAX_PETS, MAX_SKILLS, parsePetSkillPrices } from '../lib/petSkillCost';
+
+const prices = parsePetSkillPrices(loadDataset('寵物技能學習費用')?.rows ?? []);
+const categories = [...new Set(prices.map(s => s.category))];
+const notes = [...new Set(prices.map(s => s.note).filter(Boolean))];
+const money = (n: number) => `${n.toLocaleString('zh-TW')} G`;
+---
+
+<section class="psc" data-pet-skill-cost data-prices={JSON.stringify(prices)} aria-label="寵物技能費用計算器">
+  <div data-interactive hidden>
+    <div class="psc__summary">
+      <div><span>全部學習費用</span><output data-grand-total aria-live="polite" aria-atomic="true">0 G</output></div>
+      <p data-count>尚未選擇技能</p>
+    </div>
+    <div class="psc__toolbar">
+      <button type="button" data-add>＋ 新增寵物</button>
+      <button type="button" data-reset-all>清空全部</button>
+      <span>最多 {MAX_PETS} 隻，每隻最多 {MAX_SKILLS} 項</span>
+    </div>
+    <p class="psc__hint" data-storage role="status">填寫內容只儲存在這個瀏覽器，不會改動共用試算表。</p>
+    <div class="psc__pets" data-pets></div>
+  </div>
+  <noscript><p>啟用 JavaScript 後即可試算；下方費用表仍可直接查看。</p></noscript>
+
+  <template data-pet-template>
+    <fieldset class="psc__pet">
+      <legend data-pet-heading></legend>
+      <div class="psc__pet-head">
+        <label class="psc__name">寵物名稱（可留空）<input type="text" data-pet-name maxlength="60" placeholder="例如：水藍鼠" autocomplete="off" /></label>
+        <div class="psc__actions">
+          <button type="button" data-clear>清空技能</button>
+          <button type="button" data-remove>移除寵物</button>
+        </div>
+      </div>
+      <div class="psc__skills">
+        {Array.from({ length: MAX_SKILLS }, (_, slot) => (
+          <label>技能 {slot + 1}
+            <select data-slot={slot}>
+              <option value="">不學／取消選擇</option>
+              {categories.map(category => (
+                <optgroup label={category}>
+                  {prices.filter(s => s.category === category).map(s => (
+                    <option value={s.id}>{s.alias}｜{s.name} · {money(s.fee)}</option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </label>
+        ))}
+      </div>
+      <div class="psc__subtotal"><span data-selected-count>0 項技能</span><strong>這隻小計 <output data-pet-total>0 G</output></strong></div>
+    </fieldset>
+  </template>
+
+  {notes.length > 0 && <aside class="psc__notice"><strong>費用資料差異</strong>{notes.map(note => <p>{note}<br />適用技能：{prices.filter(s => s.note === note).map(s => s.name).join('、')}。</p>)}</aside>}
+
+  <details class="psc__prices">
+    <summary>查看全部 {prices.length} 項技能費用</summary>
+    <div class="psc__table-wrap">
+      <table>
+        <thead><tr><th scope="col">分類</th><th scope="col">技能</th><th scope="col">原表簡稱</th><th scope="col">學習費用</th></tr></thead>
+        <tbody>{prices.map(s => <tr><td>{s.category}</td><td>{s.name}{s.note && <span title={s.note}> ※</span>}</td><td>{s.alias}</td><td>{money(s.fee)}</td></tr>)}</tbody>
+      </table>
+    </div>
+    <p class="psc__hint">※ 有費用資料差異，說明見上方。取消單項技能請選「不學／取消選擇」。</p>
+  </details>
+</section>
+
+<script>
+  import { MAX_PETS, PLAN_STORAGE_KEY, blankPetPlan, restorePetPlans, petPlanTotal, type PetSkillPlan, type PetSkillPrice } from '../lib/petSkillCost';
+
+  document.querySelectorAll<HTMLElement>('[data-pet-skill-cost]').forEach(root => {
+    const prices = JSON.parse(root.dataset.prices || '[]') as PetSkillPrice[];
+    const petsEl = root.querySelector<HTMLElement>('[data-pets]')!;
+    const template = root.querySelector<HTMLTemplateElement>('[data-pet-template]')!;
+    const addButton = root.querySelector<HTMLButtonElement>('[data-add]')!;
+    const storageNote = root.querySelector<HTMLElement>('[data-storage]')!;
+    let pets: PetSkillPlan[] = [blankPetPlan()];
+    try {
+      const raw = localStorage.getItem(PLAN_STORAGE_KEY);
+      if (raw) pets = restorePetPlans(JSON.parse(raw), prices);
+    } catch {
+      storageNote.textContent = '無法讀取已儲存內容，已開啟空白試算。仍可計算，但內容可能無法保存。';
+    }
+
+    const money = (n: number) => `${n.toLocaleString('zh-TW')} G`;
+    const save = () => {
+      try {
+        localStorage.setItem(PLAN_STORAGE_KEY, JSON.stringify({ version: 1, pets }));
+        storageNote.textContent = '已儲存在這個瀏覽器，不會改動共用試算表。';
+      } catch {
+        storageNote.textContent = '瀏覽器無法儲存內容；仍可試算，但重新整理或關閉頁面後不會保留。';
+      }
+    };
+    const paint = () => {
+      let total = 0, count = 0, active = 0;
+      petsEl.querySelectorAll<HTMLElement>('[data-pet-index]').forEach(card => {
+        const pet = pets[Number(card.dataset.petIndex)];
+        const selected = new Set(pet.skills.filter(Boolean));
+        const cost = petPlanTotal(pet, prices);
+        total += cost; count += selected.size; if (selected.size) active++;
+        card.querySelector('[data-pet-total]')!.textContent = money(cost);
+        card.querySelector('[data-selected-count]')!.textContent = `${selected.size} 項技能`;
+        card.querySelectorAll<HTMLSelectElement>('[data-slot]').forEach(select => {
+          for (const option of select.options) option.disabled = !!option.value && selected.has(option.value) && option.value !== select.value;
+        });
+      });
+      root.querySelector('[data-grand-total]')!.textContent = money(total);
+      root.querySelector('[data-count]')!.textContent = count ? `${active} 隻寵物 · ${count} 項待學技能` : '尚未選擇技能';
+      addButton.disabled = pets.length >= MAX_PETS;
+    };
+    const render = () => {
+      petsEl.replaceChildren();
+      pets.forEach((pet, index) => {
+        const fragment = template.content.cloneNode(true) as DocumentFragment;
+        const card = fragment.querySelector<HTMLElement>('fieldset')!;
+        card.dataset.petIndex = String(index);
+        card.querySelector('[data-pet-heading]')!.textContent = `寵物 ${index + 1}`;
+        const name = card.querySelector<HTMLInputElement>('[data-pet-name]')!;
+        name.id = name.name = `pet-skill-name-${index}`;
+        name.value = pet.name;
+        name.addEventListener('input', () => { pet.name = name.value; save(); });
+        card.querySelectorAll<HTMLSelectElement>('[data-slot]').forEach(select => {
+          const slot = Number(select.dataset.slot);
+          select.id = select.name = `pet-skill-${index}-${slot}`;
+          select.value = pet.skills[slot];
+          select.addEventListener('change', () => {
+            if (select.value && pet.skills.some((id, i) => i !== slot && id === select.value)) {
+              select.value = pet.skills[slot]; return;
+            }
+            pet.skills[slot] = select.value;
+            paint(); save();
+          });
+        });
+        card.querySelector<HTMLButtonElement>('[data-clear]')!.addEventListener('click', () => {
+          if (pet.skills.some(Boolean) && !confirm(`清空「${pet.name || `寵物 ${index + 1}`}」的技能選擇？`)) return;
+          pet.skills.fill(''); render(); save();
+          petsEl.querySelectorAll<HTMLElement>('[data-clear]')[index]?.focus();
+        });
+        const remove = card.querySelector<HTMLButtonElement>('[data-remove]')!;
+        remove.disabled = pets.length === 1;
+        remove.addEventListener('click', () => {
+          if ((pet.name || pet.skills.some(Boolean)) && !confirm(`移除「${pet.name || `寵物 ${index + 1}`}」及其技能選擇？`)) return;
+          pets.splice(index, 1); render(); save();
+          petsEl.querySelectorAll<HTMLElement>('[data-pet-name]')[Math.min(index, pets.length - 1)]?.focus();
+        });
+        petsEl.append(fragment);
+      });
+      paint();
+    };
+    addButton.addEventListener('click', () => {
+      if (pets.length >= MAX_PETS) return;
+      pets.push(blankPetPlan()); render(); save();
+      petsEl.querySelectorAll<HTMLElement>('[data-pet-name]')[pets.length - 1]?.focus();
+    });
+    root.querySelector('[data-reset-all]')!.addEventListener('click', () => {
+      if (pets.some(p => p.name || p.skills.some(Boolean)) && !confirm('清空全部寵物與技能選擇？')) return;
+      pets = [blankPetPlan()]; render(); save();
+      petsEl.querySelector<HTMLElement>('[data-pet-name]')?.focus();
+    });
+    render();
+    root.querySelector<HTMLElement>('[data-interactive]')!.hidden = false;
+  });
+</script>
+
+<style>
+  .psc { margin-top: 1.5rem; }
+  .psc__summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 1rem; background: #eef5ff; border: 1px solid #c8dcf7; border-radius: 8px; padding: 1rem 1.2rem; }
+  .psc__summary span { display: block; font-size: .9rem; }
+  .psc__summary output { display: block; font-size: 1.85rem; font-weight: 700; color: #174a80; }
+  .psc__summary p { margin: 0; }
+  .psc__toolbar, .psc__actions, .psc__pet-head, .psc__subtotal { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; }
+  .psc__toolbar { margin-top: 1rem; }
+  .psc__toolbar span, .psc__hint { color: var(--text-2); font-size: .85rem; }
+  .psc__hint { margin: .6rem 0 1rem; }
+  .psc__pets { display: grid; gap: 1rem; }
+  .psc__pet { min-width: 0; margin: 0; padding: 1rem; border: 1px solid var(--border); border-radius: 8px; }
+  .psc__pet legend { padding: 0 .4rem; font-weight: 700; }
+  .psc__pet-head { justify-content: space-between; margin-bottom: .9rem; }
+  .psc label { display: flex; flex-direction: column; gap: .3rem; min-width: 0; font-size: .85rem; }
+  .psc__name { flex: 1 1 220px; max-width: 360px; }
+  .psc__skills { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: .75rem; }
+  .psc input, .psc select, .psc button { font: inherit; border: 1px solid #b7c1cd; border-radius: 5px; padding: .45rem .6rem; min-height: 42px; }
+  .psc input, .psc select { width: 100%; min-width: 0; max-width: 100%; color: var(--text); background: #fff; }
+  .psc select { background: #f5f9ff; }
+  .psc button { cursor: pointer; background: #fff; color: #174a80; font-size: .9rem; }
+  .psc button:hover:not(:disabled) { background: #eef5ff; }
+  .psc button:disabled { opacity: .5; cursor: not-allowed; }
+  .psc :is(input,select,button):focus-visible { outline: 2px solid #1155cc; outline-offset: 2px; }
+  .psc__subtotal { justify-content: space-between; margin-top: 1rem; padding-top: .7rem; border-top: 1px solid var(--border); }
+  .psc__subtotal output { color: #174a80; font-size: 1.2rem; }
+  .psc__notice { background: #fff8e7; border-left: 3px solid #c78a16; padding: .8rem 1rem; margin: 1.2rem 0; font-size: .85rem; }
+  .psc__notice p { margin: .3rem 0 0; }
+  .psc__prices { margin-top: 1.2rem; }
+  .psc__prices summary { cursor: pointer; font-weight: 600; }
+  .psc__table-wrap { max-width: 100%; overflow-x: auto; margin-top: .75rem; }
+  .psc table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  .psc th, .psc td { text-align: left; padding: .5rem .7rem; border: 1px solid var(--border); }
+  .psc th { background: var(--surface-2); }
+  .psc td:last-child { white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
+  @media (max-width: 480px) { .psc__pet { padding: .75rem; } .psc__actions { width: 100%; } }
+</style>
