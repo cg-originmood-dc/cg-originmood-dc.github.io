@@ -1,17 +1,19 @@
 ---
 import { loadDataset } from '../lib/datasets';
-import { MAX_PETS, MAX_SKILLS, parsePetSkillPrices } from '../lib/petSkillCost';
+import { MAX_PETS, MAX_SKILLS, parsePetSkillPrices, templeSkillPrices } from '../lib/petSkillCost';
+import petPresets from '../../content/data/寵物技能試算預設.json';
 
 const prices = parsePetSkillPrices(loadDataset('寵物技能學習費用')?.rows ?? []);
 const categories = [...new Set(prices.map(s => s.category))];
 const notes = [...new Set(prices.map(s => s.note).filter(Boolean))];
 const money = (n: number) => `${n.toLocaleString('zh-TW')} G`;
+const templePrices = templeSkillPrices(loadDataset('寵物物理學習聖殿卷費用')?.rows ?? []);
 ---
 
-<section class="psc" data-pet-skill-cost data-prices={JSON.stringify(prices)} aria-label="寵物技能費用計算器">
+<section class="psc" data-pet-skill-cost data-prices={JSON.stringify(prices)} data-presets={JSON.stringify(petPresets.pets)} aria-label="寵物技能費用計算器">
   <div data-interactive hidden>
     <div class="psc__summary">
-      <div><span>全部學習費用</span><output data-grand-total aria-live="polite" aria-atomic="true">0 G</output></div>
+      <div><span>樹海技能學習費用合計</span><output data-grand-total aria-live="polite" aria-atomic="true">0 G</output></div>
       <p data-count>尚未選擇技能</p>
     </div>
     <div class="psc__toolbar">
@@ -22,11 +24,17 @@ const money = (n: number) => `${n.toLocaleString('zh-TW')} G`;
     <p class="psc__hint" data-storage role="status">填寫內容只儲存在這個瀏覽器，不會改動共用試算表。</p>
     <div class="psc__pets" data-pets></div>
   </div>
+  <datalist id="pet-skill-presets">{petPresets.pets.map(pet => <option value={pet.name}>{pet.skills.length ? `${pet.skills.length} 項技能已登錄` : '尚無技能資料'}</option>)}</datalist>
   <noscript><p>啟用 JavaScript 後即可試算；下方費用表仍可直接查看。</p></noscript>
 
   <template data-pet-template>
     <fieldset class="psc__pet">
       <legend data-pet-heading></legend>
+      <div class="psc__preset">
+        <label>從寵物清單帶入（選填）<input type="text" data-preset list="pet-skill-presets" placeholder="輸入或選擇寵物名稱" autocomplete="off" maxlength="60" /></label>
+        <button type="button" data-apply-preset>帶入已學技能</button>
+      </div>
+      <p class="psc__hint" data-preset-note role="status">預設空白；帶入的技能會標為已學，不計入樹海費用。</p>
       <div class="psc__pet-head">
         <label class="psc__name">寵物名稱（可留空）<input type="text" data-pet-name maxlength="60" placeholder="例如：水藍鼠" autocomplete="off" /></label>
         <div class="psc__actions">
@@ -47,6 +55,11 @@ const money = (n: number) => `${n.toLocaleString('zh-TW')} G`;
                 </optgroup>
               ))}
             </select>
+            <span class="psc__known" data-known-slot={slot} hidden>
+              <span data-known-label></span>
+              <small>已學 · 不計費</small>
+              <button type="button" data-forget-slot={slot}>清除此格</button>
+            </span>
           </label>
         ))}
       </div>
@@ -57,7 +70,7 @@ const money = (n: number) => `${n.toLocaleString('zh-TW')} G`;
   {notes.length > 0 && <aside class="psc__notice"><strong>費用資料差異</strong>{notes.map(note => <p>{note}<br />適用技能：{prices.filter(s => s.note === note).map(s => s.name).join('、')}。</p>)}</aside>}
 
   <details class="psc__prices">
-    <summary>查看全部 {prices.length} 項技能費用</summary>
+    <summary>查看樹海 {prices.length} 項技能費用</summary>
     <div class="psc__table-wrap">
       <table>
         <thead><tr><th scope="col">分類</th><th scope="col">技能</th><th scope="col">原表簡稱</th><th scope="col">學習費用</th></tr></thead>
@@ -66,13 +79,27 @@ const money = (n: number) => `${n.toLocaleString('zh-TW')} G`;
     </div>
     <p class="psc__hint">※ 有費用資料差異，說明見上方。取消單項技能請選「不學／取消選擇」。</p>
   </details>
+
+  <details class="psc__prices" data-temple-prices>
+    <summary>少用參考：寵物物理學習聖殿卷價目表</summary>
+    <p>此表與樹海分開，未納入上方試算。來源：玩家提供的聖殿卷價目表（2026-09-29）。金額為學習費用，不含卷軸取得成本。</p>
+    <p><strong>本級費用是疊加前的金額，升級須先有前一級。</strong>例如未學氣功彈，要到 LV4，須合計 LV1～4：100,000＋200,000＋300,000＋400,000＝<strong>1,000,000 G</strong>；已有 LV2 則只加 LV3、LV4，共 700,000 G。</p>
+    <p>只列 LV10 起的技能，累計僅從 LV10 開始，不含未提供的 LV1～9 費用。下表不是直接學到目標等級的單次價格。</p>
+    <div class="psc__table-wrap">
+      <table>
+        <thead><tr><th scope="col">技能</th><th scope="col">等級</th><th scope="col">本級費用</th><th scope="col">累計範圍</th><th scope="col">範圍內累計</th></tr></thead>
+        <tbody>{templePrices.map(s => <tr><td>{s.name}</td><td>LV{s.level}</td><td>{money(s.fee)}</td><td>LV{s.fromLevel}～{s.level}</td><td>{money(s.cumulative)}</td></tr>)}</tbody>
+      </table>
+    </div>
+  </details>
 </section>
 
 <script>
-  import { MAX_PETS, PLAN_STORAGE_KEY, blankPetPlan, restorePetPlans, petPlanTotal, type PetSkillPlan, type PetSkillPrice } from '../lib/petSkillCost';
+  import { MAX_PETS, PLAN_STORAGE_KEY, blankPetPlan, planFromPreset, restorePetPlans, petPlanTotal, type PetSkillPlan, type PetSkillPrice, type PetSkillPreset } from '../lib/petSkillCost';
 
   document.querySelectorAll<HTMLElement>('[data-pet-skill-cost]').forEach(root => {
     const prices = JSON.parse(root.dataset.prices || '[]') as PetSkillPrice[];
+    const presets = JSON.parse(root.dataset.presets || '[]') as PetSkillPreset[];
     const petsEl = root.querySelector<HTMLElement>('[data-pets]')!;
     const template = root.querySelector<HTMLTemplateElement>('[data-pet-template]')!;
     const addButton = root.querySelector<HTMLButtonElement>('[data-add]')!;
@@ -88,7 +115,7 @@ const money = (n: number) => `${n.toLocaleString('zh-TW')} G`;
     const money = (n: number) => `${n.toLocaleString('zh-TW')} G`;
     const save = () => {
       try {
-        localStorage.setItem(PLAN_STORAGE_KEY, JSON.stringify({ version: 1, pets }));
+        localStorage.setItem(PLAN_STORAGE_KEY, JSON.stringify({ version: 2, pets }));
         storageNote.textContent = '已儲存在這個瀏覽器，不會改動共用試算表。';
       } catch {
         storageNote.textContent = '瀏覽器無法儲存內容；仍可試算，但重新整理或關閉頁面後不會保留。';
@@ -102,8 +129,13 @@ const money = (n: number) => `${n.toLocaleString('zh-TW')} G`;
         const cost = petPlanTotal(pet, prices);
         total += cost; count += selected.size; if (selected.size) active++;
         card.querySelector('[data-pet-total]')!.textContent = money(cost);
-        card.querySelector('[data-selected-count]')!.textContent = `${selected.size} 項技能`;
+        card.querySelector('[data-selected-count]')!.textContent = `${pet.known.filter(Boolean).length} 項已學 · ${selected.size} 項待學`;
         card.querySelectorAll<HTMLSelectElement>('[data-slot]').forEach(select => {
+          const slot = Number(select.dataset.slot), known = pet.known[slot];
+          select.hidden = select.disabled = !!known;
+          const knownEl = card.querySelector<HTMLElement>(`[data-known-slot="${slot}"]`)!;
+          knownEl.hidden = !known;
+          knownEl.querySelector('[data-known-label]')!.textContent = known;
           for (const option of select.options) option.disabled = !!option.value && selected.has(option.value) && option.value !== select.value;
         });
       });
@@ -122,11 +154,28 @@ const money = (n: number) => `${n.toLocaleString('zh-TW')} G`;
         name.id = name.name = `pet-skill-name-${index}`;
         name.value = pet.name;
         name.addEventListener('input', () => { pet.name = name.value; save(); });
+        const presetInput = card.querySelector<HTMLInputElement>('[data-preset]')!;
+        const presetNote = card.querySelector<HTMLElement>('[data-preset-note]')!;
+        presetInput.id = presetInput.name = `pet-skill-preset-${index}`;
+        presetInput.value = pet.preset;
+        const showPresetNote = (preset: PetSkillPreset) => {
+          presetNote.textContent = `${preset.name}：${preset.slots ? `圖鑑記載 ${preset.slots} 格；` : ''}${preset.skills.length ? '帶入技能均標為已學、不計費，可清除此格後改選要學的技能。' : '尚無登錄的技能資料，保留空白，不代表沒有內建技能。'}`;
+        };
+        const selectedPreset = presets.find(p => p.name === pet.preset);
+        if (selectedPreset) showPresetNote(selectedPreset);
+        card.querySelector('[data-apply-preset]')!.addEventListener('click', () => {
+          const preset = presets.find(p => p.name === presetInput.value.trim());
+          if (!preset) { presetNote.textContent = '請先從清單選擇完整寵物名稱；也可以維持空白自行選技能。'; return; }
+          if ((pet.skills.some(Boolean) || pet.known.some(Boolean)) && !confirm('帶入寵物會取代這隻的技能規劃，是否繼續？')) return;
+          pets[index] = planFromPreset(preset); render(); save();
+          petsEl.querySelectorAll<HTMLElement>('[data-preset]')[index]?.focus();
+        });
         card.querySelectorAll<HTMLSelectElement>('[data-slot]').forEach(select => {
           const slot = Number(select.dataset.slot);
           select.id = select.name = `pet-skill-${index}-${slot}`;
           select.value = pet.skills[slot];
           select.addEventListener('change', () => {
+            if (pet.known[slot]) { select.value = ''; return; }
             if (select.value && pet.skills.some((id, i) => i !== slot && id === select.value)) {
               select.value = pet.skills[slot]; return;
             }
@@ -134,15 +183,23 @@ const money = (n: number) => `${n.toLocaleString('zh-TW')} G`;
             paint(); save();
           });
         });
+        card.querySelectorAll<HTMLButtonElement>('[data-forget-slot]').forEach(button => {
+          const slot = Number(button.dataset.forgetSlot);
+          button.setAttribute('aria-label', `清除技能 ${slot + 1} 的已學標記`);
+          button.addEventListener('click', () => {
+            pet.known[slot] = ''; paint(); save();
+            card.querySelector<HTMLSelectElement>(`[data-slot="${slot}"]`)?.focus();
+          });
+        });
         card.querySelector<HTMLButtonElement>('[data-clear]')!.addEventListener('click', () => {
-          if (pet.skills.some(Boolean) && !confirm(`清空「${pet.name || `寵物 ${index + 1}`}」的技能選擇？`)) return;
-          pet.skills.fill(''); render(); save();
+          if ((pet.skills.some(Boolean) || pet.known.some(Boolean)) && !confirm(`清空「${pet.name || `寵物 ${index + 1}`}」的技能選擇？`)) return;
+          pet.skills.fill(''); pet.known.fill(''); pet.preset = ''; render(); save();
           petsEl.querySelectorAll<HTMLElement>('[data-clear]')[index]?.focus();
         });
         const remove = card.querySelector<HTMLButtonElement>('[data-remove]')!;
         remove.disabled = pets.length === 1;
         remove.addEventListener('click', () => {
-          if ((pet.name || pet.skills.some(Boolean)) && !confirm(`移除「${pet.name || `寵物 ${index + 1}`}」及其技能選擇？`)) return;
+          if ((pet.name || pet.skills.some(Boolean) || pet.known.some(Boolean)) && !confirm(`移除「${pet.name || `寵物 ${index + 1}`}」及其技能選擇？`)) return;
           pets.splice(index, 1); render(); save();
           petsEl.querySelectorAll<HTMLElement>('[data-pet-name]')[Math.min(index, pets.length - 1)]?.focus();
         });
@@ -156,7 +213,7 @@ const money = (n: number) => `${n.toLocaleString('zh-TW')} G`;
       petsEl.querySelectorAll<HTMLElement>('[data-pet-name]')[pets.length - 1]?.focus();
     });
     root.querySelector('[data-reset-all]')!.addEventListener('click', () => {
-      if (pets.some(p => p.name || p.skills.some(Boolean)) && !confirm('清空全部寵物與技能選擇？')) return;
+      if (pets.some(p => p.name || p.skills.some(Boolean) || p.known.some(Boolean)) && !confirm('清空全部寵物與技能選擇？')) return;
       pets = [blankPetPlan()]; render(); save();
       petsEl.querySelector<HTMLElement>('[data-pet-name]')?.focus();
     });
@@ -167,6 +224,12 @@ const money = (n: number) => `${n.toLocaleString('zh-TW')} G`;
 
 <style>
   .psc { margin-top: 1.5rem; }
+  .psc [hidden] { display: none !important; }
+  .psc__preset { display: flex; flex-wrap: wrap; align-items: end; gap: .6rem; }
+  .psc__preset label { flex: 1 1 220px; }
+  .psc__known { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .6rem; padding: .5rem; background: #edf8ef; border: 1px solid #b5d8bf; border-radius: 5px; }
+  .psc__known small { color: #226036; }
+  .psc__known button { margin-left: auto; }
   .psc__summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 1rem; background: #eef5ff; border: 1px solid #c8dcf7; border-radius: 8px; padding: 1rem 1.2rem; }
   .psc__summary span { display: block; font-size: .9rem; }
   .psc__summary output { display: block; font-size: 1.85rem; font-weight: 700; color: #174a80; }
