@@ -1,0 +1,10 @@
+{
+  "title": "魚人密道・連續路線",
+  "subtitle": "實線沿路走；虛線連接換圖前後的同字母位置",
+  "asset": "passage-linked.webp",
+  "stages": [
+    {"mapId":38707,"routeIndex":0,"title":"① 密道入口：前往一層","start":"起","end":"A","transition":"通過 (10,11)，抵達一層 (41,66)"},
+    {"mapId":38708,"routeIndex":0,"title":"② 密道一層：沿通道繞到出口","start":"A","end":"B","transition":"通過 (33,13)，抵達二層 (61,61)"},
+    {"mapId":38709,"routeIndex":0,"title":"③ 密道二層：走到負責人面前","start":"B","end":"終","transition":"與 (38,16) 的負責人交談開戰"}
+  ]
+}

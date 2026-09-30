@@ -1,0 +1,10 @@
+{
+  "title": "維諾亞海底洞窟・連續路線",
+  "subtitle": "實線沿路走；虛線連接換圖前後的同字母位置",
+  "asset": "sea-cave-linked.webp",
+  "stages": [
+    {"mapId":15592,"routeIndex":0,"title":"① 第一段：從守門人送入的位置出發","start":"起","end":"A","transition":"通過 (7,3)，抵達第二段 (95,19)"},
+    {"mapId":15593,"routeIndex":0,"title":"② 第二段：穿過長形洞窟","start":"A","end":"B","transition":"通過 (7,3)，抵達第三段 (25,36)"},
+    {"mapId":15594,"routeIndex":0,"title":"③ 第三段：從另一端離開海底洞窟","start":"B","end":"終","transition":"離開洞窟後，前往芙蕾雅 (314,425)"}
+  ]
+}
