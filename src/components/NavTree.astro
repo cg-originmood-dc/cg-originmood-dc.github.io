@@ -23,23 +23,34 @@ const hasActive = (n: NavNode): boolean => isActive(n.href) || n.children.some(h
     nodes.map((n) =>
       n.children.length ? (
         <li>
-          <details open={hasActive(n)}>
-            {/* 既是分類又是頁面時，標題本身要能點進去 */}
-            <summary>
-              {n.href ? (
-                <a
-                  class="navtree__selflink"
-                  href={base + n.href}
-                  aria-current={isActive(n.href) ? 'page' : undefined}
-                >
+          {n.href ? (
+            <>
+              <div class="navtree__row">
+                <a href={base + n.href} aria-current={isActive(n.href) ? 'page' : undefined}>
                   {n.label}
                 </a>
-              ) : (
+                <button
+                  class="navtree__toggle"
+                  type="button"
+                  aria-label={`${n.label}子選單`}
+                  aria-expanded="true"
+                  aria-controls={`nav-children-${encodeURIComponent(base + n.href)}`}
+                  data-initial-open={String(hasActive(n))}
+                  hidden
+                ><span aria-hidden="true">▾</span></button>
+              </div>
+              <div id={`nav-children-${encodeURIComponent(base + n.href)}`}>
+                <Astro.self nodes={n.children} base={base} here={here} depth={depth + 1} />
+              </div>
+            </>
+          ) : (
+            <details open={hasActive(n)}>
+              <summary>
                 <span>{n.label}</span>
-              )}
-            </summary>
-            <Astro.self nodes={n.children} base={base} here={here} depth={depth + 1} />
-          </details>
+              </summary>
+              <Astro.self nodes={n.children} base={base} here={here} depth={depth + 1} />
+            </details>
+          )}
         </li>
       ) : (
         <li>
@@ -54,3 +65,18 @@ const hasActive = (n: NavNode): boolean => isActive(n.href) || n.children.some(h
     )
   }
 </ul>
+
+<script>
+  // 標題連結與展開按鈕分開；沒有 JavaScript 時直接顯示子項目。
+  document.querySelectorAll<HTMLButtonElement>('.navtree__toggle').forEach((button) => {
+    const panel = document.getElementById(button.getAttribute('aria-controls')!);
+    if (!panel) return;
+    const setOpen = (open: boolean) => {
+      button.setAttribute('aria-expanded', String(open));
+      panel.hidden = !open;
+    };
+    setOpen(button.dataset.initialOpen === 'true');
+    button.hidden = false;
+    button.addEventListener('click', () => setOpen(button.getAttribute('aria-expanded') !== 'true'));
+  });
+</script>

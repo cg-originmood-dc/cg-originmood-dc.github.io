@@ -150,7 +150,8 @@ a {
 }
 
 .sidenav summary:hover,
-.sidenav a:hover {
+.sidenav a:hover,
+.navtree__toggle:hover {
   background: var(--nav-hover);
 }
 
@@ -162,6 +163,7 @@ a {
 
 /* 巢狀層級用縮排表示，不畫線，跟原站一致。--depth 由 NavTree 遞迴時帶下來 */
 .navtree > li > a,
+.navtree > li > .navtree__row > a,
 .navtree > li > details > summary {
   padding-left: calc(1rem + var(--depth) * 1rem);
 }
@@ -173,14 +175,44 @@ a {
   text-decoration: none;
 }
 
-/* summary 裡的自連結已經由 summary 提供內距，自己不要再撐一層 */
-.sidenav summary .navtree__selflink {
-  display: inline;
-  padding: 0;
+.navtree__row {
+  display: flex;
 }
 
-.sidenav a[aria-current='page'],
-.sidenav summary:has(.navtree__selflink[aria-current='page']) {
+.navtree__row > a {
+  flex: 1;
+  min-width: 0;
+}
+
+.navtree__toggle {
+  flex: 0 0 2.75rem;
+  min-height: 2.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--nav-text-dim);
+  font: inherit;
+  font-size: 0.75em;
+  cursor: pointer;
+}
+
+.navtree__toggle > span {
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+
+.navtree__toggle[aria-expanded='false'] > span {
+  transform: rotate(-90deg);
+}
+
+.navtree__toggle:focus-visible,
+.navtree__row > a:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: -2px;
+}
+
+.sidenav a[aria-current='page'] {
   font-weight: 600;
   background: var(--nav-hover);
 }
