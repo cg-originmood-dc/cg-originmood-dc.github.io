@@ -6,6 +6,8 @@
   "sources": ["https://cg.skyey.tw/errand/maae05.htm", "https://games.sina.com.cn/zhqu/cross/rwgl/rwgl34.shtml"],
   "encounterEvidence": {
     "source": "2026-10-09 地圖遇怪登記與戰鬥快照交叉核對",
+    "commonMonsters": ["水藍鳥魔", "水晶螃蟹", "貓妖"],
+    "commonMonstersSource": "2026-10-09 玩家補充：各層皆為這三種怪物。floors.monsters 保留各層實際觀測到的樣本種類，並非該層完整出怪名單；攻略使用 commonMonsters 顯示種類，等級仍使用各層觀測值。",
     "notes": "排除換圖瞬間延用上一場的怪物：第一層 Lv14 紅帽哥布林、第二層及第三層入口延用的 Lv54 陣容不採計。第五層登記曾短暫混合成 10 隻，該場戰鬥快照最多 8 隻，不據此改動出怪上限。",
     "floors": [
       {"floor": 1, "level": 54, "monsters": ["水晶螃蟹", "貓妖", "水藍鳥魔"], "battleTimes": ["2026-10-09 00:09:16", "2026-10-09 00:11:04"]},
