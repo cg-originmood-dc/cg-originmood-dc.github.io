@@ -1,0 +1,52 @@
+---
+import type { ItemGathering } from '../lib/itemGathering';
+import { LIST_SEP } from '../lib/datasets';
+import { renderCell } from '../lib/richtext';
+
+const { gathering } = Astro.props as { gathering: ItemGathering };
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+---
+
+<div class="item-gathering">
+  {gathering.groups.map((group) => (
+    <section data-gathering-source={group.skill}>
+      <h3><a href={base + group.href}>{group.skill}</a></h3>
+      {group.rows.map((row) => (
+        <div class="gathering-record" data-gathering-level={row.等級}>
+          <p class="gathering-meta">等級：{row.等級} · {row.分類}</p>
+          <dl>
+            {group.fields.filter((field) => row[field]?.trim()).map((field) => (
+              <div data-gathering-field={field}>
+                <dt>{field}</dt>
+                <dd>
+                  <ul>
+                    {row[field].split(LIST_SEP).map((part) => (
+                      <li set:html={renderCell(part, base)} />
+                    ))}
+                  </ul>
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      ))}
+    </section>
+  ))}
+</div>
+
+<style>
+  .item-gathering section + section,
+  .gathering-record + .gathering-record {
+    margin-top: 1.25rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #ddd;
+  }
+  h3 { font-size: 1.05rem; margin: 0.25rem 0 0.5rem; }
+  .gathering-meta { margin: 0 0 0.75rem; color: #5f6368; }
+  dl { margin: 0; }
+  dl > div + div { margin-top: 0.85rem; }
+  dt { font-weight: 700; }
+  dd { margin: 0.25rem 0 0; }
+  ul { margin: 0; padding-left: 1.35rem; }
+  li { margin: 0.25rem 0; overflow-wrap: anywhere; }
+</style>

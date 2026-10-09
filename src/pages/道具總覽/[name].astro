@@ -1,11 +1,13 @@
 ---
 /**
- * 道具詳情：資料來自 content/data/道具庫.csv（SSOT）
+ * 道具基本資料取自道具庫；採集資訊由明確關聯引用原採集表（同一資料來源）。
  */
 import Base from '../../layouts/Base.astro';
 import { getItem, listItems, itemFallbackLabel } from '../../lib/items';
 import { renderCell } from '../../lib/richtext';
 import { LIST_SEP } from '../../lib/datasets';
+import { getItemGathering } from '../../lib/itemGathering';
+import ItemGathering from '../../components/ItemGathering.astro';
 
 export function getStaticPaths() {
   return listItems().map((item) => ({
@@ -19,6 +21,9 @@ const item = getItem(name);
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const src = (v: string) => (v.startsWith('/') ? base + v : v);
 const img = (item?.image ?? '').trim();
+const gathering = item ? getItemGathering(item.名稱) : null;
+// 已有採集關聯時，不再顯示道具庫舊入手方式中複製的地點。
+const acquisition = gathering ? gathering.supplement : item?.入手方式 ?? '';
 ---
 
 {
@@ -72,13 +77,14 @@ const img = (item?.image ?? '').trim();
           )
         }
         {
-          item.入手方式?.trim() && (
+          (acquisition.trim() || gathering) && (
             <tr id="acquisition">
               <th scope="row">入手方式</th>
               <td class="item-acquisition">
-                {item.入手方式.split(LIST_SEP).map((part) => (
+                {acquisition.split(LIST_SEP).filter((part) => part.trim()).map((part) => (
                   <p set:html={renderCell(part, base)} />
                 ))}
+                {gathering && <ItemGathering gathering={gathering} />}
               </td>
             </tr>
           )
