@@ -4,6 +4,9 @@ import { thumbOf } from '../lib/thumbs';
 import { renderCell } from '../lib/richtext';
 import { hasPet } from '../lib/pets';
 import { getItem } from '../lib/items';
+import itemTips from '../../content/data/道具提示.json';
+
+const tips: Record<string, { text: string; href: string }> = itemTips;
 
 /**
  * 把 content/data/<name>.csv 渲染成可搜尋、可篩選、可排序的表格。
@@ -57,6 +60,9 @@ const dataset = given ?? (name ? loadDataset(name) : null);
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const src = (v: string) => (v.startsWith('/') ? base + v : v);
 const cols = dataset?.columns.filter((c) => !dataset.imageColumns.includes(c)) ?? [];
+/** 採集表共用欄位結構；加寬地點欄，物品名稱可連至既有道具頁。 */
+const gathering = cols.includes('物品名稱') && cols.includes('一般採集地點');
+const locationCols = gathering ? cols.filter((c) => c.endsWith('地點')) : [];
 const visibleImageColumns = showImages ? (dataset?.imageColumns ?? []) : [];
 /** 圖欄的表頭：image 沿用原站的「圖」，額外的圖欄（材料圖）直接用欄名 */
 const imgLabel = (c: string) => (c === 'image' ? '圖' : c);
@@ -96,7 +102,7 @@ const matCol =
         return filled.length > 0 && filled.every((v) => MATERIAL_LIST.test(v));
       }) ?? null)
     : null;
-type MatGroup = { skill: string; items: { name: string; level: string; href: string }[] };
+type MatGroup = { skill: string; items: { name: string; level: string; href: string; tip?: string }[] };
 const matLevels = (materials: string): MatGroup[] => {
   const groups: MatGroup[] = [];
   for (const part of materials.split('、')) {
@@ -110,7 +116,8 @@ const matLevels = (materials: string): MatGroup[] => {
     group.items.push({
       name: matName,
       level,
-      href: `${base}/道具總覽/${encodeURIComponent(matName)}`,
+      href: tips[matName] ? base + tips[matName].href : `${base}/道具總覽/${encodeURIComponent(matName)}`,
+      tip: tips[matName]?.text,
     });
   }
   return groups;
@@ -121,7 +128,7 @@ const matLevels = (materials: string): MatGroup[] => {
   !dataset ? (
     <p class="dataset-missing">找不到資料集 <code>{name}</code>（應在 content/data/{name}.csv）</p>
   ) : (
-    <figure class="dataset" data-dataset={dataset.name} data-filter-active="">
+    <figure class:list={['dataset', { 'dataset--gathering': gathering }]} data-dataset={dataset.name} data-filter-active="">
       {filterTabs && dataset.filterColumn && (
         <div
           class="dataset__tabs"
@@ -169,6 +176,7 @@ const matLevels = (materials: string): MatGroup[] => {
               {dataset.action && <th scope="col" class="col-act">工具</th>}
               {cols.map((c, i) => (
                 <th
+                  class={locationCols.includes(c) ? 'col-location' : undefined}
                   scope="col"
                   data-sort-index={i}
                   tabindex="0"
@@ -261,6 +269,13 @@ const matLevels = (materials: string): MatGroup[] => {
                   )}
                   {cols.map((c) => {
                     const value = row[c] ?? '';
+                    if (gathering && c === '物品名稱' && getItem(value)) {
+                      return (
+                        <td data-sort={value}>
+                          <a href={`${base}/道具總覽/${encodeURIComponent(value)}/`}>{value}</a>
+                        </td>
+                      );
+                    }
                     if (c === linkNameCol && detail) {
                       return (
                         <td class={dataset.wrapColumns.includes(c) ? 'is-wrap' : undefined}>
@@ -283,7 +298,7 @@ const matLevels = (materials: string): MatGroup[] => {
                                   {g.items.map((it, i) => (
                                     <>
                                       {i > 0 && '、'}
-                                      <a href={it.href}>{it.name}{it.level}</a>
+                                      <a href={it.href} title={it.tip} aria-description={it.tip}>{it.name}{it.level}</a>
                                     </>
                                   ))}
                                 </span>
@@ -299,25 +314,32 @@ const matLevels = (materials: string): MatGroup[] => {
                     const items = value.includes(LIST_SEP) ? value.split(LIST_SEP) : null;
                     const parts = !items && QUANTITY_LIST.test(value) ? value.split('、') : null;
                     const classes = [
+                      locationCols.includes(c) ? 'col-location' : '',
                       dataset.wrapColumns.includes(c) ? 'is-wrap' : '',
                       c === dataset.noteColumn ? 'is-note' : '',
                       items ? 'is-list' : '',
                       parts ? 'is-items' : '',
                     ].filter(Boolean).join(' ');
-                    return linked ? (
-                      <td class={classes || undefined} set:html={renderCell(value, base)} />
-                    ) : items ? (
+                    return items ? (
                       <td class={classes}>
                         {items.map((item) => (
-                          <span>{item}</span>
+                          <span set:html={renderCell(item, base)} />
                         ))}
                       </td>
+                    ) : linked ? (
+                      <td class={classes || undefined} set:html={renderCell(value, base)} />
                     ) : parts ? (
                       // 頓號留在前一項的尾巴，折行才會折在頓號後面而不是前面
                       <td class={classes}>
-                        {parts.map((part, i) => (
-                          <span>{i < parts.length - 1 ? `${part}、` : part}</span>
-                        ))}
+                        {parts.map((part, i) => {
+                          const tip = c === matCol ? tips[part.replace(/\(\d+\)$/, '').trim()] : undefined;
+                          return (
+                            <span>
+                              {tip ? <a href={base + tip.href} title={tip.text} aria-description={tip.text}>{part}</a> : part}
+                              {i < parts.length - 1 && '、'}
+                            </span>
+                          );
+                        })}
                       </td>
                     ) : (
                       <td class={classes || undefined}>{value}</td>

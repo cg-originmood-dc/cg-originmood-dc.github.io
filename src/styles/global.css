@@ -658,6 +658,37 @@ main {
   border: 1px solid #c0c0c0;
 }
 
+/* 採集點需要讀完整地名與座標：使用可用頁寬，不受一般文章寬度限制。 */
+.page:has(.dataset--gathering) {
+  max-width: none;
+}
+
+.dataset--gathering .dataset__scroll {
+  max-height: 90vh;
+  max-height: 90dvh;
+}
+
+.dataset.dataset--gathering th.col-location,
+.dataset.dataset--gathering tbody td.col-location {
+  min-width: 32rem;
+  width: 32rem;
+  white-space: normal;
+  text-align: left;
+  vertical-align: top;
+}
+
+.dataset--gathering tbody td.col-location > span + span {
+  margin-top: 0.35rem;
+}
+
+@media (max-width: 40rem) {
+  .dataset.dataset--gathering th.col-location,
+  .dataset.dataset--gathering tbody td.col-location {
+    min-width: 22rem;
+    width: 22rem;
+  }
+}
+
 /* 邊框 #c0c0c0、表頭 #f0f0f0、內容置中 —— 沿用原站嵌入表格的 .dataTable 樣式 */
 .dataset table {
   width: 100%;
