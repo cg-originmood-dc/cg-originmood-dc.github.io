@@ -25,9 +25,9 @@ test('八等勳章列在系列起點，攻略說明海洞前頭目與兩國收�
  assert(island.routes.every(r=>r.every(p=>p[0]!==441||p[1]!==302)),'海洞不在步行路線終點');
 });
 
-test('十張地圖皆有壓縮預覽、正確尺寸與可放大原圖',async()=>{
+test('十一張地圖皆有壓縮預覽、正確尺寸與可放大原圖',async()=>{
  const images=[...guide.matchAll(/<a href="([^"]+)"><img src="([^"]+)"[^>]*width="(\d+)" height="(\d+)"[^>]*>/g)];
- assert.equal(images.length,10);
+ assert.equal(images.length,11);
  for(const [,href,src,width,height] of images){
   assert(src.includes('/preview/'));
   assert.equal(href,src.replace('/preview/','/'));
@@ -36,4 +36,15 @@ test('十張地圖皆有壓縮預覽、正確尺寸與可放大原圖',async()=>
   assert.deepEqual([info.width,info.height],[+width,+height]);
   assert(+width<=1000);
  }
+});
+
+test('山賊段落直接顯示兩村交通總覽，穿洞與步行分開標示',()=>{
+ const section=guide.split('### 過橋後打山賊')[1].split('<details>')[0];
+ assert(section.includes('island-overview.webp'));
+ for(const text of ['阿凱魯法村出發','坎那貝拉村出發','反向走','虛線','不是銀條'])assert(section.includes(text));
+ const overview=JSON.parse(fs.readFileSync('content/data/quest-maps/medal8-overview.json','utf8')).maps[0];
+ assert.equal(overview.routes.length,6);
+ assert.equal(overview.routeColors.length,overview.routes.length);
+ assert(overview.transitions.some(t=>String(t.from)==='472,282'&&String(t.to)==='441,302'));
+ for(const transition of overview.transitions)assert(!overview.routes.some(([s,e])=>String(s)===String(transition.from)&&String(e)===String(transition.to)));
 });

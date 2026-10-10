@@ -1,0 +1,9 @@
+{
+  "title": "頭目戰後 → 地下水脈",
+  "asset": "waterway-linked.webp",
+  "stages": [
+    {"assetName":"after-boss","routeIndex":0,"title":"① 戰勝頭目，走後方樓梯","start":"起","end":"A","transition":"A → A：下樓回海賊基地另一區"},
+    {"assetName":"to-waterway","routeIndex":0,"title":"② 海賊基地：再下樓","start":"A","end":"B","transition":"B → B：前往黃色傳送石所在樓層"},
+    {"mapId":37010,"routeIndex":0,"title":"③ 走到黃色傳送石","start":"B","end":"終","transition":"進入地下水脈，穿過隨機迷宮後抵達湖"}
+  ]
+}

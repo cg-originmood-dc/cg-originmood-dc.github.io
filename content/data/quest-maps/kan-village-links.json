@@ -1,0 +1,9 @@
+{
+  "title": "海峽通道・阿凱側 → 坎村側",
+  "asset": "sea-linked.webp",
+  "stages": [
+    {"mapId":34013,"routeIndex":0,"title":"① 阿凱側：走到下樓梯","start":"起","end":"A","transition":"A → A：進入海底通道"},
+    {"mapId":34014,"routeIndex":0,"title":"② 海底通道：通過柵欄，走到上樓梯","start":"A","end":"B","transition":"B → B：上樓到坎村側；柵欄未開先找礦工交材料"},
+    {"mapId":34015,"routeIndex":0,"title":"③ 坎村側：走到出口","start":"B","end":"終","transition":"出洞抵達米內葛爾島 (472,282)，往東前往坎村"}
+  ]
+}
