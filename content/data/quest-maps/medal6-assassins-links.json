@@ -1,0 +1,10 @@
+{
+  "title": "刺客路線・小櫻 → 小梅 → 山吹",
+  "subtitle": "實線走到頭目前；虛線表示戰勝後傳送至下一個房間",
+  "asset": "assassins-linked.webp",
+  "stages": [
+    {"mapId":35004,"routeIndex":0,"title":"① 小櫻之間：找小櫻 (12,9)","start":"起","end":"A","transition":"戰勝小櫻 → 傳送到小梅之間"},
+    {"mapId":35005,"routeIndex":0,"title":"② 小梅之間：找小梅 (10,9)","start":"A","end":"B","transition":"戰勝小梅 → 傳送到山吹之間"},
+    {"mapId":35006,"routeIndex":0,"title":"③ 山吹之間：找山吹 (10,8)","start":"B","end":"終","transition":"戰勝山吹 → 傳送到研究管理室"}
+  ]
+}
