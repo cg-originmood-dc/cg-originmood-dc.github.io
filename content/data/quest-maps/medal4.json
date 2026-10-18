@@ -7,11 +7,26 @@
   "secretRoomVariants": [
     {"key":"jacob","country":"艾爾巴","npc":"雅可布督府執政官","roomNpcs":["雅可布督府執政官","梅利艾拉"],"beforeMapId":46031,"afterMapId":46037,"observedDate":"2026-09-25","keyResult":"艾爾巴路線戰後找梅利艾拉取得魔導研究塔的鑰匙","boss":{"name":"奇美拉","level":70,"count":1,"hpMin":11443,"hpMax":11550},"evidence":"當日05:40:50～05:42:12 UTC的敵方rawHpMax，53筆樣本；2026-10-18玩家截圖確認此為艾爾巴正確配置，同日05:48 UTC對話記錄可見雅可布與梅利艾拉。"},
     {"key":"waji","country":"蘭國","npc":"瓦吉執政官","roomNpcs":["瓦吉執政官","雅可布督府執政官"],"beforeMapId":46032,"afterMapId":46050,"observedDate":"2026-10-18","keyResult":"蘭國路線戰後找雅可布督府執政官取得魔導研究塔的鑰匙","keyConditionStatus":"蘭國正確配置；艾爾巴戰勝後仍會被傳出，不給鑰匙","wrongRouteResult":{"country":"艾爾巴","result":"戰勝後仍會被傳出，不給鑰匙"},"boss":{"name":"奇美拉","level":70,"count":1,"hpMin":11538,"hpMax":11675},"evidence":"當日04:41:58～04:43:48 UTC的敵方rawHpMax，78筆樣本；玩家確認瓦吉與雅可布配置屬蘭國路線，艾爾巴打完仍被傳出，先前未取得鑰匙並非蘭國領取條件不明。"},
-    {"key":"midiya","npc":"蜜迪雅","aliases":["密迪亞"],"fakeRoom":true,"beforeMapId":46033,"afterMapId":46030,"observedDate":"2026-10-18","keyResult":"假房間；對話後傳回廊下，沒有鑰匙","boss":null,"dialog":"你是誰呀！是誰准許你進來這間房的？","evidence":"當日04:56 UTC對話多次觀察房內NPC蜜迪雅；portalobs確認由46033傳回46030的19,3，玩家確認被傳出。"},
+    {"key":"midiya","npc":"蜜迪雅","fakeRoom":true,"beforeMapId":46033,"afterMapId":46030,"observedDate":"2026-10-18","keyResult":"假房間；對話後傳回廊下，沒有鑰匙","boss":null,"dialog":"你是誰呀！是誰准許你進來這間房的？","evidence":"當日04:56 UTC對話多次觀察房內NPC蜜迪雅；portalobs確認由46033傳回46030的19,3，玩家確認被傳出。對話紀錄確認唯一名字為蜜迪雅，密迪亞為先前誤寫，已移除別名。"},
     {"key":"andi","npc":"安蒂","fakeRoom":true,"observedDate":"2026-10-18","keyResult":"假房間；沒有鑰匙","evidence":"玩家確認為假房間；尚未對應地圖編號與對話，不套用其他房間紀錄。"},
     {"key":"coco","npc":"可可","fakeRoom":true,"beforeMapId":46034,"observedDate":"2026-10-18","keyResult":"假房間；沒有鑰匙","dialog":"你是誰呀！是誰准許你進來這間房的？","evidence":"玩家確認為假房間；當日05:02、05:26 UTC對話記錄可見可可位於11,4。"},
     {"key":"magnolia","npc":"瑪格諾亞","fakeRoom":true,"beforeMapId":46035,"observedDate":"2026-10-18","keyResult":"假房間；沒有鑰匙","dialog":"你是誰呀！是誰准許你進來這間房的？","evidence":"玩家提供截圖確認為假房間；當日05:19～05:20 UTC對話記錄核對NPC姓名為瑪格諾亞，位於11,4。"}
   ],
+  "cultivationRoomBattle": {
+    "mapId": 46047,
+    "observedDate": "2026-09-25",
+    "battleId": "20260925T070918750-45e7001b54bd47c9b2af4713a0d65748",
+    "openingEnemyCount": 7,
+    "enemies": [
+      {"name":"黑暗醫生阿魯巴斯","level":83,"count":1,"hpMin":12566,"hpMax":12706,"samples":133},
+      {"name":"小豆","level":65,"count":1,"hpMin":6152,"hpMax":6188,"samples":69},
+      {"name":"小梅","level":65,"count":1,"hpMin":7277,"hpMax":7404,"samples":85},
+      {"name":"小櫻","level":65,"count":1,"hpMin":6991,"hpMax":7120,"samples":173},
+      {"name":"山吹","level":65,"count":1,"hpMin":8860,"hpMax":8963,"samples":173},
+      {"name":"奇美拉","level":70,"count":2,"hpMin":11534,"hpMax":12281,"samples":479}
+    ],
+    "evidence": "battle-2026-09-25.jsonl：07:09:18 UTC開場round_snapshot確認陣容、等級與數量；血量為同battleId的enemy units.rawHpMax正值觀察範圍，奇美拉合併兩隻的每隻範圍。2026-10-18查核時尚無阿魯巴斯戰鬥紀錄，不混用路上的奇美拉數值。"
+  },
   "maps": [
     {"id":43000,"name":"庫魯克斯島・四等勳章地點總覽","points":[[283,437,"哥拉爾東門：接任與晚宴在城內"],[349,592,"紳士淑女養成所：取得晚宴服裝"],[701,695,"魔導研究塔：取得鑰匙後前往"],[433,824,"米諾基亞村西側入口：護符支線"]],"routes":[],"caption":"位置示意，不是直線行走路線；跨區請沿道路與橋樑前進"},
     {"id":43100,"name":"哥拉爾鎮・四等勳章地點示意","points":[[174,170,"兵舍：上2樓找雷歐接任"],[131,48,"卡希菈豪宅：取得邀請函"],[91,136,"瓦吉公館：赴宴、進秘密通道"],[159,50,"漢尼伯的家：最後交報告領勳章"]],"routes":[],"caption":"數字是任務地點順序；只標入口位置，不代表直線走法"},
