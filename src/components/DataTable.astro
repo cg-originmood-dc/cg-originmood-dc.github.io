@@ -6,7 +6,8 @@ import { hasPet } from '../lib/pets';
 import { getItem } from '../lib/items';
 import itemTips from '../../content/data/道具提示.json';
 
-const tips: Record<string, { text: string; href: string }> = itemTips;
+// 販售提示由既有 NPC 售價資料一次性整理進道具提示；渲染時不跨資料集重新拼裝。
+const tips: Record<string, { text: string; href?: string }> = itemTips;
 
 /**
  * 把 content/data/<name>.csv 渲染成可搜尋、可篩選、可排序的表格。
@@ -116,7 +117,7 @@ const matLevels = (materials: string): MatGroup[] => {
     group.items.push({
       name: matName,
       level,
-      href: tips[matName] ? base + tips[matName].href : `${base}/道具總覽/${encodeURIComponent(matName)}`,
+      href: tips[matName]?.href ? base + tips[matName].href : `${base}/道具總覽/${encodeURIComponent(matName)}`,
       tip: tips[matName]?.text,
     });
   }
@@ -312,7 +313,8 @@ const matLevels = (materials: string): MatGroup[] => {
                     // 一格好幾條的欄位（採集地點最多九個點）拆成一行一條。
                     // 串成一行的話括號座標一路接下去，要數到第幾個斜線才知道在看哪一個點。
                     const items = value.includes(LIST_SEP) ? value.split(LIST_SEP) : null;
-                    const parts = !items && QUANTITY_LIST.test(value) ? value.split('、') : null;
+                    const isMaterial = c === '材料' || c === matCol;
+                    const parts = !items && (isMaterial ? MATERIAL_LIST : QUANTITY_LIST).test(value) ? value.split('、') : null;
                     const classes = [
                       locationCols.includes(c) ? 'col-location' : '',
                       dataset.wrapColumns.includes(c) ? 'is-wrap' : '',
@@ -332,10 +334,10 @@ const matLevels = (materials: string): MatGroup[] => {
                       // 頓號留在前一項的尾巴，折行才會折在頓號後面而不是前面
                       <td class={classes}>
                         {parts.map((part, i) => {
-                          const tip = c === matCol ? tips[part.replace(/\(\d+\)$/, '').trim()] : undefined;
+                          const tip = isMaterial ? tips[part.replace(/\(\d+\)$/, '').trim()] : undefined;
                           return (
                             <span>
-                              {tip ? <a href={base + tip.href} title={tip.text} aria-description={tip.text}>{part}</a> : part}
+                              {tip?.href ? <a href={base + tip.href} title={tip.text} aria-description={tip.text}>{part}</a> : tip ? <span class="material-tip" tabindex="0" title={tip.text} aria-description={tip.text}>{part}</span> : part}
                               {i < parts.length - 1 && '、'}
                             </span>
                           );
@@ -566,3 +568,15 @@ const matLevels = (materials: string): MatGroup[] => {
     });
   });
 </script>
+
+<style>
+  .material-tip {
+    cursor: help;
+    text-decoration: underline dotted;
+    text-underline-offset: 0.2em;
+  }
+  .material-tip:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+  }
+</style>
