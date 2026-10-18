@@ -3,6 +3,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const tips=JSON.parse(fs.readFileSync('content/data/道具提示.json','utf8'));
+test('本服布料商店資料與提示不列艾夏島',()=>{
+ assert(!JSON.stringify(tips).includes('艾夏島'));
+ assert(!fs.readFileSync('content/data/材料NPC售價.csv','utf8').includes('艾夏島'));
+});
 test('布料購買提示包含商店與 NPC 座標，保留小麥粉兌換連結',()=>{
  for(const name of ['麻布','木棉布','毛氈','棉','細線','絹布','莎蓮娜線','傑諾瓦線','細麻布','開米士毛線','阿巴尼斯製的線','阿巴尼斯製的布']){
   assert(tips[name].text.startsWith('購買地點：\n'));
