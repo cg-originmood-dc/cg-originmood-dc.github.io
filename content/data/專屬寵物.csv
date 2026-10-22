@@ -1,4 +1,9 @@
 ﻿名稱,種族,體力,力量,防禦,速度,魔法,技格,總檔,屬性,技能,公告日,公告連結,image,任務用途,入手方法,入手類型
+巫帽布偶兔,不死系,31,6,10,28,50,8,125,風10,潔淨魔法LV3、超強混亂魔法LV10、超強恢復魔法LV5、強力補血魔法LV6,2026-10-21,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17904.html),/img/專屬寵物/巫帽布偶兔.gif,,萬聖節勇者秘寶（2026/10/22～11/5）,活動
+巨顎魔牙,不死系,36,41,20,19,9,8,125,水10,乾坤一擲LV11、氣功彈LV1、毒性攻擊LV12,2026-10-21,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17904.html),/img/專屬寵物/巨顎魔牙.gif,,萬聖節勇者秘寶（2026/10/22～11/5）；本期保底寵物,活動
+萬聖血手,不死系,27,14,21,22,39,8,123,水2火8,強力酒醉魔法LV7,2026-10-21,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17904.html),/img/專屬寵物/萬聖血手.gif,,萬聖節勇者秘寶（2026/10/22～11/5）,活動
+冰晶巨龍,龍系,27,39,16,22,16,8,120,水8風2,裂空斬LV10、連擊LV12,2026-10-09,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17854.html),/img/專屬寵物/冰晶巨龍.gif,,十月冰晶巨龍寶盒（2026/10/10～11/11）：召喚書1%,活動
+冰晶暴龍王,龍系,34,46,12,27,6,8,125,水10,諸刃LV13、潛龍殺LV12、裂空斬LV10、連擊LV12,2026-10-09,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17854.html),/img/專屬寵物/冰晶暴龍王.gif,應許之地：隊伍攜帶後與天蛇聖殿3樓冰晶巨龍之影（14，62）對話，可直接抵達冰晶幻境出口,十月冰晶巨龍寶盒：召喚書0.1%；解咒者亞伯罕（魔法大學研究所 22，17）：Lv1冰晶巨龍＋藍冰聖痕×188，10%得召喚書、90%得冰晶龍魂；龍魂解咒師卡爾多（21，17）：Lv1冰晶巨龍＋冰晶龍魂×3兌換；Lv1冰晶暴龍王＋冰晶龍魂×1可再換Lv1冰晶暴龍王,活動
 海蛇妖姬,植物系,36,50,6,27,6,8,125,地10,裂空斬LV10、氣功彈LV1,2026-10-08,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17844.html),/img/專屬寵物/海蛇妖姬.gif,,應許之地：遠古蛇蛋（5%）；天蛇勇者秘寶（2026/10/8～10/22）,任務
 星野海,植物系,50,44,4,23,4,8,125,地5水5,氣功彈LV4、裂空斬LV10、連擊LV11、乾坤一擲LV13,2026-10-08,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17844.html)；[官網繕誤紀錄](/官方大事記/官網繕誤紀錄/),/img/專屬寵物/星野海.gif,應許之地：隊伍攜帶後與天蛇聖殿二千年前的獅鷲守衛對話可直接抵達天蛇幻境出口,大法師安蕾雅（艾爾瑪城元素師家 216，188）：Lv1海蛇妖姬＋女媧星石×1＋閃耀變異之源×10＋50000G（星野海5%、海蛇妖姬95%）；蛇年好運兌換員（里謝里雅堡 30，66）：女媧重石×50兌換星野海召喚書,合成
 藍閃蝶,昆蟲系,35,10,13,28,39,8,125,地1水9,強力酒醉魔法LV10、超強遺忘魔法LV7,2026-10-08,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17844.html),/img/專屬寵物/藍閃蝶.gif,,天蛇勇者秘寶（2026/10/8～10/22）,活動
@@ -184,7 +189,7 @@
 紫金冥龍,金屬系,26,40,17,25,12,8,120,風10,乾坤一擲LV11,2025-11-10,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_16164.html),/img/專屬寵物/紫金暴龍王.gif,,,
 強擊漂浮炸彈,特殊系,40,40,10,25,10,8,125,風8地2,連擊LV11,2025-11-10,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_16144.html),/img/專屬寵物/強擊漂浮炸彈.gif,,,
 風之使徒,特殊系,50,4,4,50,17,9,125,風10,超強昏睡魔法LV10、潔淨魔法LV3、超強補血魔法LV7,2025-10-29,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_16124.html),/img/專屬寵物/風之使徒.gif,[寵物技能聖殿](/任務攻略/專屬任務/寵物技能聖殿) 隊伍中有即可與時空獸或寶石鼠洛洛對話，跳過步驟 4、5 直接進入時空聖殿,,
-白銀冥鬥士,不死系,32,44,26,17,6,9,125,風10,裂空斬LV10、連擊LV12、諸刃LV11,2025-10-29,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_16124.html),/img/專屬寵物/白銀冥鬥士.gif,,,
+白銀冥鬥士,不死系,32,44,26,17,6,9,125,風10,裂空斬LV10、連擊LV12、諸刃LV11,2025-10-29,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_16124.html),/img/專屬寵物/白銀冥鬥士.gif,,2026萬聖節勇者秘寶（10/22～11/5）（[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17904.html)）,活動
 欺詐小魅魔,不死系,21,11,13,36,44,9,125,風8地2,混亂衝擊波LV5,2025-10-29,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_16124.html),/img/專屬寵物/欺詐小魅魔.gif,,,
 魯恩卡爾,人形系,30,48,21,16,10,9,125,火10,裂空斬LV10、反擊LV11、氣功彈LV2,2025-10-15,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_16064.html),/img/專屬寵物/魯恩卡爾.gif,,,
 死亡狂蜂,昆蟲系,31,44,13,27,10,9,125,水10,裂空斬LV10、氣功彈LV1,2025-10-15,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_16064.html),/img/專屬寵物/死亡狂蜂.gif,,,
@@ -609,10 +614,10 @@
 和馬,人形系,21,33,25,31,16,7,125,水5火5,,2023-10-09,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_10404.html),/img/專屬寵物/侍魂和馬.gif,,,
 皎月公主,人形系,16,6,13,40,50,9,125,地5水5,氣絕回復Lv1、超強昏睡魔法Lv5,2023-09-22,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_10334.html),/img/專屬寵物/皎月公主.gif,,,
 暗月公主,人形系,17,50,12,40,6,9,125,火5風5,乾坤一擲Lv11、迅雷衝擊,2023-09-22,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_10334.html),/img/專屬寵物/暗月公主.gif,,,
-月宮公主,人形系,22,9,43,9,42,9,125,地8風2,混亂衝擊波Lv10、強力石化魔法Lv5,2023-09-22,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_10334.html),/img/專屬寵物/月宮公主.gif,,,
-水月公主,人形系,42,9,22,9,43,9,125,水8地2,混亂衝擊波Lv10、強力昏睡魔法Lv5,2023-09-22,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_10334.html),/img/專屬寵物/水月公主.gif,,,
-猩紅公主,人形系,22,43,9,42,9,9,125,火8水2,乾坤一擲Lv11、毒性攻擊Lv11,2023-09-22,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_10334.html),/img/專屬寵物/猩紅公主.gif,,,
-風月公主,人形系,43,42,9,22,9,9,125,風8火2,諸刃Lv11、遺忘攻擊Lv11,2023-09-22,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_10334.html),/img/專屬寵物/風月公主.gif,,,
+月宮公主,人形系,22,9,43,9,42,9,125,地8風2,混亂衝擊波Lv10、強力石化魔法Lv5,2023-09-22,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_10334.html),/img/專屬寵物/月宮公主.gif,,十月冰晶巨龍寶盒（2026/10/10～11/11）（[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17854.html)）,活動
+水月公主,人形系,42,9,22,9,43,9,125,水8地2,混亂衝擊波Lv10、強力昏睡魔法Lv5,2023-09-22,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_10334.html),/img/專屬寵物/水月公主.gif,,十月冰晶巨龍寶盒（2026/10/10～11/11）（[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17854.html)）,活動
+猩紅公主,人形系,22,43,9,42,9,9,125,火8水2,乾坤一擲Lv11、毒性攻擊Lv11,2023-09-22,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_10334.html),/img/專屬寵物/猩紅公主.gif,,十月冰晶巨龍寶盒（2026/10/10～11/11）（[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17854.html)）,活動
+風月公主,人形系,43,42,9,22,9,9,125,風8火2,諸刃Lv11、遺忘攻擊Lv11,2023-09-22,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_10334.html),/img/專屬寵物/風月公主.gif,,十月冰晶巨龍寶盒（2026/10/10～11/11）（[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17854.html)）,活動
 阿魯巴斯,人形系,32,18,19,19,32,7,120,火3風7,,2023-07-07,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_9844.html),/img/專屬寵物/阿魯巴斯.gif,,,
 阿魯巴斯克隆體,人形系,35,52,13,19,6,9,125,火3風7,飛刃亂舞Lv10,2023-07-07,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_9844.html),/img/專屬寵物/阿魯巴斯克隆體.gif,,,
 斯巴達戰神,人形系,44,40,23,10,8,9,125,火10,潛龍殺Lv6,2023-04-17,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_9324.html),/img/專屬寵物/斯巴達戰神.gif,,,
@@ -927,7 +932,7 @@
 幼年岩帝龍骨,不死系,24,6,23,37,33,9,123,風2地8,單體即死LV1、單體石化魔法LV10,2024-11-22,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_14254.html),/img/專屬寵物/岩帝龍骨.gif,,,
 炎魔龍骨,不死系,17,6,12,48,42,9,125,水5火5,超強石化魔法Lv5、強力混亂魔法Lv7,2024-10-24,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_14144.html),/img/專屬寵物/炎魔龍骨.gif,,,
 萬聖鬼斧,不死系,31,48,13,25,8,9,125,風10,裂空斬Lv10、諸刃Lv11,2024-10-24,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_14144.html),/img/專屬寵物/白銀冥鬥士.gif,,,
-萬聖食屍鬼,不死系,41,37,16,21,10,9,125,火7風3,乾坤一擲Lv11、昏睡攻擊Lv11,2024-10-24,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_14144.html),/img/專屬寵物/萬聖食屍鬼.gif,,,
+萬聖食屍鬼,不死系,41,37,16,21,10,9,125,火7風3,乾坤一擲Lv11、昏睡攻擊Lv11,2024-10-24,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_14144.html),/img/專屬寵物/萬聖食屍鬼.gif,,2026萬聖節勇者秘寶（10/22～11/5）；驚魂萬聖夜南瓜怪寶箱：召喚書0.5%（[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17904.html)）,活動
 夢之惡魔,不死系,40,6,11,19,49,9,125,地5水5,超強昏睡魔法Lv5、潔淨魔法Lv3,2024-10-10,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_14084.html),/img/專屬寵物/夢之惡魔.gif,,,
 戰鬥骷髏戰士,不死系,42,42,12,12,17,9,125,風7地3,乾坤一擲Lv11,2024-09-26,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_14004.html),/img/專屬寵物/戰鬥骷髏戰士.gif,,,
 戰鬥亡靈,不死系,34,10,15,17,49,9,125,火2風8,超強昏睡魔法Lv5、混亂衝擊波Lv10,2024-09-26,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_14004.html),/img/專屬寵物/戰鬥亡靈.gif,,,
@@ -983,8 +988,8 @@
 黃金龍骨,不死系,28,11,37,12,37,8,125,火3風7,強力昏睡魔法Lv2,2023-02-15,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_9084.html),/img/專屬寵物/黃金龍骨.gif,,,
 炎心真龍,不死系,32,47,14,22,10,9,125,水5火5,潛龍殺Lv6,2023-02-15,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_9084.html),/img/專屬寵物/炎心真龍.gif,[冰原禁地](/任務攻略/練功專區/冰原禁地) 可免除冰原通行證，單人通過禁地守衛,,
 冰霜巨龍,不死系,36,10,20,14,45,9,125,火5風5,強力昏睡魔法Lv5,2023-02-15,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_9084.html),/img/專屬寵物/冰霜巨龍.gif,[冰原禁地](/任務攻略/練功專區/冰原禁地) 可免除冰原通行證，單人通過禁地守衛,,
-赤炎假面,不死系,31,10,22,19,43,8,125,火10,,2022-10-27,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_8614.html),/img/專屬寵物/赤炎假面.gif,,,
-巨斧假面,不死系,36,39,21,19,10,8,125,火9風1,,2022-10-27,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_8614.html),/img/專屬寵物/巨斧假面.gif,,,
+赤炎假面,不死系,31,10,22,19,43,8,125,火10,,2022-10-27,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_8614.html),/img/專屬寵物/赤炎假面.gif,,2026萬聖節勇者秘寶（10/22～11/5）（[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17904.html)）,活動
+巨斧假面,不死系,36,39,21,19,10,8,125,火9風1,,2022-10-27,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_8614.html),/img/專屬寵物/巨斧假面.gif,,2026萬聖節勇者秘寶（10/22～11/5）（[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17904.html)）,活動
 魔法師之鬼,不死系,17,12,16,28,47,6,120,地10,,2022-08-12,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_8073.html),/img/專屬寵物/魔法師之鬼.gif,,,
 巫師之鬼,不死系,16,31,17,40,16,6,120,風10,,2022-08-12,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_8073.html),/img/專屬寵物/巫師之鬼.gif,,,
 卡爾克,不死系,12,45,20,26,17,6,120,水2火8,,2022-08-12,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_8073.html),/img/專屬寵物/卡爾克.gif,,,
@@ -998,11 +1003,11 @@
 玄翼暴龍,不死系,40,40,14,21,10,8,125,地9風1,,2022-04-21,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_7413.html),/img/專屬寵物/玄翼暴龍.gif,,,
 闇影魔龍,不死系,35,10,16,24,40,8,125,地2水8,,2022-04-21,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_7413.html),/img/專屬寵物/闇影魔龍.gif,,,
 幽紫妖靈,不死系,19,11,23,33,39,8,125,水2火8,,2022-03-24,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_7223.html),/img/專屬寵物/幽紫魔靈.gif,,,
-獅面女神,不死系,33,14,22,19,35,8,123,地10,,2022-03-24,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_7223.html),/img/專屬寵物/獅面女神.gif,,,
-貓臉女神,不死系,42,37,12,18,14,8,123,水10,,2022-03-24,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_7223.html),/img/專屬寵物/貓臉女神.gif,,,
-貓隊長,不死系,35,42,17,19,10,8,123,火10,,2022-03-24,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_7223.html),/img/專屬寵物/貓隊長.gif,,,
-惡夢貓,不死系,15,20,20,32,36,7,123,風10,,2022-03-24,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_7223.html),/img/專屬寵物/惡夢貓.gif,,,
-福爾菲斯,不死系,14,40,12,18,39,8,123,火1風9,,2022-03-24,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_7223.html),/img/專屬寵物/福爾菲斯.gif,,,
+獅面女神,不死系,33,14,22,19,35,8,123,地10,,2022-03-24,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_7223.html),/img/專屬寵物/獅面女神.gif,,十月冰晶巨龍寶盒（2026/10/10～11/11）（[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17854.html)）,活動
+貓臉女神,不死系,42,37,12,18,14,8,123,水10,,2022-03-24,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_7223.html),/img/專屬寵物/貓臉女神.gif,,十月冰晶巨龍寶盒（2026/10/10～11/11）（[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17854.html)）,活動
+貓隊長,不死系,35,42,17,19,10,8,123,火10,,2022-03-24,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_7223.html),/img/專屬寵物/貓隊長.gif,,十月冰晶巨龍寶盒（2026/10/10～11/11）（[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17854.html)）,活動
+惡夢貓,不死系,15,20,20,32,36,7,123,風10,,2022-03-24,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_7223.html),/img/專屬寵物/惡夢貓.gif,,十月冰晶巨龍寶盒（2026/10/10～11/11）（[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17854.html)）,活動
+福爾菲斯,不死系,14,40,12,18,39,8,123,火1風9,,2022-03-24,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_7223.html),/img/專屬寵物/福爾菲斯.gif,,十月冰晶巨龍寶盒（2026/10/10～11/11）（[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17854.html)）,活動
 深淵武裝骷髏,不死系,18,23,43,8,28,7,120,地7水3,,,,/img/專屬寵物/深淵武裝骷髏.gif,,,
 改造殭屍,不死系,41,36,16,16,16,9,125,地3風7,,2021-07-29,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_5313.html),/img/專屬寵物/改造殭屍.gif,,,
 千夜,植物系,42,6,6,29,42,9,125,水10,超強石化魔法LV7、超強中毒魔法LV7、超強補血魔法LV5,2025-03-06,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_14854.html),/img/專屬寵物/千夜.gif,,,
@@ -1056,11 +1061,11 @@
 風鈴花妖,植物系,32,12,14,27,35,8,120,火4風6,,2023-03-02,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_9134.html),/img/專屬寵物/風鈴花妖.gif,,,
 橘子公主,植物系,37,6,16,22,44,8,125,火6風4,強力遺忘魔法Lv3,2023-03-02,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_9134.html),/img/專屬寵物/橘子公主.gif,,,
 番茄聖女,植物系,33,6,16,22,48,8,125,水5火5,,2023-02-02,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_9044.html),/img/專屬寵物/番茄聖女.gif,,,
-萬聖南瓜精靈,植物系,18,6,22,31,48,9,125,地5風5,,2021-10-28,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_6303.html),/img/專屬寵物/萬聖南瓜精靈.gif,,,
-晨曦南瓜怪,植物系,15,33,15,45,15,8,123,火2風8,,2021-10-28,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_6303.html),/img/專屬寵物/晨曦南瓜怪.gif,,,
-白晝南瓜怪,植物系,45,15,33,15,15,8,123,地2水8,,2021-10-28,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_6303.html),/img/專屬寵物/白晝南瓜怪.gif,,,
-黃昏南瓜怪,植物系,15,45,15,33,15,8,123,水2火8,,2021-10-28,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_6303.html),/img/專屬寵物/黃昏南瓜怪.png,,,
-暮夜南瓜怪,植物系,15,15,45,15,33,8,123,地8風2,,2021-10-28,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_6303.html),/img/專屬寵物/暮夜南瓜怪.gif,,,
+萬聖南瓜精靈,植物系,18,6,22,31,48,9,125,地5風5,,2021-10-28,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_6303.html),/img/專屬寵物/萬聖南瓜精靈.gif,,2026萬聖節勇者秘寶（10/22～11/5）（[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17904.html)）,活動
+晨曦南瓜怪,植物系,15,33,15,45,15,8,123,火2風8,,2021-10-28,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_6303.html),/img/專屬寵物/晨曦南瓜怪.gif,,2026萬聖節勇者秘寶（10/22～11/5）；驚魂萬聖夜對應南瓜怪寶箱：召喚書3.35%（[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17904.html)）,活動
+白晝南瓜怪,植物系,45,15,33,15,15,8,123,地2水8,,2021-10-28,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_6303.html),/img/專屬寵物/白晝南瓜怪.gif,,2026萬聖節勇者秘寶（10/22～11/5）；公告另列白曦寶箱，與本寵名稱的對應待確認（[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17904.html)）,活動
+黃昏南瓜怪,植物系,15,45,15,33,15,8,123,水2火8,,2021-10-28,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_6303.html),/img/專屬寵物/黃昏南瓜怪.png,,2026萬聖節勇者秘寶（10/22～11/5）；驚魂萬聖夜對應南瓜怪寶箱：召喚書3.35%（[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17904.html)）,活動
+暮夜南瓜怪,植物系,15,15,45,15,33,8,123,地8風2,,2021-10-28,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_6303.html),/img/專屬寵物/暮夜南瓜怪.gif,,2026萬聖節勇者秘寶（10/22～11/5）；驚魂萬聖夜對應南瓜怪寶箱：召喚書3.35%（[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17904.html)）,活動
 舞動花妖,植物系,36,12,17,16,39,8,120,水5火5,,2022-09-29,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_8374.html),/img/專屬寵物/舞動花妖.gif,,,
 迷魂草,植物系,29,17,15,22,37,7,120,水6火4,,2021-11-25,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_6413.html),/img/專屬寵物/迷魂草.gif,,,
 致幻海葵,植物系,28,14,22,13,33,7,110,地4水6,,2021-11-25,[公告](https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_6413.html),/img/專屬寵物/致幻海葵.gif,,,
