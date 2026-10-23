@@ -14,7 +14,7 @@ const label = (p: typeof data.points[number]) => `${p.id}．${p.monster}${p.npc 
 <section class="location-map" id="halloween-map" data-location-map data-portraits="true" aria-labelledby="location-map-title">
   <h3 id="location-map-title">{data.title}</h3>
   <p>{data.note}</p>
-  <p class="instructions">點選怪物／座標，地圖會放大並定位；點地圖編號可查看對應項目。地圖可捲動，使用「全圖」回到總覽。</p>
+  <p class="instructions">點選怪物／座標或地圖上的寵物，紅色準星會標出實際對話位置，寵物圖片會移到旁邊。地圖可捲動，使用「全圖」回到總覽。</p>
   <div class="visit-controls" data-visit-controls hidden>
     <label>紀錄日期（台灣時間） <input type="date" name="visit-date" data-visit-date /></label>
     <button type="button" data-today>回到今天</button>
@@ -52,7 +52,7 @@ const label = (p: typeof data.points[number]) => `${p.id}．${p.monster}${p.npc 
     <label><input type="checkbox" name="map-portraits" data-portrait-toggle checked /> 地圖顯示寵物圖</label>
     <a href={`${base}${data.image}`} target="_blank" rel="noopener">開啟清晰底圖</a>
   </div>
-  <p class="guide-note">紅線對照上方選取項目與地圖位置，並非行走路線。</p>
+  <p class="guide-note">請到紅色準星中心對應的座標找 NPC；寵物圖卡不是站位，紅線也不是行走路線。</p>
   <div class="map-guide" data-map-guide>
   <div class="selection">
     <img class="pet-portrait selected-portrait" data-selected-portrait width="112" height="112" alt="" hidden />
@@ -77,6 +77,14 @@ const label = (p: typeof data.points[number]) => `${p.id}．${p.monster}${p.npc 
           </a>
         </span>;
       })}
+      <div class="dialogue-target" data-dialogue-target hidden>
+        <span class="dialogue-label" data-dialogue-label></span>
+        <svg width="48" height="48" viewBox="-24 -24 48 48" aria-hidden="true">
+          <g fill="none" stroke="white" stroke-width="6"><circle r="15"/><path d="M -23 0 H -8 M 8 0 H 23 M 0 -23 V -8 M 0 8 V 23"/></g>
+          <g fill="none" stroke="#e52828" stroke-width="3"><circle r="15"/><path d="M -23 0 H -8 M 8 0 H 23 M 0 -23 V -8 M 0 8 V 23"/></g>
+          <circle r="3" fill="#e52828" stroke="white" stroke-width="1"/>
+        </svg>
+      </div>
     </div>
   </div>
   <svg class="selection-guide" data-selection-guide aria-hidden="true" hidden>
@@ -108,6 +116,7 @@ const label = (p: typeof data.points[number]) => `${p.id}．${p.monster}${p.npc 
     let zoom = 1;
     const guideHost = root.querySelector<HTMLElement>('[data-map-guide]')!;
     const guide = root.querySelector<SVGSVGElement>('[data-selection-guide]')!;
+    const dialogueTarget = root.querySelector<HTMLElement>('[data-dialogue-target]')!;
     let guideFrame = 0;
     const updateGuide = () => {
       guideFrame = 0;
@@ -115,14 +124,14 @@ const label = (p: typeof data.points[number]) => `${p.id}．${p.monster}${p.npc 
       if (!marker) { guide.setAttribute('hidden', ''); return; }
       const box = guideHost.getBoundingClientRect();
       const panel = root.querySelector<HTMLElement>('.selection')!.getBoundingClientRect();
-      const target = marker.getBoundingClientRect(), frame = viewport.getBoundingClientRect();
-      if (target.right <= frame.left || target.left >= frame.right || target.bottom <= frame.top || target.top >= frame.bottom) {
+      const target = marker.parentElement!.getBoundingClientRect(), frame = viewport.getBoundingClientRect();
+      if (target.left <= frame.left + 24 || target.left >= frame.right - 24 || target.top <= frame.top + 24 || target.top >= frame.bottom - 24) {
         guide.setAttribute('hidden', ''); return;
       }
       const start = portrait.hidden ? panel.left + 24 : portrait.getBoundingClientRect().left + portrait.width / 2;
       const x1 = start - box.left, y1 = panel.bottom - box.top;
-      const x2 = Math.max(frame.left + 8, Math.min(frame.right - 8, target.left + target.width / 2)) - box.left;
-      const y2 = Math.max(frame.top + 8, Math.min(frame.bottom - 8, target.top - 8)) - box.top;
+      const x2 = target.left - box.left;
+      const y2 = target.top - 25 - box.top;
       const mid = y1 + (y2 - y1) / 2;
       const path = `M ${x1} ${y1} C ${x1} ${mid}, ${x2} ${mid}, ${x2} ${y2}`;
       guide.setAttribute('viewBox', `0 0 ${box.width} ${box.height}`);
@@ -138,13 +147,23 @@ const label = (p: typeof data.points[number]) => `${p.id}．${p.monster}${p.npc 
     // Keep the coordinate dot fixed. Only move the image label, joined by a leader line.
     const layoutMarkers = () => {
       const placed: {left:number;top:number;right:number;bottom:number}[] = [];
+      const selectedAnchor = markers.find(m => m.dataset.marker === selected)?.parentElement;
+      dialogueTarget.hidden = !selectedAnchor;
+      if (selectedAnchor) {
+        const ax = selectedAnchor.offsetLeft, ay = selectedAnchor.offsetTop;
+        dialogueTarget.style.left = selectedAnchor.style.left;
+        dialogueTarget.style.top = selectedAnchor.style.top;
+        // Reserve visible terrain, the crosshair and its caption, even when portraits are off.
+        placed.push({left:ax-100, right:ax+100, top:ay-40, bottom:ay+76});
+      }
       for (const marker of markers) {
         const anchor = marker.parentElement!;
+        anchor.classList.toggle('is-selected', marker.dataset.marker === selected);
         const ax = anchor.offsetLeft, ay = anchor.offsetTop;
         const w = marker.offsetWidth, h = marker.offsetHeight;
         const dx = Number(marker.dataset.offsetX), dy = Number(marker.dataset.offsetY);
         let x = ax + dx, y = ay + dy;
-        if (toggle.checked) {
+        if (toggle.checked || selected) {
           let found = false;
           for (let radius = 0; radius <= Math.max(stage.clientWidth, stage.clientHeight) && !found; radius += 16) {
             const count = radius ? 16 : 1;
@@ -164,7 +183,7 @@ const label = (p: typeof data.points[number]) => `${p.id}．${p.monster}${p.npc 
       scheduleGuide();
     };
     const center = (marker: HTMLElement) => {
-      const point = marker.getBoundingClientRect(), frame = viewport.getBoundingClientRect();
+      const point = marker.parentElement!.getBoundingClientRect(), frame = viewport.getBoundingClientRect();
       viewport.scrollTo({left:viewport.scrollLeft + point.left + point.width / 2 - frame.left - viewport.clientWidth / 2,
         top:viewport.scrollTop + point.top + point.height / 2 - frame.top - viewport.clientHeight / 2});
       scheduleGuide();
@@ -191,6 +210,7 @@ const label = (p: typeof data.points[number]) => `${p.id}．${p.monster}${p.npc 
       markers.forEach(marker => marker.setAttribute('aria-current', String(marker.dataset.marker === id)));
       const link = links.find(link => link.dataset.point === id)!;
       status.textContent = link.dataset.label!;
+      root.querySelector<HTMLElement>('[data-dialogue-label]')!.textContent = `對話點：${link.querySelector('small')!.textContent}`;
       const source = link.querySelector<HTMLImageElement>('.pet-portrait');
       portrait.hidden = !source;
       if (source) { portrait.src = source.src; portrait.alt = source.alt; }
@@ -200,6 +220,9 @@ const label = (p: typeof data.points[number]) => `${p.id}．${p.monster}${p.npc 
         resize(Math.max(zoom, Math.min(5, 1600 / Math.max(viewport.clientWidth, toggle.checked ? 900 : 0))));
         center(markers.find(marker => marker.dataset.marker === id)!);
         viewport.scrollIntoView({block:'center', behavior:'instant'});
+      } else {
+        layoutMarkers();
+        center(markers.find(marker => marker.dataset.marker === id)!);
       }
       scheduleGuide();
     };
@@ -393,6 +416,12 @@ const label = (p: typeof data.points[number]) => `${p.id}．${p.monster}${p.npc 
   .map-stage > img { display:block; width:100%; max-width:none; height:auto; margin:0; }
   .marker-anchor { position:absolute; width:0; height:0; }
   .marker-anchor svg { position:absolute; overflow:visible; pointer-events:none; }
+  .marker-anchor.is-selected > svg { z-index:2; }
+  .marker-anchor.is-selected > svg path { stroke:#e52828; stroke-width:3; filter:drop-shadow(0 0 1px white); }
+  .dialogue-target { position:absolute; width:0; height:0; z-index:3; pointer-events:none; }
+  .dialogue-target[hidden] { display:none; }
+  .dialogue-target > svg { position:absolute; left:-24px; top:-24px; max-width:none; }
+  .dialogue-label { position:absolute; top:32px; left:-90px; width:180px; box-sizing:border-box; padding:4px; background:#fff; color:#a11010; border:2px solid #e52828; border-radius:4px; text-align:center; font:bold 12px/1.4 system-ui; }
   .map-marker { position:absolute; z-index:1; transform:translate(-50%,-50%); border:2px solid white; text-decoration:none; box-sizing:border-box; box-shadow:0 1px 4px #000; }
   .marker-portrait, .marker-name { display:none; }
   [data-portraits="true"] .has-portrait { width:68px; height:80px; background:#f7f5ef; color:#222; border:2px solid var(--point-color); border-radius:6px; display:flex; flex-direction:column; justify-content:center; }
