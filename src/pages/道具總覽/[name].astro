@@ -77,6 +77,34 @@ const acquisition = gathering ? gathering.supplement : item?.入手方式 ?? '';
           )
         }
         {
+          item.能力參考?.trim() && (
+            <tr><th scope="row">能力參考</th><td>{item.能力參考}<p class="item-note">{item.能力來源}。6～12 級製作品資料數較少，數值僅供參考。</p></td></tr>
+          )
+        }
+        {
+          item.實測說明?.trim() && item.實測說明 !== item.說明 && (
+            <tr><th scope="row">遊戲內說明</th><td>{item.實測說明.split(LIST_SEP).map(text=><p>{text}</p>)}</td></tr>
+          )
+        }
+        {
+          item.實測案例?.trim() && (
+            <tr id="observations"><th scope="row">實測案例</th><td>
+              <p class="item-note">以下為個別成品的觀察數值，可能受寶石、修理等因素影響，不代表製作能力上下限；耐久為觀察當時的數字。</p>
+              <ol>{item.實測案例.split(LIST_SEP).map(text=><li>{text}</li>)}</ol>
+            </td></tr>
+          )
+        }
+        {
+          item.觀察註記?.trim() && (
+            <tr><th scope="row">資料註記</th><td>{item.觀察註記}</td></tr>
+          )
+        }
+        {
+          item.收錄來源?.trim() && (
+            <tr><th scope="row">收錄來源</th><td>{item.收錄來源}{item.收錄日期 ? `（${item.收錄日期} 收錄）` : ''}</td></tr>
+          )
+        }
+        {
           (acquisition.trim() || gathering) && (
             <tr id="acquisition">
               <th scope="row">入手方式</th>
@@ -95,6 +123,9 @@ const acquisition = gathering ? gathering.supplement : item?.入手方式 ?? '';
 }
 
 <style>
+  .item-note {color:var(--muted,#666);font-size:.85rem;margin:.5rem 0}
+  #observations {scroll-margin-top:60px}
+  #observations li {margin:.5rem 0;overflow-wrap:anywhere}
   .item-acquisition p {
     margin: 0 0 0.65rem;
   }

@@ -1,0 +1,120 @@
+---
+import {listItems} from '../lib/items';
+import {thumbOf} from '../lib/thumbs';
+import {filterCatalog, catalogPage} from '../lib/itemCatalog';
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const items = listItems().map(item => {
+  const image = item.image ? thumbOf(item.image) : '';
+  // Never load a collection of animated GIFs into the list.
+  return {...item,image: /\.gif(?:\?|$)/i.test(image) ? '' : image};
+});
+const initial = catalogPage(filterCatalog(items,{query:'',category:'',source:'',numericOnly:false,sort:'new'}),1);
+const categories = [...new Set(items.map(i=>i.分類))].sort((a,b)=>a.localeCompare(b,'zh-Hant'));
+const short = (s:string) => s.length > 120 ? s.slice(0,120)+'…' : s;
+const details = (name:string) => `${base}/道具總覽/${encodeURIComponent(name)}/`;
+---
+<section class="catalog" data-item-catalog data-base={base} aria-label="道具清單">
+  <div class="filters" data-catalog-controls hidden>
+    <label>搜尋名稱／描述／數值<input type="search" name="item-search" data-search placeholder="例如：糖果、攻擊、耗魔" /></label>
+    <label>分類<select name="item-category" data-category><option value="">全部分類</option>{categories.map(c=><option value={c}>{c}</option>)}</select></label>
+    <label>收錄來源<select name="item-source" data-source><option value="">全部</option><option value="new">遊戲觀察新增</option><option value="observed">全部遊戲觀察</option></select></label>
+    <label>排序<select name="item-sort" data-sort><option value="new">新增道具優先</option><option value="name">名稱</option><option value="level">等級（低至高）</option></select></label>
+    <label class="check"><input type="checkbox" name="item-numeric" data-numeric /> 有能力參考／實測數值</label>
+    <button type="button" data-reset>清除篩選</button>
+  </div>
+  <p data-count role="status" aria-live="polite">共 {initial.total} 種道具，第 1／{initial.pages} 頁</p>
+  <div class="pager" data-catalog-controls hidden><button type="button" data-prev>上一頁</button><span data-page>1／{initial.pages}</span><button type="button" data-next>下一頁</button></div>
+  <div class="table-scroll" tabindex="0" role="region" aria-label="道具清單表格，可左右捲動">
+    <table>
+      <thead><tr><th scope="col">道具／等級</th><th scope="col">描述</th><th scope="col">能力參考</th><th scope="col">實測案例</th></tr></thead>
+      <tbody data-rows>
+        {initial.rows.map(item=><tr>
+          <td><div class="identity">{item.image&&<img src={`${base}${item.image}`} alt="" width="48" height="48" loading="lazy" decoding="async" />}<div><a href={details(item.名稱)}>{item.名稱}</a><small>{[item.分類,item.子分類,item.等級?`Lv${item.等級}`:''].filter(Boolean).join(' · ')}</small><small class="source">{item.收錄來源}</small></div></div></td>
+          <td><p>{short(item.說明||item.實測說明||'尚無描述')}</p>{item.觀察註記&&<small>{item.觀察註記}</small>}</td>
+          <td><p>{short(item.能力參考||'—')}</p>{item.能力來源&&<small>{item.能力來源}</small>}</td>
+          <td><p>{short(item.實測案例?.split(' / ')[0]||'—')}</p>{item.實測案例&&<small>單件觀察值，不是能力上下限。<a href={details(item.名稱)+'#observations'}>查看全部案例</a></small>}</td>
+        </tr>)}
+      </tbody>
+    </table>
+  </div>
+  <p data-empty hidden>沒有符合條件的道具，請試著減少關鍵字或清除篩選。</p>
+  <div class="pager" data-catalog-controls hidden><button type="button" data-prev>上一頁</button><span data-page>1／{initial.pages}</span><button type="button" data-next>下一頁</button></div>
+  <noscript><p>目前顯示前 50 筆；開啟 JavaScript 可搜尋、篩選及翻頁。</p><details><summary>全部道具名稱索引</summary><ul>{items.map(item=><li><a href={details(item.名稱)}>{item.名稱}</a></li>)}</ul></details></noscript>
+  <script type="application/json" data-items set:html={JSON.stringify(items).replace(/</g,'\\u003c')} />
+</section>
+
+<script>
+  import type {ItemRecord} from '../lib/items';
+  import {filterCatalog,catalogPage} from '../lib/itemCatalog';
+  document.querySelectorAll<HTMLElement>('[data-item-catalog]').forEach(root=>{
+    const items:ItemRecord[]=JSON.parse(root.querySelector('[data-items]')!.textContent!);
+    const query=root.querySelector<HTMLInputElement>('[data-search]')!;
+    const category=root.querySelector<HTMLSelectElement>('[data-category]')!;
+    const source=root.querySelector<HTMLSelectElement>('[data-source]')!;
+    const sort=root.querySelector<HTMLSelectElement>('[data-sort]')!;
+    const numeric=root.querySelector<HTMLInputElement>('[data-numeric]')!;
+    const body=root.querySelector<HTMLTableSectionElement>('[data-rows]')!;
+    let page=1;
+    const make=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',cls='')=>{
+      const el=document.createElement(tag);el.textContent=text;if(cls)el.className=cls;return el;
+    };
+    const short=(s:string)=>s.length>120?s.slice(0,120)+'…':s;
+    const render=()=>{
+      const result=catalogPage(filterCatalog(items,{query:query.value,category:category.value,source:source.value,sort:sort.value,numericOnly:numeric.checked}),page);
+      page=result.page;
+      const fragment=document.createDocumentFragment();
+      for(const item of result.rows){
+        const row=make('tr'), name=make('td'), identity=make('div','','identity'), text=make('div');
+        const href=`${root.dataset.base}/道具總覽/${encodeURIComponent(item.名稱)}/`;
+        if(item.image){const img=make('img');img.src=root.dataset.base+item.image;img.alt='';img.width=48;img.height=48;img.loading='lazy';img.decoding='async';identity.append(img);}
+        const link=make('a',item.名稱);link.href=href;
+        text.append(link,make('small',[item.分類,item.子分類,item.等級?`Lv${item.等級}`:''].filter(Boolean).join(' · ')),make('small',item.收錄來源,'source'));
+        identity.append(text);name.append(identity);row.append(name);
+        const description=make('td');description.append(make('p',short(item.說明||item.實測說明||'尚無描述')));
+        if(item.觀察註記)description.append(make('small',item.觀察註記));
+        const reference=make('td');reference.append(make('p',short(item.能力參考||'—')));
+        if(item.能力來源)reference.append(make('small',item.能力來源));
+        const observed=make('td');observed.append(make('p',short(item.實測案例?.split(' / ')[0]||'—')));
+        if(item.實測案例){const note=make('small','單件觀察值，不是能力上下限。');const all=make('a','查看全部案例');all.href=href+'#observations';note.append(all);observed.append(note);}
+        row.append(description,reference,observed);fragment.append(row);
+      }
+      body.replaceChildren(fragment);
+      root.querySelector('[data-count]')!.textContent=`共 ${result.total} 種道具，第 ${page}／${result.pages} 頁`;
+      root.querySelectorAll('[data-page]').forEach(el=>el.textContent=`${page}／${result.pages}`);
+      root.querySelectorAll<HTMLButtonElement>('[data-prev]').forEach(el=>el.disabled=page===1);
+      root.querySelectorAll<HTMLButtonElement>('[data-next]').forEach(el=>el.disabled=page===result.pages);
+      root.querySelector<HTMLElement>('[data-empty]')!.hidden=!!result.total;
+    };
+    const resetPage=()=>{page=1;render();};
+    query.addEventListener('input',resetPage);
+    [category,source,sort,numeric].forEach(el=>el.addEventListener('change',resetPage));
+    root.querySelector('[data-reset]')!.addEventListener('click',()=>{query.value='';category.value='';source.value='';sort.value='new';numeric.checked=false;resetPage();});
+    for(const [selector,delta] of [['[data-prev]',-1],['[data-next]',1]] as const){root.querySelectorAll(selector).forEach(el=>el.addEventListener('click',()=>{page+=delta;render();root.scrollIntoView({block:'start'});}));}
+    root.querySelectorAll<HTMLElement>('[data-catalog-controls]').forEach(el=>el.hidden=false);
+    render();
+  });
+</script>
+
+<style>
+  .catalog {min-width:0;scroll-margin-top:60px}
+  .filters {display:flex;flex-wrap:wrap;gap:.75rem;align-items:end;padding:.85rem;background:var(--surface-2,#f3f3f3)}
+  .filters label {display:flex;flex-direction:column;gap:.3rem;font-size:.9rem}
+  .filters .check {flex-direction:row;align-items:center;align-self:center}
+  .filters input[type=search] {width:240px;max-width:100%}
+  input,select,button {font:inherit;padding:.4rem;border:1px solid #aaa;border-radius:4px;background:var(--surface,#fff);color:var(--text,#222)}
+  button {cursor:pointer} button:disabled {opacity:.45;cursor:default}
+  .pager {display:flex;justify-content:center;align-items:center;gap:1rem;margin:.75rem 0}
+  [hidden] {display:none!important}
+  .table-scroll {overflow:auto;max-width:100%}
+  table {width:100%;min-width:780px;border-collapse:collapse;table-layout:fixed}
+  th {background:var(--surface-2,#eee);text-align:left}
+  th:nth-child(1) {width:23%} th:nth-child(2) {width:29%} th:nth-child(3) {width:22%} th:nth-child(4) {width:26%}
+  .catalog :global(td),th {padding:.75rem;border:1px solid var(--border,#ccc);vertical-align:top;overflow-wrap:anywhere;font-size:.9rem}
+  .catalog :global(tbody tr:nth-child(even)) {background:var(--surface-2,#f7f7f7)}
+  .catalog :global(td p) {margin:0 0 .4rem;white-space:pre-line}
+  .catalog :global(td small) {display:block;color:var(--muted,#666);font-size:.78rem;margin-top:.3rem}
+  .catalog :global(.identity) {display:flex;align-items:start;gap:.5rem}
+  .catalog :global(.identity img) {flex-shrink:0;object-fit:contain;image-rendering:pixelated}
+  .catalog :global(.source) {color:#397449}
+  @media(max-width:600px){.filters label {max-width:100%}.filters input[type=search] {width:100%}.catalog :global(td),th {padding:.5rem}}
+</style>
