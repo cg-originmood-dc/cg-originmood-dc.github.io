@@ -1,0 +1,40 @@
+{
+  "title": "變身怪物與換糖位置",
+  "note": "位置沿用 2025 年流程；本期尚待核對。變成指定怪物後，找對應 NPC 換取糖果（3～7 顆）。底圖為法蘭城位置示意，活動場景以遊戲內為準。",
+  "image": "/img/maps/萬聖節狂歡/法蘭城.webp",
+  "overviewImage": "/img/maps/萬聖節狂歡/法蘭城-small.webp",
+  "width": 2800,
+  "height": 1999,
+  "projection": { "gridWidth": 300, "originX": 2080, "originY": 1746, "scale": 0.22429906542056074 },
+  "groups": [
+    { "name": "殭屍", "color": "#a33e21" },
+    { "name": "靈類", "color": "#196ba0" },
+    { "name": "骷髏", "color": "#6d40a5" },
+    { "name": "死神", "color": "#267046" },
+    { "name": "南瓜頭目", "color": "#805400" }
+  ],
+  "points": [
+    { "id": "1", "group": "殭屍", "portrait": "/img/maps/萬聖節狂歡/pets/喪屍.webp", "portraitSource": "https://www.ibluecg.com/pet/pet1-img/023.gif", "monster": "喪屍", "npc": "貝蒂", "x": 231, "y": 104 },
+    { "id": "2", "group": "殭屍", "portrait": "/img/maps/萬聖節狂歡/pets/腐屍.webp", "portraitSource": "https://www.ibluecg.com/pet/pet1-img/025.gif", "monster": "腐屍", "npc": "陶歐", "x": 73, "y": 105 },
+    { "id": "3", "group": "殭屍", "portrait": "/img/maps/萬聖節狂歡/pets/殭屍.webp", "portraitSource": "https://www.ibluecg.com/pet/pet1-img/022.gif", "monster": "殭屍", "npc": "里玲", "x": 215, "y": 157 },
+    { "id": "4", "group": "殭屍", "portrait": "/img/maps/萬聖節狂歡/pets/木乃伊.webp", "portraitSource": "https://www.ibluecg.com/pet/pet1-img/026.gif", "monster": "木乃伊", "npc": "基爾", "x": 200, "y": 133 },
+    { "id": "5", "group": "殭屍", "portrait": "/img/maps/萬聖節狂歡/pets/食屍鬼.webp", "portraitSource": "https://www.ibluecg.com/pet/pet1-img/024.gif", "monster": "食屍鬼", "npc": "哈利", "x": 102, "y": 109 },
+    { "id": "6", "group": "靈類", "portrait": "/img/maps/萬聖節狂歡/pets/亡靈.webp", "portraitSource": "https://www.ibluecg.com/pet/pet1-img/034.gif", "monster": "亡靈", "npc": "強哥", "x": 191, "y": 37 },
+    { "id": "7", "group": "靈類", "portrait": "/img/maps/萬聖節狂歡/pets/幽靈.webp", "portraitSource": "https://www.ibluecg.com/pet/pet1-img/032.gif", "monster": "幽靈", "npc": "尼莫克", "x": 215, "y": 98 },
+    { "id": "8", "group": "靈類", "portrait": "/img/maps/萬聖節狂歡/pets/死靈.webp", "portraitSource": "https://www.ibluecg.com/pet/pet1-img/035.gif", "monster": "死靈", "npc": "艾文阿姨", "x": 215, "y": 148 },
+    { "id": "9", "group": "靈類", "portrait": "/img/maps/萬聖節狂歡/pets/鬼靈.webp", "portraitSource": "https://www.ibluecg.com/pet/pet1-img/033.gif", "monster": "鬼靈", "npc": "希洛克", "x": 94, "y": 98 },
+    { "id": "10", "group": "骷髏", "portrait": "/img/maps/萬聖節狂歡/pets/血骷髏.webp", "portraitSource": "https://www.ibluecg.com/pet/pet1-img/028.gif", "monster": "血骷髏", "npc": "強蓋魯特", "x": 201, "y": 108 },
+    { "id": "11", "group": "骷髏", "portrait": "/img/maps/萬聖節狂歡/pets/骷髏海盜.webp", "portraitSource": "https://www.ibluecg.com/pet/pet1-img/031.gif", "monster": "骷髏海盜", "npc": "米克爾", "x": 100, "y": 62 },
+    { "id": "12", "group": "骷髏", "portrait": "/img/maps/萬聖節狂歡/pets/骷髏戰士.webp", "portraitSource": "https://www.ibluecg.com/pet/pet1-img/027.gif", "monster": "骷髏戰士", "npc": "波利", "x": 94, "y": 49, "labelOffset": [0, 14] },
+    { "id": "13", "group": "骷髏", "portrait": "/img/maps/萬聖節狂歡/pets/武裝骷髏.webp", "portraitSource": "https://www.ibluecg.com/pet/pet1-img/030.gif", "monster": "武裝骷髏", "npc": "達美", "x": 93, "y": 78 },
+    { "id": "14", "group": "骷髏", "portrait": "/img/maps/萬聖節狂歡/pets/地獄骷髏.webp", "portraitSource": "https://www.ibluecg.com/pet/pet1-img/029.gif", "monster": "地獄骷髏", "npc": "葛利瑪", "x": 216, "y": 43, "labelOffset": [16, -16] },
+    { "id": "15", "group": "死神", "portrait": "/img/maps/萬聖節狂歡/pets/斬首者.webp", "portraitSource": "https://www.ibluecg.com/pet/pet1-img/169.gif", "monster": "斬首者", "npc": "凱蒂夫人", "x": 196, "y": 78 },
+    { "id": "16", "group": "死神", "portrait": "/img/maps/萬聖節狂歡/pets/鐮刀魔.webp", "portraitSource": "https://www.ibluecg.com/pet/pet1-img/167.gif", "monster": "鐮刀魔", "npc": "畢安禮", "x": 134, "y": 135 },
+    { "id": "17", "group": "死神", "portrait": "/img/maps/萬聖節狂歡/pets/暗黑僧侶.webp", "portraitSource": "https://www.ibluecg.com/pet/pet1-img/168.gif", "monster": "暗黑僧侶", "npc": "利貝亞", "x": 116, "y": 57 },
+    { "id": "18", "group": "死神", "portrait": "/img/maps/萬聖節狂歡/pets/冥界死神.webp", "portraitSource": "https://www.ibluecg.com/pet/pet1-img/170.gif", "monster": "冥界死神", "npc": "真中", "x": 192, "y": 171 },
+    { "id": "A", "group": "南瓜頭目", "monster": "惡靈晨曦南瓜怪", "npc": "", "x": 211, "y": 42, "labelOffset": [-16, 16] },
+    { "id": "B", "group": "南瓜頭目", "monster": "惡靈白晝南瓜怪", "npc": "", "x": 91, "y": 159 },
+    { "id": "C", "group": "南瓜頭目", "monster": "惡靈黃昏南瓜怪", "npc": "", "x": 211, "y": 159, "labelOffset": [-16, 20] },
+    { "id": "D", "group": "南瓜頭目", "monster": "惡靈暮夜南瓜怪", "npc": "", "x": 91, "y": 42, "labelOffset": [-8, -16] }
+  ]
+}

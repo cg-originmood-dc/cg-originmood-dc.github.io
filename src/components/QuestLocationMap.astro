@@ -1,0 +1,411 @@
+---
+import data from '../../content/data/quest-maps/halloween.json';
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const project = (point: typeof data.points[number]) => {
+  const p = data.projection;
+  return {
+    left: (((point.x + point.y + 1) * 32 - p.originX) * p.scale) / data.width * 100,
+    top: (((point.y - point.x + p.gridWidth) * 24 - p.originY) * p.scale) / data.height * 100,
+  };
+};
+const label = (p: typeof data.points[number]) => `${p.id}．${p.monster}${p.npc ? ` → ${p.npc}` : ''}（${p.x}, ${p.y}）`;
+---
+
+<section class="location-map" id="halloween-map" data-location-map data-portraits="true" aria-labelledby="location-map-title">
+  <h3 id="location-map-title">{data.title}</h3>
+  <p>{data.note}</p>
+  <p class="instructions">點選怪物／座標，地圖會放大並定位；點地圖編號可查看對應項目。地圖可捲動，使用「全圖」回到總覽。</p>
+  <div class="visit-controls" data-visit-controls hidden>
+    <label>紀錄日期（台灣時間） <input type="date" name="visit-date" data-visit-date /></label>
+    <button type="button" data-today>回到今天</button>
+    <p>登記人物後會勾選「已完成」，可繼續登記其他人物。紀錄只存在此瀏覽器；換日不刪除舊紀錄，可切換日期查看。</p>
+    <p role="status" data-visit-summary></p>
+    <p role="alert" data-storage-warning hidden>無法讀寫瀏覽器紀錄，請勿將本頁當作已儲存的進度。</p>
+  </div>
+  <div class="point-groups">
+    {data.groups.map(group => <section style={`--point-color:${group.color}`}>
+      <h4>{group.name}</h4>
+      <ul>{data.points.filter(p => p.group === group.name).map(p => <li data-visit-card={p.id}>
+        <a class="point-link" id={`list-point-${p.id}`} href={`#map-point-${p.id}`} data-point={p.id} data-label={label(p)}>
+          <span class="badge">{p.id}</span>
+          {p.portrait && <img class="pet-portrait" src={`${base}${p.portrait}`} alt={p.monster} width="80" height="88" loading="lazy" decoding="async" />}
+          <span><strong>{p.monster}</strong><small>{p.npc}（{p.x}, {p.y}）</small></span>
+        </a>
+        <small class="card-status" data-card-status></small>
+        <div class="visit-form" data-visit-form={p.id} hidden>
+          <label class="done-label"><input type="checkbox" name={`done-${p.id}`} data-done={p.id} /> <span data-done-label>今日已完成</span></label>
+          <small data-done-time></small>
+          <form data-register={p.id}>
+            <label for={`visitor-${p.id}`}>已去過的人物</label>
+            <div class="register-row"><input id={`visitor-${p.id}`} name="character" type="text" maxlength="80" required placeholder="輸入人物名稱" autocomplete="off" /><button type="submit">登記完成</button></div>
+          </form>
+          <ul class="visit-records" data-visit-records aria-label={`${p.monster}的人物登記紀錄`}></ul>
+        </div>
+      </li>)}</ul>
+    </section>)}
+  </div>
+  <p class="image-source">怪物圖片：<a href="https://www.ibluecg.com/pet/?id=2" target="_blank" rel="noopener">水藍魔力不死系圖鑑</a>（靜態外觀）。</p>
+  <div class="map-controls" data-controls hidden>
+    <button type="button" data-zoom="in" aria-label="放大地圖">＋ 放大</button>
+    <button type="button" data-zoom="out" aria-label="縮小地圖">－ 縮小</button>
+    <button type="button" data-zoom="fit">全圖</button>
+    <label><input type="checkbox" name="map-portraits" data-portrait-toggle checked /> 地圖顯示寵物圖</label>
+    <a href={`${base}${data.image}`} target="_blank" rel="noopener">開啟清晰底圖</a>
+  </div>
+  <p class="guide-note">紅線對照上方選取項目與地圖位置，並非行走路線。</p>
+  <div class="map-guide" data-map-guide>
+  <div class="selection">
+    <img class="pet-portrait selected-portrait" data-selected-portrait width="112" height="112" alt="" hidden />
+    <div class="selection-content"><p data-selection role="status" aria-live="polite">點選地圖上的怪物，即可在這裡登記完成。</p><small data-selected-visits></small><div data-selected-form></div></div>
+  </div>
+  <div class="map-viewport" tabindex="0" role="region" aria-label="萬聖夜之法蘭城互動地圖，可捲動查看" data-viewport>
+    <div class="map-stage" data-stage>
+      <img src={`${base}${data.overviewImage}`} data-detail-src={`${base}${data.image}`} width={data.width} height={data.height}
+        alt="萬聖夜之法蘭城：換糖 NPC 與四個南瓜頭目的位置，編號對照上方清單" loading="lazy" decoding="async" />
+      {data.points.map(p => {
+        const pos = project(p);
+        const color = data.groups.find(g => g.name === p.group)!.color;
+        const [dx, dy] = p.labelOffset ?? [0, 0];
+        return <span class="marker-anchor" style={`left:${pos.left}%;top:${pos.top}%;--point-color:${color}`}>
+          <svg width="1" height="1" aria-hidden="true"><path d={`M 0 0 L ${dx} ${dy}`} stroke="white" stroke-width="2"/><circle r="3" fill="white" stroke={color}/></svg>
+          <a id={`map-point-${p.id}`} href={`#list-point-${p.id}`} class:list={['map-marker', {'has-portrait':!!p.portrait}]} data-marker={p.id}
+            data-offset-x={dx} data-offset-y={dy} style={`left:${dx}px;top:${dy}px`} aria-label={label(p)} title={label(p)}>
+            {p.portrait && <img class="marker-portrait" src={`${base}${p.portrait}`} alt="" width="56" height="56" loading="lazy" decoding="async" />}
+            <span class="marker-id">{p.id}</span>
+            {p.portrait && <span class="marker-name">{p.monster}</span>}
+            <span class="marker-visits" data-marker-visits hidden></span>
+          </a>
+        </span>;
+      })}
+    </div>
+  </div>
+  <svg class="selection-guide" data-selection-guide aria-hidden="true" hidden>
+    <defs><marker id="halloween-selection-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10 Z" fill="#e52828" /></marker></defs>
+    <path data-guide-path fill="none" stroke="white" stroke-width="6" stroke-linecap="round" />
+    <path data-guide-path fill="none" stroke="#e52828" stroke-width="3" stroke-linecap="round" marker-end="url(#halloween-selection-arrow)" />
+    <circle data-guide-start r="4" fill="#e52828" stroke="white" stroke-width="2" />
+  </svg>
+  </div>
+  <noscript><p>未開啟 JavaScript 時，可依相同編號對照清單與地圖。</p></noscript>
+</section>
+
+<script>
+  import {taipeiDay, compactVisitTime, readVisitState, registerVisit} from '../lib/questVisits.mjs';
+  document.querySelectorAll<HTMLElement>('[data-location-map]').forEach(root => {
+    const slot = document.querySelector('[data-location-map-slot]');
+    if (slot) slot.replaceWith(root);
+    const viewport = root.querySelector<HTMLElement>('[data-viewport]')!;
+    const stage = root.querySelector<HTMLElement>('[data-stage]')!;
+    const img = stage.querySelector<HTMLImageElement>('img')!;
+    const links = [...root.querySelectorAll<HTMLAnchorElement>('[data-point]')];
+    const markers = [...root.querySelectorAll<HTMLAnchorElement>('[data-marker]')];
+    const status = root.querySelector<HTMLElement>('[data-selection]')!;
+    const portrait = root.querySelector<HTMLImageElement>('[data-selected-portrait]')!;
+    const visitForms = new Map([...root.querySelectorAll<HTMLElement>('[data-visit-form]')].map(form => [form.dataset.visitForm!, form]));
+    root.querySelector('[data-selected-form]')!.append(...visitForms.values());
+    root.querySelector<HTMLElement>('[data-controls]')!.hidden = false;
+    let selected: string | undefined;
+    let zoom = 1;
+    const guideHost = root.querySelector<HTMLElement>('[data-map-guide]')!;
+    const guide = root.querySelector<SVGSVGElement>('[data-selection-guide]')!;
+    let guideFrame = 0;
+    const updateGuide = () => {
+      guideFrame = 0;
+      const marker = markers.find(m => m.dataset.marker === selected);
+      if (!marker) { guide.setAttribute('hidden', ''); return; }
+      const box = guideHost.getBoundingClientRect();
+      const panel = root.querySelector<HTMLElement>('.selection')!.getBoundingClientRect();
+      const target = marker.getBoundingClientRect(), frame = viewport.getBoundingClientRect();
+      if (target.right <= frame.left || target.left >= frame.right || target.bottom <= frame.top || target.top >= frame.bottom) {
+        guide.setAttribute('hidden', ''); return;
+      }
+      const start = portrait.hidden ? panel.left + 24 : portrait.getBoundingClientRect().left + portrait.width / 2;
+      const x1 = start - box.left, y1 = panel.bottom - box.top;
+      const x2 = Math.max(frame.left + 8, Math.min(frame.right - 8, target.left + target.width / 2)) - box.left;
+      const y2 = Math.max(frame.top + 8, Math.min(frame.bottom - 8, target.top - 8)) - box.top;
+      const mid = y1 + (y2 - y1) / 2;
+      const path = `M ${x1} ${y1} C ${x1} ${mid}, ${x2} ${mid}, ${x2} ${y2}`;
+      guide.setAttribute('viewBox', `0 0 ${box.width} ${box.height}`);
+      guide.querySelectorAll('[data-guide-path]').forEach(p => p.setAttribute('d', path));
+      const dot = guide.querySelector('[data-guide-start]')!;
+      dot.setAttribute('cx', String(x1)); dot.setAttribute('cy', String(y1));
+      guide.removeAttribute('hidden');
+    };
+    const scheduleGuide = () => { if (!guideFrame) guideFrame = requestAnimationFrame(updateGuide); };
+    viewport.addEventListener('scroll', scheduleGuide, {passive:true});
+    new ResizeObserver(scheduleGuide).observe(guideHost);
+    const toggle = root.querySelector<HTMLInputElement>('[data-portrait-toggle]')!;
+    // Keep the coordinate dot fixed. Only move the image label, joined by a leader line.
+    const layoutMarkers = () => {
+      const placed: {left:number;top:number;right:number;bottom:number}[] = [];
+      for (const marker of markers) {
+        const anchor = marker.parentElement!;
+        const ax = anchor.offsetLeft, ay = anchor.offsetTop;
+        const w = marker.offsetWidth, h = marker.offsetHeight;
+        const dx = Number(marker.dataset.offsetX), dy = Number(marker.dataset.offsetY);
+        let x = ax + dx, y = ay + dy;
+        if (toggle.checked) {
+          let found = false;
+          for (let radius = 0; radius <= Math.max(stage.clientWidth, stage.clientHeight) && !found; radius += 16) {
+            const count = radius ? 16 : 1;
+            for (let i = 0; i < count; i++) {
+              const cx = ax + dx + radius * Math.cos(i * 2 * Math.PI / count);
+              const cy = ay + dy + radius * Math.sin(i * 2 * Math.PI / count);
+              const box = {left:cx-w/2-8, right:cx+w/2+8, top:cy-h/2-8, bottom:cy+h/2+8};
+              if (box.left < 0 || box.top < 0 || box.right > stage.clientWidth || box.bottom > stage.clientHeight) continue;
+              if (placed.some(p => box.left < p.right && box.right > p.left && box.top < p.bottom && box.bottom > p.top)) continue;
+              x = cx; y = cy; placed.push(box); found = true; break;
+            }
+          }
+        }
+        marker.style.left = `${x-ax}px`; marker.style.top = `${y-ay}px`;
+        anchor.querySelector('path')!.setAttribute('d', `M 0 0 L ${x-ax} ${y-ay}`);
+      }
+      scheduleGuide();
+    };
+    const center = (marker: HTMLElement) => {
+      const point = marker.getBoundingClientRect(), frame = viewport.getBoundingClientRect();
+      viewport.scrollTo({left:viewport.scrollLeft + point.left + point.width / 2 - frame.left - viewport.clientWidth / 2,
+        top:viewport.scrollTop + point.top + point.height / 2 - frame.top - viewport.clientHeight / 2});
+      scheduleGuide();
+    };
+    const resize = (next: number) => {
+      const oldWidth = stage.clientWidth;
+      const x = (viewport.scrollLeft + viewport.clientWidth / 2) / oldWidth;
+      const y = (viewport.scrollTop + viewport.clientHeight / 2) / stage.clientHeight;
+      zoom = Math.min(5, Math.max(1, next));
+      viewport.dataset.fit = String(zoom === 1);
+      const markerArea = markers.reduce((sum, marker) => sum + (marker.offsetWidth + 16) * (marker.offsetHeight + 16), 0);
+      const aspect = Number(img.getAttribute('width')) / Number(img.getAttribute('height'));
+      const recordWidth = markers.some(m => m.classList.contains('has-records')) ? Math.sqrt(markerArea * 2 * aspect) : 0;
+      stage.style.width = `${Math.max(viewport.clientWidth, toggle.checked ? 900 : 0, recordWidth) * zoom}px`;
+      layoutMarkers();
+      if (zoom > 1) img.src = img.dataset.detailSrc!;
+      viewport.scrollTo({left:x * stage.clientWidth - viewport.clientWidth / 2, top:y * stage.clientHeight - viewport.clientHeight / 2});
+      root.querySelector<HTMLButtonElement>('[data-zoom="in"]')!.disabled = zoom === 5;
+      root.querySelector<HTMLButtonElement>('[data-zoom="out"]')!.disabled = zoom === 1;
+    };
+    const select = (id: string, locate: boolean) => {
+      selected = id;
+      links.forEach(link => link.setAttribute('aria-current', String(link.dataset.point === id)));
+      markers.forEach(marker => marker.setAttribute('aria-current', String(marker.dataset.marker === id)));
+      const link = links.find(link => link.dataset.point === id)!;
+      status.textContent = link.dataset.label!;
+      const source = link.querySelector<HTMLImageElement>('.pet-portrait');
+      portrait.hidden = !source;
+      if (source) { portrait.src = source.src; portrait.alt = source.alt; }
+      visitForms.forEach((form, key) => form.hidden = key !== id);
+      showSelectedVisits();
+      if (locate) {
+        resize(Math.max(zoom, Math.min(5, 1600 / Math.max(viewport.clientWidth, toggle.checked ? 900 : 0))));
+        center(markers.find(marker => marker.dataset.marker === id)!);
+        viewport.scrollIntoView({block:'center', behavior:'instant'});
+      }
+      scheduleGuide();
+    };
+    links.forEach(link => link.addEventListener('click', event => {
+      event.preventDefault();
+      select(link.dataset.point!, true);
+    }));
+    markers.forEach(marker => marker.addEventListener('click', event => {
+      event.preventDefault();
+      select(marker.dataset.marker!, false);
+    }));
+    root.querySelectorAll<HTMLButtonElement>('[data-zoom]').forEach(button => button.addEventListener('click', () => {
+      resize(button.dataset.zoom === 'fit' ? 1 : zoom + (button.dataset.zoom === 'in' ? .5 : -.5));
+      if (selected && button.dataset.zoom !== 'fit') center(markers.find(m => m.dataset.marker === selected)!);
+      if (button.dataset.zoom === 'fit') viewport.scrollTo(0, 0);
+    }));
+    toggle.addEventListener('change', () => {
+      root.dataset.portraits = String(toggle.checked);
+      resize(zoom);
+      if (selected) center(markers.find(m => m.dataset.marker === selected)!);
+    });
+    new ResizeObserver(() => resize(zoom)).observe(viewport);
+    resize(1);
+
+    const prefix = 'cg-halloween-visits:v1:';
+    const dateInput = root.querySelector<HTMLInputElement>('[data-visit-date]')!;
+    const warning = root.querySelector<HTMLElement>('[data-storage-warning]')!;
+    const cards = [...root.querySelectorAll<HTMLElement>('[data-visit-card]')];
+    let today = taipeiDay();
+    dateInput.value = today; dateInput.max = today;
+    const timeLabel = compactVisitTime;
+    const key = (id: string) => `${prefix}${dateInput.value}:${id}`;
+    const read = (id: string) => readVisitState(localStorage.getItem(key(id)));
+    function showSelectedVisits() {
+      const detail = root.querySelector<HTMLElement>('[data-selected-visits]')!;
+      detail.textContent = '';
+      if (!selected) return;
+      try {
+        const state = read(selected);
+        detail.textContent = state.visits.length ? `已登記 ${state.visits.length} 名人物` : (state.doneAt ? `已完成：${timeLabel(state.doneAt)}` : '尚無完成紀錄');
+      } catch { warning.hidden = false; }
+    }
+    const refreshVisits = () => {
+      let done = 0;
+      const historical = dateInput.value !== today;
+      for (const card of cards) {
+        const id = card.dataset.visitCard!;
+        const visitForm = visitForms.get(id)!;
+        const checkbox = visitForm.querySelector<HTMLInputElement>('[data-done]')!;
+        const form = visitForm.querySelector<HTMLFormElement>('form')!;
+        checkbox.disabled = historical;
+        form.hidden = historical;
+        visitForm.querySelector<HTMLElement>('[data-done-label]')!.textContent = historical ? '當日已完成' : '今日已完成';
+        try {
+          const state = read(id);
+          checkbox.checked = !!state.doneAt;
+          if (state.doneAt) done++;
+          card.classList.toggle('is-done', !!state.doneAt);
+          const marker = markers.find(m => m.dataset.marker === id)!;
+          marker.classList.toggle('is-done', !!state.doneAt);
+          const markerVisits = marker.querySelector<HTMLElement>('[data-marker-visits]')!;
+          markerVisits.replaceChildren();
+          markerVisits.hidden = !(state.visits.length || state.doneAt);
+          marker.classList.toggle('has-records', !markerVisits.hidden);
+          const lines = state.visits.length
+            ? state.visits.slice(0, 3).map((v: {name:string;time:string}) => `${v.name}\n${timeLabel(v.time)}`)
+            : state.doneAt ? [`已完成\n${timeLabel(state.doneAt)}`] : [];
+          if (state.visits.length > 3) lines.push(`另 ${state.visits.length - 3} 人（點選查看）`);
+          for (const text of lines) { const line = document.createElement('span'); line.textContent = text; markerVisits.append(line); }
+          card.querySelector<HTMLElement>('[data-card-status]')!.textContent = state.doneAt ? `✓ 已完成 · ${timeLabel(state.doneAt)}` : '';
+          visitForm.querySelector<HTMLElement>('[data-done-time]')!.textContent = state.doneAt ? timeLabel(state.doneAt) : '';
+          const list = visitForm.querySelector<HTMLElement>('[data-visit-records]')!;
+          list.replaceChildren();
+          for (const visit of state.visits) {
+            const row = document.createElement('li');
+            row.textContent = `${visit.name} · ${timeLabel(visit.time)}`;
+            if (!historical) {
+              const remove = document.createElement('button');
+              remove.type = 'button'; remove.textContent = '移除';
+              remove.setAttribute('aria-label', `移除 ${visit.name} 的登記`);
+              remove.addEventListener('click', () => save(id, current => {
+                const visits = current.visits.filter((v: {name:string}) => v.name !== visit.name);
+                return {...current, visits, doneAt:visits.length ? current.doneAt : null};
+              }));
+              row.append(remove);
+            }
+            list.append(row);
+          }
+        } catch { warning.hidden = false; }
+      }
+      root.querySelector<HTMLElement>('[data-visit-summary]')!.textContent = `${dateInput.value}：已完成 ${done}／${cards.length} 項${historical ? '（歷史紀錄，唯讀）' : ''}`;
+      showSelectedVisits();
+      resize(zoom);
+    };
+    const checkDay = () => {
+      const next = taipeiDay();
+      if (today === next) return;
+      if (dateInput.value === today) dateInput.value = next;
+      today = next; dateInput.max = next; refreshVisits();
+    };
+    const save = (id: string, update: (state: ReturnType<typeof readVisitState>) => ReturnType<typeof readVisitState>) => {
+      checkDay();
+      if (dateInput.value !== today) return false;
+      try {
+        localStorage.setItem(key(id), JSON.stringify(update(read(id))));
+        warning.hidden = true; refreshVisits(); return true;
+      } catch { warning.hidden = false; refreshVisits(); return false; }
+    };
+    cards.forEach(card => {
+      const id = card.dataset.visitCard!;
+      const visitForm = visitForms.get(id)!;
+      const checkbox = visitForm.querySelector<HTMLInputElement>('[data-done]')!;
+      checkbox.addEventListener('change', () => {
+        const checked = checkbox.checked;
+        save(id, state => ({...state, doneAt:checked ? new Date().toISOString() : null}));
+      });
+      const form = visitForm.querySelector<HTMLFormElement>('form')!;
+      form.addEventListener('submit', event => {
+        event.preventDefault();
+        const input = form.querySelector<HTMLInputElement>('input')!;
+        if (!input.value.trim()) return;
+        if (save(id, state => registerVisit(state, input.value))) input.value = '';
+      });
+    });
+    root.querySelector<HTMLElement>('[data-visit-controls]')!.hidden = false;
+    dateInput.addEventListener('change', () => {
+      if (!dateInput.value || dateInput.value > today) dateInput.value = today;
+      refreshVisits();
+    });
+    root.querySelector('[data-today]')!.addEventListener('click', () => { checkDay(); dateInput.value = today; refreshVisits(); });
+    window.addEventListener('storage', event => { if (!event.key || event.key.startsWith(prefix)) refreshVisits(); });
+    window.addEventListener('focus', checkDay);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) checkDay(); });
+    window.setInterval(checkDay, 60_000);
+    refreshVisits();
+  });
+</script>
+
+<style>
+  .location-map { min-width:0; margin:1.5rem 0; }
+  h3 { margin-bottom:.6rem; }
+  .instructions { color:var(--muted, #555); font-size:.95rem; }
+  .point-groups { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:.75rem; }
+  .point-groups section { border:1px solid var(--border,#ccc); border-top:4px solid var(--point-color); border-radius:6px; padding:.6rem; }
+  .point-groups h4 { margin:0 0 .4rem; }
+  .point-groups ul { list-style:none; padding:0; margin:0; }
+  .point-groups li { margin:0; }
+  .point-groups li[data-visit-card] { padding-bottom:.75rem; margin-bottom:.75rem; border-bottom:1px solid var(--border,#ccc); }
+  .pet-portrait { display:block; width:80px; height:88px; object-fit:contain; flex-shrink:0; margin:0; background:#f7f5ef; border-radius:4px; image-rendering:pixelated; }
+  .selected-portrait { width:112px; height:112px; }
+  .pet-portrait[hidden] { display:none; }
+  .image-source { font-size:.85rem; }
+  .visit-controls { padding:.75rem; background:var(--surface-2,#eee); border-radius:6px; margin:1rem 0; }
+  .visit-controls p { margin:.5rem 0; font-size:.9rem; }
+  .visit-form { padding:0 .4rem; font-size:.9rem; }
+  .visit-form[hidden] { display:none; }
+  .card-status { display:block; padding:0 .4rem; color:#287342; }
+  .visit-form form { margin:.5rem 0; }
+  .done-label { display:flex; align-items:center; gap:.3rem; cursor:pointer; }
+  .done-label input { width:20px; height:20px; }
+  .register-row { display:flex; gap:.3rem; }
+  .register-row input { min-width:0; width:100%; }
+  .register-row button { flex-shrink:0; }
+  input { font:inherit; padding:.3rem; border:1px solid var(--border,#aaa); border-radius:4px; background:var(--surface,#fff); color:var(--text,#222); }
+  .visit-records { overflow-wrap:anywhere; }
+  .visit-records :global(li) { padding:.3rem 0; font-size:.8rem; }
+  .visit-records :global(button) { margin-left:.4rem; padding:.1rem .3rem; font:inherit; cursor:pointer; }
+  .is-done .done-label { color:#287342; font-weight:bold; }
+  .map-marker.is-done::after { content:'✓'; position:absolute; right:-9px; top:-9px; background:#267046; color:#fff; border:1px solid white; border-radius:50%; padding:2px; font-size:12px; }
+  .point-link { display:flex; align-items:center; gap:.6rem; padding:.4rem; border-radius:4px; color:var(--text,#222); text-decoration:none; border:2px solid transparent; }
+  .point-link small { display:block; font-size:.85rem; }
+  .point-link:hover, .point-link[aria-current="true"] { border-color:var(--point-color); background:var(--surface-2,#f2f2f2); }
+  .badge, .map-marker { background:var(--point-color); color:#fff; border-radius:50%; display:grid; place-items:center; font:bold 14px/1 system-ui; flex-shrink:0; width:28px; height:28px; }
+  .map-controls { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; margin-top:1rem; }
+  .map-controls[hidden] { display:none; }
+  button { font:inherit; padding:.45rem .7rem; border:1px solid var(--border,#aaa); background:var(--surface-2,#eee); color:var(--text,#222); border-radius:4px; cursor:pointer; }
+  button:disabled { opacity:.45; cursor:default; }
+  .selection { display:flex; align-items:center; gap:.7rem; padding:.7rem; margin:.5rem 0; background:var(--surface-2,#eee); border-left:4px solid #b2631b; font-weight:bold; min-height:1.5em; overflow-wrap:anywhere; }
+  .selection p { margin:0; }
+  .selection small { font-weight:normal; }
+  .selection-content { min-width:0; flex:1; }
+  .guide-note { margin:.6rem 0; font-size:.85rem; color:var(--muted,#555); }
+  .map-guide { position:relative; display:flow-root; }
+  .selection-guide { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:4; }
+  .selection-guide[hidden] { display:none; }
+  .selection .visit-form { margin-top:.65rem; padding:0; font-weight:normal; }
+  .selection .visit-records { list-style:none; padding:0; margin:.5rem 0; }
+  .map-viewport { max-height:650px; overflow:auto; border:1px solid var(--border,#999); background:#121218; position:relative; overscroll-behavior:contain; }
+  .map-viewport[data-fit="true"] { max-height:none; }
+  .map-stage { position:relative; width:100%; }
+  .map-stage > img { display:block; width:100%; max-width:none; height:auto; margin:0; }
+  .marker-anchor { position:absolute; width:0; height:0; }
+  .marker-anchor svg { position:absolute; overflow:visible; pointer-events:none; }
+  .map-marker { position:absolute; z-index:1; transform:translate(-50%,-50%); border:2px solid white; text-decoration:none; box-sizing:border-box; box-shadow:0 1px 4px #000; }
+  .marker-portrait, .marker-name { display:none; }
+  [data-portraits="true"] .has-portrait { width:68px; height:80px; background:#f7f5ef; color:#222; border:2px solid var(--point-color); border-radius:6px; display:flex; flex-direction:column; justify-content:center; }
+  [data-portraits="true"] .marker-portrait { display:block; width:56px; height:56px; object-fit:contain; image-rendering:pixelated; margin:0; }
+  [data-portraits="true"] .marker-name { display:block; font-size:11px; line-height:18px; white-space:nowrap; }
+  [data-portraits="true"] .has-portrait .marker-id { position:absolute; left:-8px; top:-8px; display:grid; place-items:center; width:22px; height:22px; border-radius:50%; color:white; background:var(--point-color); border:1px solid white; }
+  .map-marker.has-records, [data-portraits="true"] .map-marker.has-records { width:120px; height:auto; min-height:36px; padding:4px; border-radius:6px; display:flex; flex-direction:column; align-items:center; }
+  .marker-visits { display:block; width:100%; font:11px/1.35 system-ui; background:#edf7ee; color:#173c23; margin-top:3px; border-radius:3px; white-space:pre-line; overflow-wrap:anywhere; text-align:center; }
+  .marker-visits[hidden] { display:none; }
+  .marker-visits :global(span) { display:block; padding:3px 2px; }
+  .marker-visits :global(span + span) { border-top:1px solid #c8ddc9; }
+  .map-marker:hover, .map-marker:focus-visible, .map-marker[aria-current="true"] { z-index:2; outline:3px solid #ffe270; outline-offset:2px; }
+  a:focus-visible, button:focus-visible, .map-viewport:focus-visible { outline:3px solid #1679c5; outline-offset:3px; }
+  @media(max-width:600px) { .point-groups { grid-template-columns:1fr; } .map-viewport { max-height:65vh; } .selection { align-items:flex-start; } .selected-portrait { width:72px; height:80px; } }
+  @media print { .map-controls { display:none; } .map-viewport { max-height:none; overflow:visible; } .map-stage { width:100% !important; } }
+</style>

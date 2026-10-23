@@ -23,6 +23,7 @@ const pages = defineCollection({
       heading: z.string(),
       anchor: z.string().regex(/^[a-z][a-z0-9-]*$/),
     })).default([]),
+    locationMap: z.enum(['halloween']).optional(),
     /** 這頁要渲染哪些 content/data/*.csv 資料集 */
     datasets: z.array(z.string()).default([]),
     /**
