@@ -44,7 +44,7 @@ DATE_TEXT = (
     r"(?:\s*\d{1,2}[:：]\d{2}(?::\d{2})?)?"
 )
 RANGE_SEP = r"(?:--+|－+|—+|~|～|至)"
-REQUIRED_PET_HEADERS = ("所需寵物", "需求寵物")
+REQUIRED_PET_HEADERS = ("所需寵物", "需求寵物", "所需名稱")
 REQUIRED_ITEM_HEADERS = (
     "所需道具",
     "所需材料",
@@ -125,6 +125,20 @@ def normalized_header(row: list[str]) -> list[str]:
     return [re.sub(r"\s+", "", value) for value in row]
 
 
+REPEATED_LEVEL_PREFIX = re.compile(
+    r"(?<!\S)(?P<prefix>Lv\.?\s*\d+\s*的?)(?:Lv\.?\s*\d+\s*的?)+",
+    re.I,
+)
+
+
+def normalize_repeated_level_prefix(value: str) -> str:
+    """修正公告偶爾重複寫出的「Lv1的Lv1的寵物名」。"""
+    return REPEATED_LEVEL_PREFIX.sub(
+        lambda match: match.group("prefix"),
+        clean(value),
+    )
+
+
 def synthesis_header(
     rows: list[list[str]],
 ) -> tuple[int, int | None, int, int] | None:
@@ -133,6 +147,14 @@ def synthesis_header(
         pet_name = next((name for name in REQUIRED_PET_HEADERS if name in header), None)
         item_name = next((name for name in REQUIRED_ITEM_HEADERS if name in header), None)
         result_name = next((name for name in RESULT_PET_HEADERS if name in header), None)
+        if result_name is None and "獲得道具" in header:
+            result_col = header.index("獲得道具")
+            has_summon_result = any(
+                result_col < len(data) and "召喚書" in data[result_col]
+                for data in rows[index + 1 :]
+            )
+            if has_summon_result:
+                result_name = "獲得道具"
         if item_name and result_name:
             return (
                 index,
@@ -291,7 +313,7 @@ def format_materials(value: str) -> str:
 
 
 def format_result(value: str) -> str:
-    value = clean(value).replace("*", "×")
+    value = normalize_repeated_level_prefix(value).replace("*", "×")
     value = re.sub(r"\s+([（(](?:概率|機率))", r"\1", value)
     value = re.sub(
         r"(?<![（(])\s*((?:概率|機率)\s*[\d.]+\s*%)",
@@ -637,7 +659,7 @@ def source_tables(soup: BeautifulSoup) -> list[Source]:
             item_name = next(
                 (
                     name
-                    for name in ("物品名稱", "道具名稱", "名字", "獎品名稱", "獎品")
+                    for name in ("物品名稱", "道具名稱", "名稱", "名字", "獎品名稱", "獎品")
                     if name in header
                 ),
                 None,
@@ -764,9 +786,13 @@ def parse_recipes(ref: NewsRef, source: str) -> list[Recipe]:
                 required_columns.append(pet_col)
             if max(required_columns) >= len(row):
                 continue
-            required_pet = row[pet_col] if pet_col is not None else "不需要"
+            required_pet = (
+                normalize_repeated_level_prefix(row[pet_col])
+                if pet_col is not None
+                else "不需要"
+            )
             required_item = row[item_col]
-            result_pet = row[result_col]
+            result_pet = normalize_repeated_level_prefix(row[result_col])
             no_required_pet = required_pet.strip() in {"/", "／", "-", "無", "不需要"}
             if (
                 not required_item
