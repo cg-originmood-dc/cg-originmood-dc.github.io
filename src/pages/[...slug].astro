@@ -37,7 +37,7 @@ const hasProse = entry.body != null && entry.body.trim().length > 0;
 <Base title={entry.data.title} breadcrumb={entry.data.breadcrumb} social={entry.data.social}>
   <h1 class="page-title">{entry.data.title}</h1>
 
-  {hasProse && (
+  {hasProse && entry.data.title !== '稱號與聲望' && (
     <div class="prose">
       <Content />
     </div>
@@ -51,7 +51,9 @@ const hasProse = entry.body != null && entry.body.trim().length > 0;
   ) : entry.data.title === '道具總覽' ? (
     <ItemCatalog />
   ) : entry.data.title === '稱號與聲望' ? (
-    <TitleReputation />
+    <TitleReputation>
+      <div slot="rules-intro" class="prose"><Content /></div>
+    </TitleReputation>
   ) : entry.data.title === '週年慶寵物島' ? (
     <>
       <EventPeriods event="週年慶寵物島" />

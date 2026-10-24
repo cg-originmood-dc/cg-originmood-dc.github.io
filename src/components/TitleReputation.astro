@@ -54,6 +54,7 @@ const tracks = trackRows.map((t) => {
     });
   return {
     group,
+    tab: get(t, '分頁') || group,
     jobs: split(get(t, '適用職業')),
     claim: get(t, '領取方式'),
     note: get(t, '說明'),
@@ -62,6 +63,7 @@ const tracks = trackRows.map((t) => {
     hasJira: rows.some((r) => r.jira !== '-'),
   };
 });
+const trackTabs = [...new Set(tracks.map((t) => t.tab))];
 const fmt = (n: number) => n.toLocaleString('en-US');
 
 /** 晉階條件：一關一張卡，卡內一列一個職業群 */
@@ -155,6 +157,7 @@ const commonActions = actionRows.filter((r) => get(r, '職業系') === '共通')
 const typedActions = actionRows.filter((r) => get(r, '職業系') !== '共通');
 
 const NAV = [
+  { href: '#overview', label: '聲望規則' },
   { href: '#rules', label: '怎麼算' },
   { href: '#daily', label: '各職業' },
   { href: '#spots', label: '去哪刷' },
@@ -191,31 +194,9 @@ const calcTracks = tracks.map((t) => ({
     ))}
   </nav>
 
-  <!-- 核心觀念：時間鎖 -->
-  <section class="rt__card rt__timelock">
-    <h3>稱號是時間鎖，每天把聲望額度打滿就是最快。</h3>
-    <p>
-      系統每天自動發 <strong>1,600 點</strong>額度，<strong>沒上線也照發</strong>，最多囤
-      6 天。打滿之後再怎麼刷都不會增加。
-    </p>
-    <div class="rt__quota" aria-hidden="true">
-      <div class="rt__quota-cell is-today">
-        <b>1,600</b>
-        <span>今天</span>
-      </div>
-      {[...Array(5)].map(() => (
-        <div class="rt__quota-cell is-bank">
-          <b>+1,600</b>
-          <span>沒上線</span>
-        </div>
-      ))}
-      <div class="rt__quota-eq">=</div>
-      <div class="rt__quota-cell is-full">
-        <b>9,600</b>
-        <span>囤滿上限</span>
-      </div>
-    </div>
-    <p class="rt__timelock-foot">超過 6 天不上線，多的就浪費了。至少每 6 天上線清一次庫存。</p>
+  <!-- 規則正文由內容頁維護，與下方既有查詢工具共用一個入口。 -->
+  <section id="overview" class="rt__section">
+    <slot name="rules-intro" />
   </section>
 
   <!-- #rules 通用規則 -->
@@ -269,10 +250,6 @@ const calcTracks = tracks.map((t) => ({
           <span>一場合計</span>
           <small>平均殺 3 隻約 +40</small>
         </div>
-      </div>
-      <div class="rt__legend">
-        <span><i class="rt__swatch is-green"></i>怪物等級 ≥ 自己等級 ÷ 2 − 3（捨去小數）</span>
-        <span><i class="rt__swatch is-gold"></i>怪物等級 ≥ 自己等級 ÷ 4 − 3（捨去小數）</span>
       </div>
       <p class="rt__premise">三份超過門檻即各自消失：吉拉 53 等剩 +20、54 等剩 +10、108 等歸零，各王分段見「去哪刷」。</p>
     </div>
@@ -395,17 +372,21 @@ const calcTracks = tracks.map((t) => ({
   <section id="ladder" class="rt__section">
     <h2>稱號階梯</h2>
     <p class="rt__subnote">
-      四個職業群各走各的階梯：稱號名不同、門檻也不同。選你的職業群，再找現在的稱號往右看要幾天。
+      先選職業分類，再找目前的稱號。生產、服務與採集放在同一分頁，各自保留不同的聲望門檻。
     </p>
     <div class="rt__card rt__trackpick">
-      <label>
-        職業群
-        <select data-track>
-          {tracks.map((t) => (
-            <option value={t.group}>{t.group}</option>
-          ))}
-        </select>
-      </label>
+      <div class="rt__tracktabs" role="tablist" aria-label="職業分類">
+        {trackTabs.map((tab, i) => (
+          <button type="button" role="tab" id={`rt-track-tab-${i}`} data-track-tab={tab}
+            aria-controls="rt-track-panel" aria-selected={i === 0} tabindex={i === 0 ? 0 : -1}>{tab}</button>
+        ))}
+      </div>
+      <div id="rt-track-panel" role="tabpanel" aria-labelledby="rt-track-tab-0" tabindex="0">
+      <div class="rt__trackchoices" role="group" aria-label="職業群" data-track-choices hidden>
+        {tracks.map((t) => (
+          <button type="button" data-track={t.group} data-track-category={t.tab} aria-pressed="false">{t.group}</button>
+        ))}
+      </div>
       {tracks.map((t) => (
         <div class="rt__trackinfo" data-track-info={t.group} hidden>
           <p class="rt__trackjobs">{t.jobs.join('、')}</p>
@@ -415,6 +396,7 @@ const calcTracks = tracks.map((t) => ({
           </p>
         </div>
       ))}
+      </div>
     </div>
     <div class="rt__card rt__tablewrap">
       {tracks.map((t) => (
@@ -644,12 +626,15 @@ const calcTracks = tracks.map((t) => ({
     const fmt = (n: number) => n.toLocaleString('en-US');
     const CAP = 1600;
 
-    const trackSel = root.querySelector<HTMLSelectElement>('[data-track]')!;
+    const trackButtons = [...root.querySelectorAll<HTMLButtonElement>('[data-track]')];
+    const tabButtons = [...root.querySelectorAll<HTMLButtonElement>('[data-track-tab]')];
+    const rememberedTracks = new Map<string, string>();
     const curSel = root.querySelector<HTMLSelectElement>('[data-calc-cur]')!;
     const targetSel = root.querySelector<HTMLSelectElement>('[data-calc-target]')!;
 
     /** 換職業群：階梯表、職業清單、計算機的選項全部跟著換 */
     const pickTrack = (group: string) => {
+      for (const button of trackButtons) button.setAttribute('aria-pressed', String(button.dataset.track === group));
       for (const el of root.querySelectorAll<HTMLElement>('[data-track-table], [data-track-info]')) {
         el.hidden = (el.dataset.trackTable ?? el.dataset.trackInfo) !== group;
       }
@@ -696,12 +681,39 @@ const calcTracks = tracks.map((t) => ({
       update();
     });
     targetSel.addEventListener('change', update);
-    trackSel.addEventListener('change', () => {
-      pickTrack(trackSel.value);
+    const pickTab = (tab: HTMLButtonElement) => {
+      const category = tab.dataset.trackTab!;
+      for (const button of tabButtons) {
+        button.setAttribute('aria-selected', String(button === tab));
+        button.tabIndex = button === tab ? 0 : -1;
+      }
+      root.querySelector('#rt-track-panel')!.setAttribute('aria-labelledby', tab.id);
+      const choices = trackButtons.filter((button) => button.dataset.trackCategory === category);
+      for (const button of trackButtons) button.hidden = !choices.includes(button);
+      root.querySelector<HTMLElement>('[data-track-choices]')!.hidden = choices.length < 2;
+      pickTrack(rememberedTracks.get(category) ?? choices[0].dataset.track!);
       update();
+    };
+    trackButtons.forEach((button) => button.addEventListener('click', () => {
+      rememberedTracks.set(button.dataset.trackCategory!, button.dataset.track!);
+      pickTrack(button.dataset.track!);
+      update();
+    }));
+    tabButtons.forEach((button, i) => {
+      button.addEventListener('click', () => pickTab(button));
+      button.addEventListener('keydown', (event) => {
+        let index: number;
+        if (event.key === 'ArrowRight') index = (i + 1) % tabButtons.length;
+        else if (event.key === 'ArrowLeft') index = (i - 1 + tabButtons.length) % tabButtons.length;
+        else if (event.key === 'Home') index = 0;
+        else if (event.key === 'End') index = tabButtons.length - 1;
+        else return;
+        event.preventDefault();
+        tabButtons[index].focus();
+        pickTab(tabButtons[index]);
+      });
     });
-    pickTrack(trackSel.value);
-    update();
+    if (tabButtons.length) pickTab(tabButtons[0]);
   });
 </script>
 
@@ -1223,29 +1235,41 @@ const calcTracks = tracks.map((t) => ({
 
   /* ── 階梯表的職業群選擇 ── */
   .rt__trackpick {
+    display: block;
+  }
+
+  .rt__tracktabs, .rt__trackchoices {
     display: flex;
     flex-wrap: wrap;
-    align-items: baseline;
-    gap: 8px 16px;
-  }
-
-  .rt__trackpick > label {
-    display: flex;
-    align-items: center;
     gap: 8px;
-    font-size: 13px;
-    font-weight: 700;
-    color: #6b675c;
-    white-space: nowrap;
+    margin-bottom: 16px;
   }
 
-  .rt__trackpick select {
-    padding: 7px 10px;
+  .rt__tracktabs button, .rt__trackchoices button {
+    min-height: 44px;
+    padding: 9px 16px;
     border: 1px solid #d8d5cb;
     border-radius: 6px;
     background: #fff;
+    color: #4a463c;
     font: inherit;
-    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .rt__tracktabs button[aria-selected="true"], .rt__trackchoices button[aria-pressed="true"] {
+    background: #2c6e49;
+    border-color: #2c6e49;
+    color: #fff;
+  }
+
+  .rt__trackpick button:focus-visible {
+    outline: 3px solid #b17a17;
+    outline-offset: 3px;
+  }
+
+  .rt__trackpick [hidden] {
+    display: none;
   }
 
   .rt__trackinfo {
