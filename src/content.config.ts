@@ -10,6 +10,12 @@ const pages = defineCollection({
   schema: z.object({
     /** 頁面標題 */
     title: z.string(),
+    /** 選填：分享預覽資料；圖片使用不含部署 base 的站內絕對路徑。 */
+    social: z.object({
+      description: z.string().min(1),
+      image: z.string().regex(/^\/(?!\/)/),
+      imageAlt: z.string().min(1),
+    }).optional(),
     /**
      * 這頁內容的出處，顯示在頁尾。多數是原 Google Sites 的對應頁，
      * 也可以是別的站（例如外站的配方表）。我們自己編的索引頁沒有出處，留空。
