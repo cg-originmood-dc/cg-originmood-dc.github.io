@@ -1,4 +1,16 @@
 {
+  "小可愛優奈": {
+    "sealable": false,
+    "obtainMethods": [
+      {
+        "type": "quest",
+        "map": "法蘭城美人沙龍",
+        "coords": "216.124",
+        "note": "透過月亮俱樂部取得優奈與流行手冊，攜帶優奈及流行手冊4本，找見習美容師蕾娜換取小可愛優奈LV1。",
+        "link": "https://cg.skyey.tw/errand/maaa31.htm"
+      }
+    ]
+  },
   "風之使徒": {
     "sealable": false,
     "cardLevel": "未知",
