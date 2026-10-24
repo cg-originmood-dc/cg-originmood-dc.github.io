@@ -5,7 +5,7 @@ import { visit } from 'unist-util-visit';
 // GitHub Pages 設定：
 //   使用者頁（<user>.github.io）或自訂網域 → BASE_PATH 留 '/'
 //   專案頁（<user>.github.io/<repo>）      → BASE_PATH 設成 '/<repo>'
-const site = process.env.SITE_URL ?? 'https://example.github.io';
+const site = process.env.SITE_URL ?? 'https://cg-originmood-dc.github.io';
 const base = process.env.BASE_PATH ?? '/';
 
 /**

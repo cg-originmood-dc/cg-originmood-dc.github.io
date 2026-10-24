@@ -34,7 +34,7 @@ const { Content } = await render(entry);
 const hasProse = entry.body != null && entry.body.trim().length > 0;
 ---
 
-<Base title={entry.data.title} breadcrumb={entry.data.breadcrumb}>
+<Base title={entry.data.title} breadcrumb={entry.data.breadcrumb} social={entry.data.social}>
   <h1 class="page-title">{entry.data.title}</h1>
 
   {hasProse && (

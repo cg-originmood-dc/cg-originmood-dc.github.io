@@ -3,6 +3,7 @@ import { buildNav } from '../lib/nav';
 import NavTree from '../components/NavTree.astro';
 import EventBanner from '../components/EventBanner.astro';
 import ReportIssue from '../components/ReportIssue.astro';
+import { socialUrls, type SocialPreview } from '../lib/social';
 import '../styles/global.css';
 
 interface Props {
@@ -12,10 +13,14 @@ interface Props {
   dbEmbed?: boolean;
   /** 實驗、預覽或其他不應出現在搜尋結果的頁面 */
   noindex?: boolean;
+  social?: SocialPreview;
 }
-const { title, breadcrumb = [], dbEmbed = false, noindex = false } = Astro.props;
+const { title, breadcrumb = [], dbEmbed = false, noindex = false, social } = Astro.props;
 const nav = await buildNav();
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const pageTitle = `${title} — 永恆初心 Cross Gate 攻略`;
+const description = social?.description ?? `${title}｜魔力寶貝 永恆初心 Cross Gate 攻略資料`;
+const share = social && socialUrls(Astro.site ?? Astro.url, Astro.url.pathname, base, social.image);
 // 網址是 percent-encoded，導覽的 href 是中文原字，不解碼的話兩邊永遠對不起來，
 // 目前頁面不會反白、所屬分類也不會自動展開。
 const here = decodeURIComponent(Astro.url.pathname).replace(/\/$/, '');
@@ -26,8 +31,24 @@ const here = decodeURIComponent(Astro.url.pathname).replace(/\/$/, '');
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{title} — 永恆初心 Cross Gate 攻略</title>
-    <meta name="description" content={`${title}｜魔力寶貝 永恆初心 Cross Gate 攻略資料`} />
+    <title>{pageTitle}</title>
+    <meta name="description" content={description} />
+    {social && share && <>
+      <link rel="canonical" href={share.url} />
+      <meta property="og:type" content="website" />
+      <meta property="og:title" content={pageTitle} />
+      <meta property="og:description" content={description} />
+      <meta property="og:url" content={share.url} />
+      <meta property="og:site_name" content="永恆初心 Cross Gate 攻略" />
+      <meta property="og:locale" content="zh_TW" />
+      <meta property="og:image" content={share.image} />
+      <meta property="og:image:alt" content={social.imageAlt} />
+      <meta name="twitter:card" content="summary" />
+      <meta name="twitter:title" content={pageTitle} />
+      <meta name="twitter:description" content={description} />
+      <meta name="twitter:image" content={share.image} />
+      <meta name="twitter:image:alt" content={social.imageAlt} />
+    </>}
     {noindex && <meta name="robots" content="noindex,nofollow" />}
     {/* 站徽 public/img/logo.gif 裁出來的，重產見 scripts/make_favicon.py */}
     <link rel="icon" href={`${base}/favicon.ico`} sizes="16x16 32x32 48x48" />
