@@ -312,7 +312,7 @@ const mana = (manaDs?.rows ?? []).map((r) =>
         matsBody.append(tr);
       });
       saleInput.value = lsGet(SALE(p.n));
-      meta.textContent = `${p.c}　${p.l} 階「${p.n}」｜販店價：${p.s || '—'}`;
+      meta.textContent = `${p.c}　${p.l} 階「${p.n}」｜初心賣店價：${p.s ? `${p.s} G／件` : '尚未確認'}`;
       recalc();
     };
 

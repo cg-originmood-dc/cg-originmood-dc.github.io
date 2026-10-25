@@ -62,7 +62,8 @@ export function loadProducts(): Product[] {
           l: (r['等級'] ?? '').trim(),
           v: Number.parseInt(r['等級'] ?? '', 10) || 0,
           n: (r['名稱'] ?? '').trim(),
-          s: (r['販店價'] ?? '').trim(),
+          // 僅採用初心已確認價格，不能以經典版販店價補空值。
+          s: (r['初心賣店價（G／件）'] ?? '').trim(),
           m,
         });
       }

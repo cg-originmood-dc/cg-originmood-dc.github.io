@@ -60,7 +60,9 @@ const {
 const dataset = given ?? (name ? loadDataset(name) : null);
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const src = (v: string) => (v.startsWith('/') ? base + v : v);
-const cols = dataset?.columns.filter((c) => !dataset.imageColumns.includes(c)) ?? [];
+// 「欄名＋佐證／說明」為同格附註；舊版販店價保留在資料檔，不再顯示。
+const companionColumns = dataset?.columns.filter((c) => /(?:佐證|說明)$/.test(c) && dataset.columns.includes(c.slice(0, -2))) ?? [];
+const cols = dataset?.columns.filter((c) => !dataset.imageColumns.includes(c) && !companionColumns.includes(c) && c !== '販店價') ?? [];
 /** 採集表共用欄位結構；加寬地點欄，物品名稱可連至既有道具頁。 */
 const gathering = cols.includes('物品名稱') && cols.includes('一般採集地點');
 const locationCols = gathering ? cols.filter((c) => c.endsWith('地點')) : [];
@@ -160,7 +162,7 @@ const matLevels = (materials: string): MatGroup[] => {
             </select>
           </label>
         )}
-        {dataset.noteColumn && (
+        {dataset.noteColumn && cols.includes(dataset.noteColumn) && (
           <label class="dataset__check">
             <input type="checkbox" data-note-col={cols.indexOf(dataset.noteColumn)} />
             只看有{dataset.noteColumn}的
@@ -270,6 +272,16 @@ const matLevels = (materials: string): MatGroup[] => {
                   )}
                   {cols.map((c) => {
                     const value = row[c] ?? '';
+                    const evidence = row[`${c}佐證`];
+                    const explanation = row[`${c}說明`];
+                    if (value && (evidence || explanation)) {
+                      return (
+                        <td data-sort={value}>
+                          {explanation ? <span class="material-tip" tabindex="0" title={explanation} aria-description={explanation}>{value}</span> : value}
+                          {evidence && <>{' '}<span set:html={renderCell(evidence, base)} /></>}
+                        </td>
+                      );
+                    }
                     if (gathering && c === '物品名稱' && getItem(value)) {
                       return (
                         <td data-sort={value}>
