@@ -3,7 +3,7 @@ title: "S階提升任務"
 sourceUrl: "https://sites.google.com/view/goodluck2cg/任務攻略/專屬任務/s階提升任務"
 breadcrumb:
   - "任務攻略"
-  - "專屬任務"
+  - "晉階任務"
 ---
 
 ## <span class="hl-ref"><strong>初心S階任務</strong></span>
