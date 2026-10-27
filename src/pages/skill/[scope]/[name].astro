@@ -10,6 +10,7 @@ import { listSkills, getSkill, skillScope, skillPath, skillIcon, mpLabel, type S
 import { listPetsWithSkill } from '../../../lib/pets';
 import { craftSkillHref } from '../../../lib/craftSkills';
 import { skillRelatedPages } from '../../../lib/skillRelatedPages';
+import skillEvidence from '../../../../content/data/技能說明佐證.json';
 
 export function getStaticPaths() {
   const real = listSkills().map((s) => ({
@@ -110,13 +111,11 @@ if (skill?.pet) sides.push({ key: 'pet', label: '寵物技能', side: skill.pet 
   ) : (
     <Base title={`${skill.name} — 技能詳情`}>
       <h1 class="page-title">{skill.name}</h1>
-      <p class="crumbs">
+      <nav class="crumbs" aria-label="階層">
         <a href={`${base}/`}>首頁</a>
-        <span aria-hidden="true"> / </span>
         <a href={`${base}/技能總覽`}>技能總覽</a>
-        <span aria-hidden="true"> / </span>
-        <span>{skill.name}</span>
-      </p>
+        <span aria-current="page">{skill.name}</span>
+      </nav>
 
       {craftHref && (
         <p class="craft-banner">
@@ -157,6 +156,14 @@ if (skill?.pet) sides.push({ key: 'pet', label: '寵物技能', side: skill.pet 
               </td>
             </tr>
           </table>
+
+          {skillEvidence.filter((entry) => entry.技能 === name && entry.適用 === (key === 'char' ? '人物' : '寵物')).map((entry) => (
+            <section class="skill-evidence">
+              <h2>{entry.標題}</h2>
+              <blockquote>{entry.描述}</blockquote>
+              <p class="evidence-note">來源：<a href={entry.來源網址}>{entry.來源名稱}</a></p>
+            </section>
+          ))}
 
           <table class="level-table">
             <thead>
@@ -267,6 +274,10 @@ if (skill?.pet) sides.push({ key: 'pet', label: '寵物技能', side: skill.pet 
   .related-banner a { font-weight: 700; }
 
   .skill-side { margin-bottom: 20px; }
+  .skill-evidence { margin: 16px 0 24px; }
+  .skill-evidence h2 { font-size: 1.15rem; }
+  .skill-evidence blockquote { margin: 12px 0; padding: 10px 16px; border-left: 4px solid #a76a1a; background: #fff8e1; }
+  .evidence-note { font-size: 0.9rem; color: #5f6368; }
   .info-table {
     width: 100%;
     background-color: #e0e0e0;

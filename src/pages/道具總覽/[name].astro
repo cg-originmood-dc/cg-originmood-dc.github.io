@@ -37,13 +37,11 @@ const acquisition = gathering ? gathering.supplement : item?.入手方式 ?? '';
   ) : (
     <Base title={`${item.名稱} — 道具`}>
       <h1 class="page-title">{item.名稱}</h1>
-      <p class="crumbs">
+      <nav class="crumbs" aria-label="階層">
         <a href={`${base}/`}>首頁</a>
-        <span aria-hidden="true"> / </span>
         <a href={`${base}/道具總覽`}>道具總覽</a>
-        <span aria-hidden="true"> / </span>
-        <span>{item.名稱}</span>
-      </p>
+        <span aria-current="page">{item.名稱}</span>
+      </nav>
 
       <table class="info-table">
         <tr class="head"><td colspan="2">道具資料</td></tr>
