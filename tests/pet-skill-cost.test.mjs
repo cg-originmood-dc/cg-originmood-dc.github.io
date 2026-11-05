@@ -6,7 +6,7 @@ import {blankPetPlan, parsePetSkillPrices, petPlanTotal, restorePetPlans, planFr
 
 const rows=parse(readFileSync('content/data/寵物技能學習費用.csv','utf8'),{columns:true,skip_empty_lines:true});
 const prices=parsePetSkillPrices(rows);
-assert.equal(prices.length,31);
+assert.equal(prices.length,32);
 assert.equal(prices.filter(s=>s.note).length,6);
 const byAlias=new Map(prices.map(s=>[s.alias,s]));
 const plan=aliases=>({...blankPetPlan(),name:'測試寵物',skills:[...aliases.map(a=>byAlias.get(a).id),...Array(MAX_SKILLS-aliases.length).fill('')]});
@@ -22,6 +22,7 @@ for(const [aliases,expected] of cases) assert.equal(petPlanTotal(plan(aliases),p
 assert.equal(cases.reduce((sum,[aliases])=>sum+petPlanTotal(plan(aliases),prices),0),1122600);
 assert.equal(petPlanTotal(blankPetPlan(),prices),0);
 assert.equal(petPlanTotal(plan(['乾','乾']),prices),16000);
+assert.equal(petPlanTotal(plan(['散步']),prices),5000);
 assert.equal(petPlanTotal(plan(['混攻','毒攻','石攻','酒攻','遺忘攻','睡攻']),prices),73500);
 const saved={version:2,pets:cases.map(([aliases])=>plan(aliases))};
 assert.deepEqual(restorePetPlans(saved,prices),saved.pets);
@@ -53,4 +54,4 @@ const q4=temple.find(s=>s.name==='氣功彈'&&s.level===4);assert.equal(q4.fee,4
 const c13=temple.find(s=>s.name==='連擊'&&s.level===13);assert.equal(c13.cumulative,1068000);assert.equal(c13.fromLevel,10);
 assert.throws(()=>templeSkillPrices([{技能:'測試',等級:'1',費用:'100'},{技能:'測試',等級:'3',費用:'300'}]));
 assert.throws(()=>templeSkillPrices([{技能:'測試',等級:'1',費用:'-1'}]));
-console.log('PASS: tree totals unchanged; 13 slots; v1 migration; pet presets/free known skills; 48 separate temple prices and cumulative ranges.');
+console.log('PASS: 32 tree skills including 5,000G pet walk; totals unchanged; 13 slots; v1 migration; pet presets/free known skills; 48 separate temple prices and cumulative ranges.');

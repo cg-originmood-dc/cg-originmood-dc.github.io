@@ -14,10 +14,11 @@ test('只填入已確認的布甲單件640G，不推算其他價格', () => {
   assert.equal(rows.find(row=>row.名稱==='布甲').販店價,'800');
 });
 
-test('新增初心價欄不變更既有配方、屬性或原版價格', () => {
+test('新增初心價欄不變更保留配方的屬性或原版價格，僅移除未開放的水龍之服', () => {
   const old = parse(execFileSync('git',['show',`HEAD:${file}`],{encoding:'utf8'}),options);
   const withoutConfirmedPrice = ({[field]: price,[`${field}佐證`]: evidence,['布料成本（G／件）']: cost,['布料成本（G／件）說明']: note,...row})=>row;
-  assert.deepEqual(rows.map(withoutConfirmedPrice),old.map(withoutConfirmedPrice));
+  assert(!rows.some(row => row.名稱 === '水龍之服'));
+  assert.deepEqual(rows.map(withoutConfirmedPrice),old.filter(row => row.名稱 !== '水龍之服').map(withoutConfirmedPrice));
 });
 
 test('截圖附在價格同格，舊版販店價不再顯示', () => {
