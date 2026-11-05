@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {parse} from 'csv-parse/sync';
 import sharp from 'sharp';
-import {filterCatalog,catalogPage} from '../src/lib/itemCatalog.ts';
+import {filterCatalog,catalogPage,itemSocialDescription} from '../src/lib/itemCatalog.ts';
 
 const csv=fs.readFileSync('content/data/道具庫.csv','utf8');
 const items=parse(csv,{columns:true,bom:true,skip_empty_lines:true});
@@ -65,6 +65,33 @@ test('等級按數字排序，分頁限制 50 筆並處理空集合及超出頁�
   assert.equal(last.page,last.pages);
   assert(last.rows.length>0&&last.rows.length<=50);
   assert.deepEqual(catalogPage([],100),{rows:[],page:1,pages:1,total:0});
+});
+
+test('每個道具可產生精簡且有辨識度的 OG 描述',()=>{
+  const candy=items.find(i=>i.名稱==='萬聖節糖果');
+  const description=itemSocialDescription(candy);
+  assert.match(description,/^萬聖節糖果｜/);
+  assert.match(description,/恢復50法力值/);
+  assert.doesNotMatch(description,/料理・料理/);
+  assert(description.length<=180);
+  const fallback=itemSocialDescription({名稱:'測試道具',分類:'道具',子分類:'',等級:'',說明:'',實測說明:'',入手方式:'',image:''});
+  assert.equal(fallback,'測試道具｜道具。查看道具資料與入手方式。');
+});
+
+test('永恆初心未開放的水龍系列不列入製作配方',()=>{
+  const gearFiles=['劍','斧','槍','弓','杖','小刀','頭盔','帽子','鎧甲','衣服','長袍','靴子','鞋子','盾牌'];
+  for(const name of gearFiles){
+    const rows=parse(fs.readFileSync(`content/data/${name}.csv`,'utf8'),{columns:true,bom:true,skip_empty_lines:true});
+    assert.equal(rows.some(row=>row.名稱?.startsWith('水龍')),false,`${name}.csv 仍含水龍裝`);
+  }
+  const waterDragonGear=items.filter(item=>['武器','防具'].includes(item.分類)&&item.名稱.startsWith('水龍'));
+  assert.equal(waterDragonGear.length,14);
+  assert(waterDragonGear.every(item=>item.入手方式==='永恆初心未開放'));
+  assert.doesNotMatch(fs.readFileSync('content/data/料理.csv','utf8'),/水龍料理/);
+  assert.doesNotMatch(fs.readFileSync('content/data/藥水.csv','utf8'),/水龍藥水/);
+  const waterDragonConsumables=items.filter(item=>['料理','藥水'].includes(item.分類)&&item.名稱.startsWith('水龍'));
+  assert.equal(waterDragonConsumables.length,2);
+  assert(waterDragonConsumables.every(item=>item.入手方式==='永恆初心未開放'));
 });
 
 test('補入的道具圖為小型本地靜態 WebP',async()=>{

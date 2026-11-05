@@ -14,6 +14,8 @@ const pages = defineCollection({
     social: z.object({
       description: z.string().min(1),
       image: z.string().regex(/^\/(?!\/)/),
+      imageWidth: z.number().int().positive(),
+      imageHeight: z.number().int().positive(),
       imageAlt: z.string().min(1),
     }).optional(),
     /**

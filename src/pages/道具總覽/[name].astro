@@ -7,6 +7,7 @@ import { getItem, listItems, itemFallbackLabel } from '../../lib/items';
 import { renderCell } from '../../lib/richtext';
 import { LIST_SEP } from '../../lib/datasets';
 import { getItemGathering } from '../../lib/itemGathering';
+import { itemSocialDescription } from '../../lib/itemCatalog';
 import ItemGathering from '../../components/ItemGathering.astro';
 
 export function getStaticPaths() {
@@ -22,6 +23,13 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const src = (v: string) => (v.startsWith('/') ? base + v : v);
 const img = (item?.image ?? '').trim();
 const gathering = item ? getItemGathering(item.名稱) : null;
+const social = item ? {
+  description: itemSocialDescription(item),
+  image: '/apple-touch-icon.png',
+  imageWidth: 180,
+  imageHeight: 180,
+  imageAlt: '永恆初心 Cross Gate 攻略站徽',
+} : undefined;
 // 已有採集關聯時，不再顯示道具庫舊入手方式中複製的地點。
 const acquisition = gathering ? gathering.supplement : item?.入手方式 ?? '';
 ---
@@ -35,7 +43,7 @@ const acquisition = gathering ? gathering.supplement : item?.入手方式 ?? '';
       </p>
     </Base>
   ) : (
-    <Base title={`${item.名稱} — 道具`}>
+    <Base title={`${item.名稱} — 道具`} social={social}>
       <h1 class="page-title">{item.名稱}</h1>
       <nav class="crumbs" aria-label="階層">
         <a href={`${base}/`}>首頁</a>

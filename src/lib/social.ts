@@ -1,6 +1,8 @@
 export interface SocialPreview {
   description: string;
   image: string;
+  imageWidth: number;
+  imageHeight: number;
   imageAlt: string;
 }
 

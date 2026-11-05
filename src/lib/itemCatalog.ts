@@ -33,3 +33,12 @@ export function catalogPage(items: ItemRecord[], page:number, size=50) {
   const current = Math.min(pages, Math.max(1, Math.floor(page)||1));
   return {rows:items.slice((current-1)*size,current*size), page:current, pages, total:items.length};
 }
+
+export function itemSocialDescription(item: ItemRecord, maxLength = 180): string {
+  const meta = [...new Set([item.分類, item.子分類, item.等級 ? `等級 ${item.等級}` : ''].filter(Boolean))].join('・');
+  const detail = (item.說明 || item.實測說明 || item.入手方式 || '查看道具資料與入手方式。')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const description = `${item.名稱}｜${meta ? `${meta}。` : ''}${detail}`;
+  return description.length > maxLength ? `${description.slice(0, maxLength - 1)}…` : description;
+}
