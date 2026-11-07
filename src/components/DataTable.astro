@@ -5,6 +5,8 @@ import { renderCell } from '../lib/richtext';
 import { hasPet } from '../lib/pets';
 import { getItem } from '../lib/items';
 import itemTips from '../../content/data/道具提示.json';
+import GatheringRecipeFilter from './GatheringRecipeFilter.astro';
+import { findGatheringRecipe, recipeGatheringHref } from '../lib/recipeGathering';
 
 // 販售提示由既有 NPC 售價資料一次性整理進道具提示；渲染時不跨資料集重新拼裝。
 const tips: Record<string, { text: string; href?: string }> = itemTips;
@@ -132,6 +134,7 @@ const matLevels = (materials: string): MatGroup[] => {
     <p class="dataset-missing">找不到資料集 <code>{name}</code>（應在 content/data/{name}.csv）</p>
   ) : (
     <figure class:list={['dataset', { 'dataset--gathering': gathering }]} data-dataset={dataset.name} data-filter-active="">
+      {gathering && <GatheringRecipeFilter dataset={dataset.name} />}
       {filterTabs && dataset.filterColumn && (
         <div
           class="dataset__tabs"
@@ -168,7 +171,7 @@ const matLevels = (materials: string): MatGroup[] => {
             只看有{dataset.noteColumn}的
           </label>
         )}
-        <output class="dataset__count">{dataset.rows.length} 筆</output>
+        <output class="dataset__count" aria-live="polite">{dataset.rows.length} 筆</output>
       </figcaption>
 
       <div class="dataset__scroll">
@@ -249,6 +252,7 @@ const matLevels = (materials: string): MatGroup[] => {
               ));
               return (
                 <tr
+                  data-gathering-item={gathering ? row['物品名稱']?.trim() : undefined}
                   class={detail ? 'dataset__row--link' : undefined}
                   data-href={detail ?? undefined}
                   data-filter={
@@ -303,7 +307,9 @@ const matLevels = (materials: string): MatGroup[] => {
                       if (groups.length) {
                         return (
                           <td data-sort={value}>
-                            {value}
+                            {dataset.name === '料理' && findGatheringRecipe(value)
+                              ? <a href={base + recipeGatheringHref(value)} title="查看這道料理的材料採集點">{value}・材料採集點</a>
+                              : value}
                             <span class="dataset__mat-lv">
                               {groups.map((g) => (
                                 <span class="dataset__mat-lv-group">
@@ -320,6 +326,9 @@ const matLevels = (materials: string): MatGroup[] => {
                           </td>
                         );
                       }
+                    }
+                    if (c === '名稱' && dataset.name === '料理' && findGatheringRecipe(value)) {
+                      return <td data-sort={value}><a href={base + recipeGatheringHref(value)} title="查看這道料理的材料採集點">{value}・材料採集點</a></td>;
                     }
                     const linked = /\[[^\]]+\]\([^)]+\)/.test(value);
                     // 一格好幾條的欄位（採集地點最多九個點）拆成一行一條。
@@ -366,11 +375,13 @@ const matLevels = (materials: string): MatGroup[] => {
           </tbody>
         </table>
       </div>
+      {gathering && <p data-recipe-empty hidden role="status">沒有符合條件的採集物。可調整搜尋、料理或分類，或按「清空」顯示全部。</p>}
     </figure>
   )
 }
 
 <script>
+  import { findGatheringRecipe, recipeGatheringItems } from '../lib/recipeGathering';
   // 純靜態站，所以搜尋/篩選/排序都在瀏覽器端做，不需要任何後端。
   document.querySelectorAll<HTMLElement>('.dataset').forEach((root) => {
     const input = root.querySelector<HTMLInputElement>('input[type=search]');
@@ -384,6 +395,9 @@ const matLevels = (materials: string): MatGroup[] => {
     if (!tbody) return;
     const rows = Array.from(tbody.rows);
     const total = rows.length;
+    const recipeSelect = root.querySelector<HTMLSelectElement>('[data-recipe-filter]');
+    const recipeError = root.querySelector<HTMLElement>('[data-recipe-error]');
+    const recipeEmpty = root.querySelector<HTMLElement>('[data-recipe-empty]');
 
     // 真正的按需圖片：縮圖只在表格捲動區附近才給 src，離開後移除 src，
     // 避免 Edge / Chromium 繼續解碼一路捲過的動態 GIF。壓縮資料仍可走瀏覽器快取，
@@ -492,9 +506,15 @@ const matLevels = (materials: string): MatGroup[] => {
         '';
       const col = want && filterEl ? Number(filterEl.dataset.filterCol) + lead : -1;
       const onlyNote = note?.checked ?? false;
+      const recipeName = recipeSelect?.value ?? '';
+      const materials = recipeGatheringItems(recipeName, root.dataset.dataset ?? '');
+      root.querySelectorAll<HTMLElement>('[data-recipe-summary]').forEach(panel => {
+        panel.hidden = panel.dataset.recipeSummary !== recipeName;
+      });
       let shown = 0;
       for (const tr of rows) {
         const hit =
+          (!materials || materials.has(tr.dataset.gatheringItem ?? '')) &&
           (!q || searchableText(tr).includes(q)) &&
           (!want || (tr.dataset.filter ?? tr.cells[col]?.textContent?.trim()) === want) &&
           (!onlyNote || !!tr.cells[noteCol]?.textContent?.trim());
@@ -504,6 +524,7 @@ const matLevels = (materials: string): MatGroup[] => {
       // 讓 CSS 知道現在停在哪個篩選值（寵物清單「全部」檢視的列底色靠這個）
       root.dataset.filterActive = want;
       if (count) count.textContent = shown === total ? `${total} 筆` : `${shown} / ${total} 筆`;
+      if (recipeEmpty) recipeEmpty.hidden = shown > 0;
       restripe();
     };
 
@@ -523,13 +544,47 @@ const matLevels = (materials: string): MatGroup[] => {
     input?.addEventListener('input', apply);
     select?.addEventListener('change', apply);
     note?.addEventListener('change', apply);
-    clear?.addEventListener('click', () => {
+    const saveRecipeUrl = () => {
+      if (!recipeSelect) return;
+      const url = new URL(window.location.href);
+      if (recipeSelect.value) url.searchParams.set('recipe', recipeSelect.value);
+      else url.searchParams.delete('recipe');
+      window.history.pushState(null, '', url);
+      if (recipeError) recipeError.hidden = true;
+    };
+    const resetOtherFilters = () => {
       if (input) input.value = '';
       if (select) select.value = '';
       resetTabs();
       if (note) note.checked = false;
+    };
+    recipeSelect?.addEventListener('change', () => {
+      resetOtherFilters();
+      saveRecipeUrl();
       apply();
     });
+    clear?.addEventListener('click', () => {
+      resetOtherFilters();
+      if (recipeSelect) recipeSelect.value = '';
+      saveRecipeUrl();
+      apply();
+    });
+    const readRecipeUrl = () => {
+      if (!recipeSelect) return;
+      const requested = new URL(window.location.href).searchParams.get('recipe') ?? '';
+      const valid = !requested || !!findGatheringRecipe(requested);
+      recipeSelect.value = valid ? requested : '';
+      if (recipeError) {
+        recipeError.hidden = valid;
+        recipeError.textContent = valid ? '' : '找不到指定的料理，已顯示全部採集物。';
+      }
+      resetOtherFilters();
+      apply();
+    };
+    if (recipeSelect) {
+      readRecipeUrl();
+      window.addEventListener('popstate', readRecipeUrl);
+    }
 
     // CSV 進來就排好的話，表頭已經帶著 aria-sort。把那個狀態接手過來，
     // 否則第一次點下去會照「新欄位一律升冪」的規則，先跳到相反方向再回來。

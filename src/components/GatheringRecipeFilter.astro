@@ -1,0 +1,38 @@
+---
+import { gatheringRecipes, recipeGatheringHref } from '../lib/recipeGathering';
+import { getItem } from '../lib/items';
+const { dataset } = Astro.props as { dataset: string };
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+---
+<div class="recipe-filter">
+  <label>依料理找材料：
+    <select data-recipe-filter>
+      <option value="">全部採集物</option>
+      {gatheringRecipes.map(recipe => <option value={recipe.name}>Lv{recipe.level}・{recipe.name}</option>)}
+    </select>
+  </label>
+  <p data-recipe-error role="status" hidden></p>
+  {gatheringRecipes.map(recipe => (
+    <div data-recipe-summary={recipe.name} hidden>
+      <p><strong>{recipe.name}</strong>：只顯示所需材料，包含前置料理的原料。</p>
+      <p class="recipe-targets">
+        {recipe.targets.map(target => <a href={base + recipeGatheringHref(recipe.name, target.dataset)} aria-current={target.dataset === dataset ? 'page' : undefined}>
+          {target.dataset}：{target.items.join('、')}
+        </a>)}
+      </p>
+      {recipe.other.length > 0 && <p>以下材料尚無採集點收錄，請另查入手方式：
+        {recipe.other.map((name, index) => <>{index > 0 && '、'}{getItem(name) ? <a href={`${base}/道具總覽/${encodeURIComponent(name)}/`}>{name}</a> : name}</>)}
+      </p>}
+      {!recipe.targets.some(target => target.dataset === dataset) && <p>這道料理沒有收錄於本採集技能的材料。</p>}
+    </div>
+  ))}
+</div>
+<style>
+  .recipe-filter { padding: 12px; background: #f2f6fa; border: 1px solid #cbd5df; margin-bottom: 10px; }
+  label { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-weight: 700; }
+  select { font: inherit; padding: 8px; max-width: 100%; }
+  p { margin: 8px 0 0; }
+  .recipe-targets { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+  a[aria-current] { font-weight: 700; }
+  [hidden] { display: none !important; }
+</style>
