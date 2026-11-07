@@ -307,9 +307,7 @@ const matLevels = (materials: string): MatGroup[] => {
                       if (groups.length) {
                         return (
                           <td data-sort={value}>
-                            {dataset.name === '料理' && findGatheringRecipe(value)
-                              ? <a href={base + recipeGatheringHref(value)} title="查看這道料理的材料採集點">{value}・材料採集點</a>
-                              : value}
+                            {value}
                             <span class="dataset__mat-lv">
                               {groups.map((g) => (
                                 <span class="dataset__mat-lv-group">
@@ -326,9 +324,6 @@ const matLevels = (materials: string): MatGroup[] => {
                           </td>
                         );
                       }
-                    }
-                    if (c === '名稱' && dataset.name === '料理' && findGatheringRecipe(value)) {
-                      return <td data-sort={value}><a href={base + recipeGatheringHref(value)} title="查看這道料理的材料採集點">{value}・材料採集點</a></td>;
                     }
                     const linked = /\[[^\]]+\]\([^)]+\)/.test(value);
                     // 一格好幾條的欄位（採集地點最多九個點）拆成一行一條。
@@ -355,10 +350,14 @@ const matLevels = (materials: string): MatGroup[] => {
                       // 頓號留在前一項的尾巴，折行才會折在頓號後面而不是前面
                       <td class={classes}>
                         {parts.map((part, i) => {
-                          const tip = isMaterial ? tips[part.replace(/\(\d+\)$/, '').trim()] : undefined;
+                          const materialName = part.replace(/\(\d+\)$/, '').trim();
+                          const tip = isMaterial ? tips[materialName] : undefined;
+                          const recipe = dataset.name === '料理' && isMaterial ? findGatheringRecipe(row['名稱']) : undefined;
+                          const target = recipe?.targets.find(target => target.items.includes(materialName));
+                          const gatheringHref = recipe ? base + recipeGatheringHref(recipe.name, target?.dataset) : null;
                           return (
                             <span>
-                              {tip?.href ? <a href={base + tip.href} title={tip.text} aria-description={tip.text}>{part}</a> : tip ? <span class="material-tip" tabindex="0" title={tip.text} aria-description={tip.text}>{part}</span> : part}
+                              {gatheringHref ? <a href={gatheringHref} title={[`查看${recipe!.name}的材料採集點`, tip?.text].filter(Boolean).join('；')}>{part}</a> : tip?.href ? <a href={base + tip.href} title={tip.text} aria-description={tip.text}>{part}</a> : tip ? <span class="material-tip" tabindex="0" title={tip.text} aria-description={tip.text}>{part}</span> : part}
                               {i < parts.length - 1 && '、'}
                             </span>
                           );

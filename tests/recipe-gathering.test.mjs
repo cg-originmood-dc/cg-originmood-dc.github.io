@@ -7,6 +7,14 @@ const read = name => parse(fs.readFileSync(`content/data/${name}.csv`, 'utf8'), 
 const { recipes } = JSON.parse(fs.readFileSync('content/data/料理採集篩選.json', 'utf8'));
 const cooking = read('料理');
 
+test('採集入口放在材料欄，不在料理名稱加上材料採集點文字', () => {
+  const source = fs.readFileSync('src/components/DataTable.astro', 'utf8');
+  assert(!source.includes('{value}・材料採集點'));
+  assert(source.includes("dataset.name === '料理' && isMaterial"));
+  assert(source.includes('target.items.includes(materialName)'));
+  assert(source.includes('<a href={gatheringHref}'));
+});
+
 test('每道料理的採集關聯完整，精確指向現有採集物且不複製地點', () => {
   assert.deepEqual(recipes.map(r => r.name), cooking.map(r => r.名稱));
   for (const recipe of recipes) {
