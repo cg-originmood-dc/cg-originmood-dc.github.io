@@ -1,0 +1,82 @@
+{
+  "checkedAt": "2026-11-13",
+  "from": "2026-10-22",
+  "through": "2026-11-12",
+  "articleCount": 8,
+  "petRecords": 14,
+  "added": [
+    "黑耀飛龍",
+    "黑耀帝龍",
+    "大妖綠牛",
+    "大力地鼠",
+    "黃錦雲傘"
+  ],
+  "articles": [
+    {
+      "id": "18024",
+      "date": "2026-11-12",
+      "url": "https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_18024.html",
+      "pets": [
+        "狐丸",
+        "狂狐魔衛"
+      ]
+    },
+    {
+      "id": "18014",
+      "date": "2026-11-11",
+      "url": "https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_18014.html",
+      "pets": []
+    },
+    {
+      "id": "18004",
+      "date": "2026-11-09",
+      "url": "https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_18004.html",
+      "pets": [
+        "黑耀飛龍",
+        "黑耀帝龍",
+        "元宵巨神兵",
+        "小神龍",
+        "兵長麥",
+        "冥凱"
+      ]
+    },
+    {
+      "id": "17994",
+      "date": "2026-11-09",
+      "url": "https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17994.html",
+      "pets": [
+        "強擊漂浮炸彈",
+        "伏葉妖精"
+      ]
+    },
+    {
+      "id": "17944",
+      "date": "2026-11-04",
+      "url": "https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17944.html",
+      "pets": [
+        "烈風牛頭怪",
+        "大妖綠牛",
+        "大力地鼠",
+        "黃錦雲傘"
+      ]
+    },
+    {
+      "id": "17934",
+      "date": "2026-11-04",
+      "url": "https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17934.html",
+      "pets": []
+    },
+    {
+      "id": "17924",
+      "date": "2026-11-01",
+      "url": "https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17924.html",
+      "pets": []
+    },
+    {
+      "id": "17914",
+      "date": "2026-10-30",
+      "url": "https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_17914.html",
+      "pets": []
+    }
+  ]
+}
