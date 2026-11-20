@@ -1,0 +1,40 @@
+{
+  "checkedAt": "2026-11-19",
+  "from": "2026-11-13",
+  "through": "2026-11-18",
+  "articleCount": 2,
+  "petRecords": 12,
+  "added": [
+    "感恩節大公雞",
+    "芒芒鳥",
+    "小印第鳥",
+    "火妖鳥人"
+  ],
+  "articles": [
+    {
+      "id": "18044",
+      "date": "2026-11-18",
+      "url": "https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_18044.html",
+      "pets": [
+        "感恩節大公雞",
+        "芒芒鳥",
+        "小印第鳥",
+        "火妖鳥人",
+        "冰魄龍骨",
+        "火火兔",
+        "聖誕節火雞",
+        "聖誕節鴕雞",
+        "幼年岩帝龍骨",
+        "幼年聖金龍骨",
+        "岩帝龍骨",
+        "聖金龍骨"
+      ]
+    },
+    {
+      "id": "18034",
+      "date": "2026-11-18",
+      "url": "https://cg.originmood.com/NewsContent/zh_TW/mlbb_news_18034.html",
+      "pets": []
+    }
+  ]
+}
